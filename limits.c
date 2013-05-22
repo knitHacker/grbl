@@ -137,7 +137,7 @@ static void homing_cycle(uint8_t cycle_mask, int8_t pos_dir, bool invert_pin, fl
   if (dt > dt_min) { dt = dt_min; } // Disable acceleration for very slow rates.
       
   // Set default out_bits. 
-  uint8_t out_bits0 = settings.invert_mask;
+  uint8_t out_bits0 = settings.dir_invert_mask;
   out_bits0 ^= (settings.homing_dir_mask & DIRECTION_MASK); // Apply homing direction settings
   if (!pos_dir) { out_bits0 ^= DIRECTION_MASK; }   // Invert bits, if negative dir.
   
@@ -212,32 +212,32 @@ static void homing_cycle(uint8_t cycle_mask, int8_t pos_dir, bool invert_pin, fl
 }
 
 
-void limits_go_home() 
+void limits_go_home(uint8_t axis_mask) 
 {  
   // Enable only the steppers, not the cycle. Cycle should be inactive/complete.
   st_wake_up();
   
   // Search to engage all axes limit switches at faster homing seek rate.
-  homing_cycle(HOMING_SEARCH_CYCLE_0, true, false, settings.homing_seek_rate);  // Search cycle 0
+  homing_cycle(HOMING_SEARCH_CYCLE_0&axis_mask, true, false, settings.homing_seek_rate);  // Search cycle 0
   #ifdef HOMING_SEARCH_CYCLE_1
-    homing_cycle(HOMING_SEARCH_CYCLE_1, true, false, settings.homing_seek_rate);  // Search cycle 1
+    homing_cycle(HOMING_SEARCH_CYCLE_1&axis_mask, true, false, settings.homing_seek_rate);  // Search cycle 1
   #endif
   #ifdef HOMING_SEARCH_CYCLE_2
-    homing_cycle(HOMING_SEARCH_CYCLE_2, true, false, settings.homing_seek_rate);  // Search cycle 2
+    homing_cycle(HOMING_SEARCH_CYCLE_2&axis_mask, true, false, settings.homing_seek_rate);  // Search cycle 2
   #endif
   delay_ms(settings.homing_debounce_delay); // Delay to debounce signal
     
   // Now in proximity of all limits. Carefully leave and approach switches in multiple cycles
   // to precisely hone in on the machine zero location. Moves at slower homing feed rate.
-  int8_t n_cycle = N_HOMING_LOCATE_CYCLE;
+  int8_t n_cycle = N_HOMING_LOCATE_CYCLE&axis_mask;
   while (n_cycle--) {
     // Leave all switches to release them. After cycles complete, this is machine zero.
-    homing_cycle(HOMING_LOCATE_CYCLE, false, true, settings.homing_feed_rate);
+    homing_cycle(HOMING_LOCATE_CYCLE&axis_mask, false, true, settings.homing_feed_rate);
     delay_ms(settings.homing_debounce_delay);
     
     if (n_cycle > 0) {
       // Re-approach all switches to re-engage them.
-      homing_cycle(HOMING_LOCATE_CYCLE, true, false, settings.homing_feed_rate);
+      homing_cycle(HOMING_LOCATE_CYCLE&axis_mask, true, false, settings.homing_feed_rate);
       delay_ms(settings.homing_debounce_delay);
     }
   }

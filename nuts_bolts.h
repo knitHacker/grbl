@@ -35,6 +35,9 @@
 #define X_AXIS 0 // Axis indexing value
 #define Y_AXIS 1
 #define Z_AXIS 2
+#define A_AXIS 3
+//#define B_AXIS 
+#define C_AXIS 4
 
 #define MM_PER_INCH (25.40)
 #define INCH_PER_MM (0.0393701)

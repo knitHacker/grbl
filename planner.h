@@ -21,6 +21,8 @@
 
 #ifndef planner_h
 #define planner_h
+
+#include <nuts_bolts.h>
                  
 // The number of linear motions that can be in the plan at any give time
 #ifndef BLOCK_BUFFER_SIZE
@@ -33,7 +35,8 @@ typedef struct {
 
   // Fields used by the bresenham algorithm for tracing the line
   uint8_t  direction_bits;            // The direction bit set for this block (refers to *_DIRECTION_BIT in config.h)
-  uint32_t steps_x, steps_y, steps_z; // Step count along each axis
+  //  uint32_t steps_x, steps_y, steps_z; // Step count along each axis
+  uint32_t steps[N_AXIS]; // Step count along each axis
   int32_t  step_event_count;          // The number of step events required to complete this block
 
   // Fields used by the motion planner to manage acceleration

@@ -152,8 +152,10 @@ void report_grbl_settings() {
   printPgmString(PSTR(" (z, step/mm)\r\n$3=")); printInteger(settings.pulse_microseconds);
   printPgmString(PSTR(" (step pulse, usec)\r\n$4=")); printFloat(settings.default_feed_rate);
   printPgmString(PSTR(" (default feed, mm/min)\r\n$5=")); printFloat(settings.default_seek_rate);
-  printPgmString(PSTR(" (default seek, mm/min)\r\n$6=")); printInteger(settings.invert_mask); 
-  printPgmString(PSTR(" (step port invert mask, int:")); print_uint8_base2(settings.invert_mask);  
+  printPgmString(PSTR(" (default seek, mm/min)\r\n$6=")); 
+  printInteger((((uint16_t)settings.dir_invert_mask)<<8)|settings.pulse_invert_mask); 
+  printPgmString(PSTR(" (step port invert mask, int:")); print_uint8_base2(settings.dir_invert_mask);
+  printPgmString(PSTR(" | ")); print_uint8_base2(settings.pulse_invert_mask);  
   printPgmString(PSTR(")\r\n$7=")); printInteger(settings.stepper_idle_lock_time);
   printPgmString(PSTR(" (step idle delay, msec)\r\n$8=")); printFloat(settings.acceleration/(60*60)); // Convert from mm/min^2 for human readability
   printPgmString(PSTR(" (acceleration, mm/sec^2)\r\n$9=")); printFloat(settings.junction_deviation);

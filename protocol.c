@@ -75,6 +75,7 @@ void protocol_execute_startup()
 // only the runtime command execute variable to have the main program execute these when 
 // its ready. This works exactly like the character-based runtime commands when picked off
 // directly from the incoming serial data stream.
+/*
 ISR(PINOUT_INT_vect) 
 {
   // Enter only if any pinout pin is actively low.
@@ -88,7 +89,7 @@ ISR(PINOUT_INT_vect)
     }
   }
 }
-
+*/
 // Executes run-time commands, when required. This is called from various check points in the main
 // program, primarily where there may be a while loop waiting for a buffer to clear space or any
 // point where the execution time from the last check point may be more than a fraction of a second.
@@ -224,10 +225,17 @@ uint8_t protocol_execute_line(char *line)
         }
         break;               
       case 'H' : // Perform homing cycle
+		  // 'H' alone homes all axes in HOMING_SEARCH_CYCLE order.
+		  // 'Hn' where n in [0..N_AXIS) homes only that axis.
         if (bit_istrue(settings.flags,BITFLAG_HOMING_ENABLE)) { 
           // Only perform homing if Grbl is idle or lost.
           if ( sys.state==STATE_IDLE || sys.state==STATE_ALARM ) { 
-            mc_go_home(); 
+				uint8_t axis_mask = HOMING_LOCATE_CYCLE;
+				if (line[++char_counter] != 0)
+				{
+				  axis_mask = 1<<(line[char_counter]-'0');
+				}
+            mc_go_home(axis_mask); 
             if (!sys.abort) { protocol_execute_startup(); } // Execute startup scripts after successful homing.
           } else { return(STATUS_IDLE_ERROR); }
         } else { return(STATUS_SETTING_DISABLED); }

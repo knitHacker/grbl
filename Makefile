@@ -41,6 +41,7 @@ FUSES      = -U hfuse:w:0xd2:m -U lfuse:w:0xff:m
 
 # Tune the lines below only if you know what you are doing:
 
+
 AVRDUDE = avrdude $(PROGRAMMER) -p $(DEVICE) -B 10 -F
 COMPILE = avr-gcc -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE) -I. -ffunction-sections
 
@@ -59,7 +60,7 @@ all:	grbl.hex
 # compatibility define the file type manually.
 
 .c.s:
-	$(COMPILE) -S $< -o $@
+	$(COMPILE) -S -g -fverbose-asm $< -o $@
 
 flash:	all
 	$(AVRDUDE) -U flash:w:grbl.hex:i
@@ -81,6 +82,9 @@ clean:
 main.elf: $(OBJECTS)
 	$(COMPILE) -o main.elf $(OBJECTS) -lm -Wl,--gc-sections
 
+debug.elf:$(OBJECTS)
+	$(COMPILE) -g -o debug.elf $(OBJECTS) -lm -Wl,--gc-sections
+
 grbl.hex: main.elf
 	rm -f grbl.hex
 	avr-objcopy -j .text -j .data -O ihex main.elf grbl.hex
@@ -89,8 +93,8 @@ grbl.hex: main.elf
 # EEPROM and add it to the "flash" target.
 
 # Targets for code debugging and analysis:
-disasm:	main.elf
-	avr-objdump -d main.elf
+disasm: debug.elf
+	avr-objdump -S debug.elf
 
 cpp:
 	$(COMPILE) -E main.c

@@ -361,10 +361,10 @@ void plan_buffer_line(float x, float y, float z, float feed_rate, uint8_t invert
   if (target[Z_AXIS] < pl.position[Z_AXIS]) { block->direction_bits |= (1<<Z_DIRECTION_BIT); }
   
   // Number of steps for each axis
-  block->steps_x = labs(target[X_AXIS]-pl.position[X_AXIS]);
-  block->steps_y = labs(target[Y_AXIS]-pl.position[Y_AXIS]);
-  block->steps_z = labs(target[Z_AXIS]-pl.position[Z_AXIS]);
-  block->step_event_count = max(block->steps_x, max(block->steps_y, block->steps_z));
+  block->steps[X_AXIS] = labs(target[X_AXIS]-pl.position[X_AXIS]);
+  block->steps[Y_AXIS] = labs(target[Y_AXIS]-pl.position[Y_AXIS]);
+  block->steps[Z_AXIS] = labs(target[Z_AXIS]-pl.position[Z_AXIS]);
+  block->step_event_count = max(block->steps[X_AXIS], max(block->steps[Y_AXIS], block->steps[Z_AXIS]));
 
   // Bail if this is a zero-length block
   if (block->step_event_count == 0) { return; };

@@ -212,39 +212,47 @@ void mc_dwell(float seconds)
 // Perform homing cycle to locate and set machine zero. Only '$H' executes this command.
 // NOTE: There should be no motions in the buffer and Grbl must be in an idle state before
 // executing the homing cycle. This prevents incorrect buffered plans after homing.
-void mc_go_home()
+void mc_go_home(uint8_t axis_mask)
 {
   sys.state = STATE_HOMING; // Set system state variable
   LIMIT_PCMSK &= ~LIMIT_MASK; // Disable hard limits pin change register for cycle duration
   
-  limits_go_home(); // Perform homing routine.
+  limits_go_home(axis_mask); // Perform homing routine.
 
   protocol_execute_runtime(); // Check for reset and set system abort.
   if (sys.abort) { return; } // Did not complete. Alarm state set by mc_alarm.
 
-  // The machine should now be homed and machine zero has been located. Upon completion, 
-  // reset system position and sync internal position vectors.
-  clear_vector_float(sys.position); // Set machine zero
-  sys_sync_current_position();
-  sys.state = STATE_IDLE; // Set system state to IDLE to complete motion and indicate homed.
+  // The machine should now be homed and machine zero has been located.
+  
+  //! will zero only axes which moved below.
+  
   
   // Pull-off axes (that have been homed) from limit switches before continuing motion. 
   // This provides some initial clearance off the switches and should also help prevent them 
   // from falsely tripping when hard limits are enabled.
   int8_t x_dir, y_dir, z_dir;
   x_dir = y_dir = z_dir = 0;
-  if (HOMING_LOCATE_CYCLE & (1<<X_AXIS)) { 
+  if (HOMING_LOCATE_CYCLE & axis_mask & (1<<X_AXIS)) { 
     if (settings.homing_dir_mask & (1<<X_DIRECTION_BIT)) { x_dir = 1; }
     else { x_dir = -1; }
+	 sys.position[0]=0.0;
   }
-  if (HOMING_LOCATE_CYCLE & (1<<Y_AXIS)) { 
+  if (HOMING_LOCATE_CYCLE & axis_mask & (1<<Y_AXIS)) { 
     if (settings.homing_dir_mask & (1<<Y_DIRECTION_BIT)) { y_dir = 1; }
     else { y_dir = -1; }
+	 sys.position[1]=0.0;
   }
-  if (HOMING_LOCATE_CYCLE & (1<<Z_AXIS)) { 
+  if (HOMING_LOCATE_CYCLE & axis_mask & (1<<Z_AXIS)) { 
     if (settings.homing_dir_mask & (1<<Z_DIRECTION_BIT)) { z_dir = 1; }
     else { z_dir = -1; }
+	 sys.position[2]=0.0;
   }
+
+  // Upon completion, 
+  // reset system position and sync internal position vectors. 
+  sys_sync_current_position();
+  sys.state = STATE_IDLE; // Set system state to IDLE to complete motion and indicate homed.
+
   mc_line(x_dir*settings.homing_pulloff, y_dir*settings.homing_pulloff, 
           z_dir*settings.homing_pulloff, settings.homing_seek_rate, false);
   st_cycle_start(); // Move it. Nothing should be in the buffer except this motion. 

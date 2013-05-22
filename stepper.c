@@ -35,9 +35,11 @@
 // Stepper state variable. Contains running data and trapezoid variables.
 typedef struct {
   // Used by the bresenham line algorithm
-  int32_t counter_x,        // Counter variables for the bresenham line tracer
+  /*  int32_t counter_x,        // Counter variables for the bresenham line tracer
           counter_y, 
           counter_z;
+  */
+  int32_t counter[N_AXIS];      // Counter variables for the bresenham line tracer
   uint32_t event_count;
   uint32_t step_events_completed;  // The number of step events left in current motion
 
@@ -54,7 +56,8 @@ static block_t *current_block;  // A pointer to the block currently being traced
 
 // Used by the stepper driver interrupt
 static uint8_t step_pulse_time; // Step pulse reset time after step rise
-static uint8_t out_bits;        // The next stepping-bits to be output
+static uint8_t out_bits;        // The next stepping-pulse bits to be output
+static uint8_t dir_bits;        // The next stepping-dir bits to be output
 static volatile uint8_t busy;   // True when SIG_OUTPUT_COMPARE1A is being serviced. Used to avoid retriggering that handler.
 
 #if STEP_PULSE_DELAY > 0
@@ -92,7 +95,9 @@ void st_wake_up()
   }
   if (sys.state == STATE_CYCLE) {
     // Initialize stepper output bits
-    out_bits = (0) ^ (settings.invert_mask); 
+	 out_bits = (0) ^ (settings.pulse_invert_mask);
+    dir_bits = (0) ^ (settings.dir_invert_mask); 
+	 
     // Initialize step pulse timing from settings. Here to ensure updating after re-writing.
     #ifdef STEP_PULSE_DELAY
       // Set total step pulse time after direction pin set. Ad hoc computation from oscilloscope.
@@ -140,16 +145,25 @@ inline static uint8_t iterate_trapezoid_cycle_counter()
   }
 }          
 
-// "The Stepper Driver Interrupt" - This timer interrupt is the workhorse of Grbl. It is executed at the rate set with
-// config_step_timer. It pops blocks from the block_buffer and executes them by pulsing the stepper pins appropriately. 
-// It is supported by The Stepper Port Reset Interrupt which it uses to reset the stepper port after each pulse. 
-// The bresenham line tracer algorithm controls all three stepper outputs simultaneously with these two interrupts.
+
+static uint8_t PULSE_MASK[] = {(1<<X_STEP_BIT),(1<<Y_STEP_BIT),(1<<Z_STEP_BIT)};//,(1<<A_STEP_BIT)};
+static uint8_t DIR_MASK[] = {(1<<X_DIRECTION_BIT),(1<<Y_DIRECTION_BIT),(1<<Z_DIRECTION_BIT)};//,(1<<A_DIRECTION_BIT)};
+
+
+
+// "The Stepper Driver Interrupt" - This timer interrupt is the workhorse of
+// Grbl. It is executed at the rate set with config_step_timer. It pops blocks
+// from the block_buffer and executes them by pulsing the stepper pins as needed.
+// It is supported by The Stepper Port Reset Interrupt which it uses to reset the
+// stepper port after each pulse. The bresenham line tracer algorithm controls
+// all three stepper outputs simultaneously with these two interrupts.
 ISR(TIMER1_COMPA_vect)
 {        
+  int i;
   if (busy) { return; } // The busy-flag is used to avoid reentering this interrupt
   
   // Set the direction pins a couple of nanoseconds before we step the steppers
-  STEPPING_PORT = (STEPPING_PORT & ~DIRECTION_MASK) | (out_bits & DIRECTION_MASK);
+  DIRECTION_PORT = (DIRECTION_PORT & ~DIRECTION_MASK) | (dir_bits & DIRECTION_MASK);
   // Then pulse the stepping pins
   #ifdef STEP_PULSE_DELAY
     step_bits = (STEPPING_PORT & ~STEP_MASK) | out_bits; // Store out_bits to prevent overwriting.
@@ -179,9 +193,8 @@ ISR(TIMER1_COMPA_vect)
         st.trapezoid_tick_cycle_counter = CYCLES_PER_ACCELERATION_TICK/2; // Start halfway for midpoint rule.
       }
       st.min_safe_rate = current_block->rate_delta + (current_block->rate_delta >> 1); // 1.5 x rate_delta
-      st.counter_x = -(current_block->step_event_count >> 1);
-      st.counter_y = st.counter_x;
-      st.counter_z = st.counter_x;
+		//TODO: memset?
+      st.counter[0] = st.counter[1] = st.counter[2] = -(current_block->step_event_count >> 1);
       st.event_count = current_block->step_event_count;
       st.step_events_completed = 0;     
     } else {
@@ -189,31 +202,45 @@ ISR(TIMER1_COMPA_vect)
       bit_true(sys.execute,EXEC_CYCLE_STOP); // Flag main program for cycle end
     }    
   } 
-
   if (current_block != NULL) {
     // Execute step displacement profile by bresenham line algorithm
-    out_bits = current_block->direction_bits;
+    dir_bits = current_block->direction_bits;
+	 out_bits = 0;
+
+	 /*
     st.counter_x += current_block->steps_x;
     if (st.counter_x > 0) {
       out_bits |= (1<<X_STEP_BIT);
       st.counter_x -= st.event_count;
-      if (out_bits & (1<<X_DIRECTION_BIT)) { sys.position[X_AXIS]--; }
+      if (dir_bits & (1<<X_DIRECTION_BIT)) { sys.position[X_AXIS]--; }
       else { sys.position[X_AXIS]++; }
+		//OPT?: sys.position[X_AXIS]+=((dir_bits>>(X_DIRECTION_BIT-1))&2)-1
     }
     st.counter_y += current_block->steps_y;
     if (st.counter_y > 0) {
       out_bits |= (1<<Y_STEP_BIT);
       st.counter_y -= st.event_count;
-      if (out_bits & (1<<Y_DIRECTION_BIT)) { sys.position[Y_AXIS]--; }
+      if (dir_bits & (1<<Y_DIRECTION_BIT)) { sys.position[Y_AXIS]--; }
       else { sys.position[Y_AXIS]++; }
     }
     st.counter_z += current_block->steps_z;
     if (st.counter_z > 0) {
       out_bits |= (1<<Z_STEP_BIT);
       st.counter_z -= st.event_count;
-      if (out_bits & (1<<Z_DIRECTION_BIT)) { sys.position[Z_AXIS]--; }
+      if (dir_bits & (1<<Z_DIRECTION_BIT)) { sys.position[Z_AXIS]--; }
       else { sys.position[Z_AXIS]++; }
     }
+*/
+	 for (i=0;i<N_AXIS;i++){
+		st.counter[i]+=current_block->steps[i];
+		if (st.counter[i]>0){
+		  st.counter[i]-=st.event_count;
+		  out_bits|=PULSE_MASK[i];
+		  if (dir_bits & DIR_MASK[i]) { sys.position[i]--; }
+		  else { sys.position[i]++; }
+		}
+	 }
+
     
     st.step_events_completed++; // Iterate step events
 
@@ -258,6 +285,9 @@ ISR(TIMER1_COMPA_vect)
               // Reached nominal rate a little early. Cruise at nominal rate until decelerate_after.
               st.trapezoid_adjusted_rate = current_block->nominal_rate;
             }
+				//OPT: st.trapezoid_adjusted_rate = min(
+  				//         st.trapezoid_adjusted_rate+current_block->rate_delta,
+				//         current_block->nominal_rate);
             set_step_events_per_minute(st.trapezoid_adjusted_rate);
           }
         } else if (st.step_events_completed >= current_block->decelerate_after) {
@@ -308,7 +338,7 @@ ISR(TIMER1_COMPA_vect)
       plan_discard_current_block();
     }
   }
-  out_bits ^= settings.invert_mask;  // Apply step and direction invert mask    
+  dir_bits ^= settings.dir_invert_mask;  // Apply step and direction invert mask    
   busy = false;
 }
 
@@ -321,7 +351,7 @@ ISR(TIMER1_COMPA_vect)
 ISR(TIMER2_OVF_vect)
 {
   // Reset stepping pins (leave the direction pins)
-  STEPPING_PORT = (STEPPING_PORT & ~STEP_MASK) | (settings.invert_mask & STEP_MASK); 
+  STEPPING_PORT = (STEPPING_PORT & ~STEP_MASK) | (settings.pulse_invert_mask & STEP_MASK); 
   TCCR2B = 0; // Disable Timer2 to prevent re-entering this interrupt when it's not needed. 
 }
 
@@ -350,8 +380,10 @@ void st_reset()
 void st_init()
 {
   // Configure directions of interface pins
-  STEPPING_DDR |= STEPPING_MASK;
-  STEPPING_PORT = (STEPPING_PORT & ~STEPPING_MASK) | settings.invert_mask;
+  STEPPING_DDR |= STEP_MASK;
+  STEPPING_PORT = (STEPPING_PORT & ~STEP_MASK) | settings.pulse_invert_mask;
+  DIRECTION_DDR |= DIRECTION_MASK;
+  DIRECTION_PORT = (DIRECTION_PORT & ~DIRECTION_MASK) | settings.dir_invert_mask;
   STEPPERS_DISABLE_DDR |= 1<<STEPPERS_DISABLE_BIT;
 
   // waveform generation = 0100 = CTC

@@ -77,7 +77,8 @@ void settings_reset(bool reset_all) {
     settings.default_seek_rate = DEFAULT_RAPID_FEEDRATE;
     settings.acceleration = DEFAULT_ACCELERATION;
     settings.mm_per_arc_segment = DEFAULT_MM_PER_ARC_SEGMENT;
-    settings.invert_mask = DEFAULT_STEPPING_INVERT_MASK;
+    settings.pulse_invert_mask = DEFAULT_PULSE_INVERT_MASK;
+    settings.dir_invert_mask = DEFAULT_DIR_INVERT_MASK;
     settings.junction_deviation = DEFAULT_JUNCTION_DEVIATION;
   }
   // New settings since last version
@@ -162,7 +163,10 @@ uint8_t settings_store_global_setting(int parameter, float value) {
       settings.pulse_microseconds = round(value); break;
     case 4: settings.default_feed_rate = value; break;
     case 5: settings.default_seek_rate = value; break;
-    case 6: settings.invert_mask = trunc(value); break;
+    case 6: //low 8 bits are for step port, high 8 bits are for direction port
+		settings.pulse_invert_mask = ((uint8_t)trunc(value))&0xFF; 
+		settings.dir_invert_mask = (((uint16_t)trunc(value))>>8)&0xFF; 
+		break;
     case 7: settings.stepper_idle_lock_time = round(value); break;
     case 8: settings.acceleration = value*60*60; break; // Convert to mm/min^2 for grbl internal use.
     case 9: settings.junction_deviation = fabs(value); break;
