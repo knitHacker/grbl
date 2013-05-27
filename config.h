@@ -22,6 +22,7 @@
 #ifndef config_h
 #define config_h
 
+
 // IMPORTANT: Any changes here requires a full re-compiling of the source code to propagate them.
 
 // Default settings. Used when resetting EEPROM. Change to desired name in defaults.h
@@ -37,82 +38,94 @@
 #define X_STEP_BIT         2  // Uno Digital Pin 2
 #define Y_STEP_BIT         3  // Uno Digital Pin 3
 #define Z_STEP_BIT         4  // Uno Digital Pin 4
-#define STEP_MASK ((1<<X_STEP_BIT)|(1<<Y_STEP_BIT)|(1<<Z_STEP_BIT)) // All step bits
+#define A_STEP_BIT         5  // Uno Digital Pin 5
+#define B_STEP_BIT         6  // Uno Digital Pin 6
 
+// All step bits
+//#define STEP_MASK ((1<<X_STEP_BIT)|(1<<Y_STEP_BIT)|(1<<Z_STEP_BIT)|(1<<A_STEP_BIT)|(1<<B_STEP_BIT)) 
+#define STEP_MASK ((1<<X_STEP_BIT)|(1<<Y_STEP_BIT)|(1<<A_STEP_BIT)|(1<<B_STEP_BIT)) 
+extern const uint8_t AXIS_STEP_MASK[];
 
 // NOTE: All direction bits must be on the same port.
-/*
-#define DIRECTION_DDR       DDRD
-#define DIRECTION_PORT      PORTD
-#define X_DIRECTION_BIT    5  // Uno Digital Pin 5
-#define Y_DIRECTION_BIT    6  // Uno Digital Pin 6
-#define Z_DIRECTION_BIT    7  // Uno Digital Pin 7
-*/
 #define DIRECTION_DDR       DDRB
 #define DIRECTION_PORT      PORTB
 #define X_DIRECTION_BIT    0  // Uno Digital Pin 8
 #define Y_DIRECTION_BIT    1  // Uno Digital Pin 9
-#define Z_DIRECTION_BIT    3  // Uno Digital Pin 11
-#define A_DIRECTION_BIT    2  // Uno Digital Pin 10
-#define DIRECTION_MASK ((1<<X_DIRECTION_BIT)|(1<<Y_DIRECTION_BIT)|(1<<Z_DIRECTION_BIT)) // All direction bits
+#define Z_DIRECTION_BIT    2  // Uno Digital Pin 10
+#define A_DIRECTION_BIT    3  // Uno Digital Pin 11
+#define B_DIRECTION_BIT    4  // Uno Digital Pin 12
+//#define DIRECTION_MASK ((1<<X_DIRECTION_BIT)|(1<<Y_DIRECTION_BIT)|(1<<Z_DIRECTION_BIT)|(1<<A_DIRECTION_BIT)|(1<<B_ DIRECTION_BIT)) // All direction bits
+#define DIRECTION_MASK ((1<<X_DIRECTION_BIT)|(1<<Y_DIRECTION_BIT)|(1<<A_DIRECTION_BIT)|(1<<B_DIRECTION_BIT)) // All direction bits
 
-#define STEPPERS_DISABLE_DDR    DDRD
-#define STEPPERS_DISABLE_PORT   PORTD
-#define STEPPERS_DISABLE_BIT    7  // Uno Digital Pin 
-#define STEPPERS_DISABLE_MASK (1<<STEPPERS_DISABLE_BIT)
+extern const uint8_t AXIS_DIR_MASK[];
+
+
+#ifdef ENABLE_DISABLE
+  #define STEPPERS_DISABLE_DDR    DDRD
+  #define STEPPERS_DISABLE_PORT   PORTD
+  #define STEPPERS_DISABLE_BIT    7  // Uno Digital Pin 
+  #define STEPPERS_DISABLE_MASK (1<<STEPPERS_DISABLE_BIT)
+#endif
 
 // NOTE: All limit bit pins must be on the same port
-/*
-#define LIMIT_DDR       DDRB
-#define LIMIT_PIN       PINB
-#define LIMIT_PORT      PORTB
-#define X_LIMIT_BIT     1  // Uno Digital Pin 9
-#define Y_LIMIT_BIT     2  // Uno Digital Pin 10
-#define Z_LIMIT_BIT     3  // Uno Digital Pin 11
-*/
 #define LIMIT_DDR       DDRC
 #define LIMIT_PIN       PINC
 #define LIMIT_PORT      PORTC
 #define X_LIMIT_BIT     0  // Uno Analog Pin 0
 #define Y_LIMIT_BIT     1  // Uno Analog Pin 1
 #define Z_LIMIT_BIT     2  // Uno Analog Pin 2
+#define A_LIMIT_BIT     3  // Uno Analog Pin 3
+#define B_LIMIT_BIT     4  // Uno Analog Pin 4
 #define LIMIT_INT       PCIE1  // Pin change interrupt enable pin
 #define LIMIT_INT_vect  PCINT1_vect 
 #define LIMIT_PCMSK     PCMSK1 // Pin change interrupt register
-#define LIMIT_MASK ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<Z_LIMIT_BIT)) // All limit bits
+//#define LIMIT_MASK ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<Z_LIMIT_BIT)|(1<<A_LIMIT_BIT)|(1<<B_LIMIT_BIT)) // All limit bits
+#define LIMIT_MASK ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<A_LIMIT_BIT)|(1<<B_LIMIT_BIT)) // All limit bits
 
-#define SPINDLE_ENABLE_DDR   DDRB
-#define SPINDLE_ENABLE_PORT  PORTB
-#define SPINDLE_ENABLE_BIT   4  // Uno Digital Pin 12
+extern const uint8_t AXIS_LIMIT_MASK[];
 
-#define SPINDLE_DIRECTION_DDR   DDRB
-#define SPINDLE_DIRECTION_PORT  PORTB
-#define SPINDLE_DIRECTION_BIT   5  // Uno Digital Pin 13 (NOTE: D13 can't be pulled-high input due to LED.)
+// #define ENABLE_M345
+#ifdef ENABLE_M3
+  #define SPINDLE_ENABLE_DDR   DDRD
+  #define SPINDLE_ENABLE_PORT  PORTD
+  #define SPINDLE_ENABLE_BIT   7  // Uno Digital Pin 13 (NOTE: D13 can't be pulled-high input due to LED.)
+  
+  #ifdef ENABLE_M4
+    #define SPINDLE_DIRECTION_DDR   DDRB
+  #else
+    #define SPINDLE_DIRECTION_DDR   dummy_port
+  #endif
+    #define SPINDLE_DIRECTION_PORT  PORTB
+    #define SPINDLE_DIRECTION_BIT   5  // Uno Digital Pin 13 
+#endif
 
+#ifdef ENABLE_M8
 #define COOLANT_FLOOD_DDR   DDRD
 #define COOLANT_FLOOD_PORT  PORTD
 #define COOLANT_FLOOD_BIT   7  // Uno Digital Pin 7
-
+#endif
 // NOTE: Uno analog pins 4 and 5 are reserved for an i2c interface, and may be installed at
 // a later date if flash and memory space allows.
 // #define ENABLE_M7  // Mist coolant disabled by default. Uncomment to enable.
 #ifdef ENABLE_M7
-  #define COOLANT_MIST_DDR   DDRC
-  #define COOLANT_MIST_PORT  PORTC
-  #define COOLANT_MIST_BIT   4 // Uno Analog Pin 4
+  #define COOLANT_MIST_DDR   DDRB
+  #define COOLANT_MIST_PORT  PORTB
+  #define COOLANT_MIST_BIT   5 // Uno Digital Pin 13
 #endif  
 
 // NOTE: All pinouts pins must be on the same port
 #define PINOUT_DDR       DDRC
 #define PINOUT_PIN       PINC
 #define PINOUT_PORT      PORTC
-#define PIN_RESET        3  // Uno Analog Pin 3
-#define PIN_FEED_HOLD    3  // Uno Analog Pin 4
-#define PIN_CYCLE_START  3  // Uno Analog Pin 2
+//With 5 axes with limits, only one of these can be defined
+#define PIN_RESET        5  // Uno Analog Pin 5
+//#define PIN_FEED_HOLD    5  // Uno Analog Pin 5 
+//#define PIN_CYCLE_START  5  // Uno Analog Pin 5
 #define PINOUT_INT       PCIE1  // Pin change interrupt enable pin
 #define PINOUT_INT_vect  PCINT1_vect
 #define PINOUT_PCMSK     PCMSK1 // Pin change interrupt register
-#define PINOUT_MASK ((1<<PIN_RESET)|(1<<PIN_FEED_HOLD)|(1<<PIN_CYCLE_START))
+//#define PINOUT_MASK ((1<<PIN_RESET)|(1<<PIN_FEED_HOLD)|(1<<PIN_CYCLE_START))
+#define PINOUT_MASK ((1<<PIN_RESET))
 
 // Define runtime command special characters. These characters are 'picked-off' directly from the
 // serial read data stream and are not passed to the grbl line execution parser. Select characters
@@ -175,11 +188,11 @@
 // in on machine zero, followed by a pull-off maneuver. HOMING_LOCATE_CYCLE governs these final moves,
 // and this mask must contain all axes in the search.
 // NOTE: Later versions may have this installed in settings.
-#define HOMING_SEARCH_CYCLE_0 (1<<Z_AXIS)                // First move Z to clear workspace.
+#define HOMING_SEARCH_CYCLE_0 (1<<X_AXIS)                // First move Z to clear workspace.
 //#define HOMING_SEARCH_CYCLE_1 ((1<<X_AXIS)|(1<<Y_AXIS))  // Then move X,Y at the same time.
 // #define HOMING_SEARCH_CYCLE_2                         // Uncomment and add axes mask to enable
 //#define HOMING_LOCATE_CYCLE   ((1<<X_AXIS)|(1<<Y_AXIS)|(1<<Z_AXIS)) // Must contain ALL search axes
-#define HOMING_LOCATE_CYCLE   ((1<<Z_AXIS)) // Must contain ALL search axes
+#define HOMING_LOCATE_CYCLE   ((1<<X_AXIS)) // Must contain ALL search axes
 
 // Number of homing cycles performed after when the machine initially jogs to limit switches.
 // This help in preventing overshoot and should improve repeatability. This value should be one or 

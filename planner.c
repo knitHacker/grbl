@@ -38,10 +38,10 @@ static uint8_t next_buffer_head;                 // Index of the next buffer hea
 
 // Define planner variables
 typedef struct {
-  int32_t position[3];             // The planner position of the tool in absolute steps. Kept separate
+  int32_t position[N_AXIS];             // The planner position of the tool in absolute steps. Kept separate
                                    // from g-code position for movements requiring multiple line motions,
                                    // i.e. arcs, canned cycles, and backlash compensation.
-  float previous_unit_vec[3];     // Unit vector of previous path line segment
+  float previous_unit_vec[N_AXIS];     // Unit vector of previous path line segment
   float previous_nominal_speed;   // Nominal speed of previous path line segment
 } planner_t;
 static planner_t pl;
@@ -343,39 +343,35 @@ void plan_synchronize()
 // All position data passed to the planner must be in terms of machine position to keep the planner 
 // independent of any coordinate system changes and offsets, which are handled by the g-code parser.
 // NOTE: Assumes buffer is available. Buffer checks are handled at a higher level by motion_control.
-void plan_buffer_line(float x, float y, float z, float feed_rate, uint8_t invert_feed_rate) 
+void plan_buffer_line(float* axes, float feed_rate, uint8_t invert_feed_rate) 
 {
   // Prepare to set up new block
   block_t *block = &block_buffer[block_buffer_head];
 
-  // Calculate target position in absolute steps
-  int32_t target[3];
-  target[X_AXIS] = lround(x*settings.steps_per_mm[X_AXIS]);
-  target[Y_AXIS] = lround(y*settings.steps_per_mm[Y_AXIS]);
-  target[Z_AXIS] = lround(z*settings.steps_per_mm[Z_AXIS]);     
-
-  // Compute direction bits for this block
+  int32_t target[N_AXIS];
+  int i;
   block->direction_bits = 0;
-  if (target[X_AXIS] < pl.position[X_AXIS]) { block->direction_bits |= (1<<X_DIRECTION_BIT); }
-  if (target[Y_AXIS] < pl.position[Y_AXIS]) { block->direction_bits |= (1<<Y_DIRECTION_BIT); }
-  if (target[Z_AXIS] < pl.position[Z_AXIS]) { block->direction_bits |= (1<<Z_DIRECTION_BIT); }
-  
-  // Number of steps for each axis
-  block->steps[X_AXIS] = labs(target[X_AXIS]-pl.position[X_AXIS]);
-  block->steps[Y_AXIS] = labs(target[Y_AXIS]-pl.position[Y_AXIS]);
-  block->steps[Z_AXIS] = labs(target[Z_AXIS]-pl.position[Z_AXIS]);
-  block->step_event_count = max(block->steps[X_AXIS], max(block->steps[Y_AXIS], block->steps[Z_AXIS]));
-
+  block->step_event_count = 0;
+  EACH_AXIS(i){
+	 // Calculate target position in absolute steps
+	 target[i] = lround(axes[i]*settings.steps_per_mm[i]);
+	 // Compute direction bits for this block
+	 if (target[i] < pl.position[i]) { block->direction_bits |= AXIS_DIR_MASK[i];}
+	 // Number of steps for each axis
+	 block->steps[i] = labs(target[i]-pl.position[i]);
+	 block->step_event_count = max(block->steps[i],block->step_event_count);
+  }
   // Bail if this is a zero-length block
   if (block->step_event_count == 0) { return; };
   
   // Compute path vector in terms of absolute step target and current positions
-  float delta_mm[3];
-  delta_mm[X_AXIS] = (target[X_AXIS]-pl.position[X_AXIS])/settings.steps_per_mm[X_AXIS];
-  delta_mm[Y_AXIS] = (target[Y_AXIS]-pl.position[Y_AXIS])/settings.steps_per_mm[Y_AXIS];
-  delta_mm[Z_AXIS] = (target[Z_AXIS]-pl.position[Z_AXIS])/settings.steps_per_mm[Z_AXIS];
-  block->millimeters = sqrt(delta_mm[X_AXIS]*delta_mm[X_AXIS] + delta_mm[Y_AXIS]*delta_mm[Y_AXIS] + 
-                            delta_mm[Z_AXIS]*delta_mm[Z_AXIS]);
+  float delta_mm[N_AXIS];
+  float sum_mm = 0;
+  EACH_AXIS(i){
+	 delta_mm[i] = (target[i]-pl.position[i])/settings.steps_per_mm[i];
+	 sum_mm += (delta_mm[i]*delta_mm[i]);
+  }
+  block->millimeters = sqrt(sum_mm);
   float inverse_millimeters = 1.0/block->millimeters;  // Inverse millimeters to remove multiple divides	
   
   // Calculate speed in mm/minute for each axis. No divide by zero due to previous checks.
@@ -400,11 +396,10 @@ void plan_buffer_line(float x, float y, float z, float feed_rate, uint8_t invert
         settings.acceleration / (60 * ACCELERATION_TICKS_PER_SECOND )); // (step/min/acceleration_tick)
 
   // Compute path unit vector                            
-  float unit_vec[3];
-
-  unit_vec[X_AXIS] = delta_mm[X_AXIS]*inverse_millimeters;
-  unit_vec[Y_AXIS] = delta_mm[Y_AXIS]*inverse_millimeters;
-  unit_vec[Z_AXIS] = delta_mm[Z_AXIS]*inverse_millimeters;  
+  float unit_vec[N_AXIS];
+  EACH_AXIS(i){
+	 unit_vec[i] = delta_mm[i]*inverse_millimeters;
+  }
 
   // Compute maximum allowable entry speed at junction by centripetal acceleration approximation.
   // Let a circle be tangent to both previous and current path line segments, where the junction 
@@ -427,9 +422,8 @@ void plan_buffer_line(float x, float y, float z, float feed_rate, uint8_t invert
   if ((block_buffer_head != block_buffer_tail) && (pl.previous_nominal_speed > 0.0)) {
     // Compute cosine of angle between previous and current path. (prev_unit_vec is negative)
     // NOTE: Max junction velocity is computed without sin() or acos() by trig half angle identity.
-    float cos_theta = - pl.previous_unit_vec[X_AXIS] * unit_vec[X_AXIS] 
-                       - pl.previous_unit_vec[Y_AXIS] * unit_vec[Y_AXIS] 
-                       - pl.previous_unit_vec[Z_AXIS] * unit_vec[Z_AXIS] ;
+    float cos_theta = 0;
+	 EACH_AXIS(i){ cos_theta -= pl.previous_unit_vec[i] * unit_vec[i]; }
                          
     // Skip and use default max junction speed for 0 degree acute junction.
     if (cos_theta < 0.95) {
@@ -476,11 +470,10 @@ void plan_buffer_line(float x, float y, float z, float feed_rate, uint8_t invert
 }
 
 // Reset the planner position vector (in steps). Called by the system abort routine.
-void plan_set_current_position(int32_t x, int32_t y, int32_t z)
+void plan_set_current_position(int32_t* pos)
 {
-  pl.position[X_AXIS] = x;
-  pl.position[Y_AXIS] = y;
-  pl.position[Z_AXIS] = z;
+  int i;
+  EACH_AXIS(i){ pl.position[i]=pos[i];}
 }
 
 // Re-initialize buffer plan with a partially completed block, assumed to exist at the buffer tail.

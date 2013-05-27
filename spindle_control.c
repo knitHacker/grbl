@@ -23,6 +23,8 @@
 #include "spindle_control.h"
 #include "planner.h"
 
+
+#ifdef ENABLE_M3
 static uint8_t current_direction;
 
 void spindle_init()
@@ -55,3 +57,15 @@ void spindle_run(int8_t direction) //, uint16_t rpm)
     current_direction = direction;
   }
 }
+
+#else  //dummy functions if no spindle at all
+void spindle_init()
+{
+}
+void spindle_stop()
+{
+}
+void spindle_run(int8_t direction)
+{} 
+
+#endif

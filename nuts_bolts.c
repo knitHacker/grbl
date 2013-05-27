@@ -27,6 +27,9 @@
 #define MAX_INT_DIGITS 8 // Maximum number of digits in int32 (and float)
 extern float __floatunsisf (unsigned long);
 
+
+uint8_t dummy_port;  //A place to dump unused bits
+
 // Extracts a floating point value from a string. The following code is based loosely on
 // the avr-libc strtod() function by Michael Stumpf and Dmitry Xmelkov and many freely
 // available conversion method examples, but has been highly optimized for Grbl. For known
@@ -143,6 +146,6 @@ void delay_us(uint32_t us)
 // Syncs all internal position vectors to the current system position.
 void sys_sync_current_position()
 {
-  plan_set_current_position(sys.position[X_AXIS],sys.position[Y_AXIS],sys.position[Z_AXIS]);
-  gc_set_current_position(sys.position[X_AXIS],sys.position[Y_AXIS],sys.position[Z_AXIS]);
+  plan_set_current_position(sys.position);
+  gc_set_current_position(sys.position);
 }

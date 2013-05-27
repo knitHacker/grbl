@@ -31,13 +31,16 @@
 #define false 0
 #define true 1
 
-#define N_AXIS 3 // Number of axes
+#define N_AXIS 5 // Number of axes
 #define X_AXIS 0 // Axis indexing value
 #define Y_AXIS 1
 #define Z_AXIS 2
 #define A_AXIS 3
-//#define B_AXIS 
-#define C_AXIS 4
+#define B_AXIS 4
+
+#define EACH_AXIS(idx) for(idx=0;idx<N_AXIS;idx++)
+
+#define N_COORDS  3   //only first 3 axes get coordinate transforms
 
 #define MM_PER_INCH (25.40)
 #define INCH_PER_MM (0.0393701)

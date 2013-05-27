@@ -173,7 +173,9 @@ void report_grbl_settings() {
   printPgmString(PSTR(" (homing feed, mm/min)\r\n$20=")); printFloat(settings.homing_seek_rate);
   printPgmString(PSTR(" (homing seek, mm/min)\r\n$21=")); printInteger(settings.homing_debounce_delay);
   printPgmString(PSTR(" (homing debounce, msec)\r\n$22=")); printFloat(settings.homing_pulloff);
-  printPgmString(PSTR(" (homing pull-off, mm)\r\n")); 
+  printPgmString(PSTR(" (homing pull-off, mm)\r\n$23="));  printFloat(settings.steps_per_mm[A_AXIS]);
+  printPgmString(PSTR(" (a, step/mm)\r\n$24=")); printFloat(settings.steps_per_mm[B_AXIS]);
+  printPgmString(PSTR(" (b, step/mm)\r\n"));
 }
 
 
@@ -200,16 +202,14 @@ void report_gcode_parameters()
       // case 8: printPgmString(PSTR("92:")); break; // G92.2, G92.3 not supported. Hence not stored.  
     }           
     for (i=0; i<N_AXIS; i++) {
-      if (bit_istrue(settings.flags,BITFLAG_REPORT_INCHES)) { printFloat(coord_data[i]*INCH_PER_MM); }
-      else { printFloat(coord_data[i]); }
+      printFloat(coord_data[i]*report_distance_conversion); 
       if (i < (N_AXIS-1)) { printPgmString(PSTR(",")); }
       else { printPgmString(PSTR("]\r\n")); }
     } 
   }
   printPgmString(PSTR("[G92:")); // Print G92,G92.1 which are not persistent in memory
   for (i=0; i<N_AXIS; i++) {
-    if (bit_istrue(settings.flags,BITFLAG_REPORT_INCHES)) { printFloat(gc.coord_offset[i]*INCH_PER_MM); }
-    else { printFloat(gc.coord_offset[i]); }
+    printFloat(gc.coord_offset[i]*report_distance_conversion);
     if (i < (N_AXIS-1)) { printPgmString(PSTR(",")); }
     else { printPgmString(PSTR("]\r\n")); }
   } 
@@ -287,6 +287,7 @@ void report_startup_line(uint8_t n, char *line)
  // specific needs, but the desired real-time data report must be as short as possible. This is
  // requires as it minimizes the computational overhead and allows grbl to keep running smoothly, 
  // especially during g-code programs with fast, short line segments and high frequency reports (5-20Hz).
+#define P_AXIS 3 //N_AXIS
 void report_realtime_status()
 {
   // **Under construction** Bare-bones status report. Provides real-time machine position relative to 
@@ -294,9 +295,9 @@ void report_realtime_status()
   // to be added are distance to go on block, processed block id, and feed rate. Also a settings bitmask
   // for a user to select the desired real-time data.
   uint8_t i;
-  int32_t current_position[3]; // Copy current state of the system position variable
+  int32_t current_position[P_AXIS]; // Copy current state of the system position variable
   memcpy(current_position,sys.position,sizeof(sys.position));
-  float print_position[3];
+  float print_position[P_AXIS];
  
   // Report current machine state
   switch (sys.state) {
@@ -312,24 +313,20 @@ void report_realtime_status()
  
   // Report machine position
   printPgmString(PSTR(",MPos:")); 
-  for (i=0; i<= 2; i++) {
+  for (i=0; i< P_AXIS; i++) {
     print_position[i] = current_position[i]/settings.steps_per_mm[i];
-    if (bit_istrue(settings.flags,BITFLAG_REPORT_INCHES)) { print_position[i] *= INCH_PER_MM; }
-    printFloat(print_position[i]);
+    printFloat(print_position[i]*report_distance_conversion);
     printPgmString(PSTR(","));
   }
   
-  // Report work position
+  /*  // Report work position
   printPgmString(PSTR("WPos:")); 
-  for (i=0; i<= 2; i++) {
-    if (bit_istrue(settings.flags,BITFLAG_REPORT_INCHES)) {
-      print_position[i] -= (gc.coord_system[i]+gc.coord_offset[i])*INCH_PER_MM;
-    } else {
-      print_position[i] -= gc.coord_system[i]+gc.coord_offset[i];
-    }
+  for (i=0; i<= N_AXIS; i++) {
+    print_position[i] -= (gc.coord_system[i]+gc.coord_offset[i])*report_distance_conversion;
     printFloat(print_position[i]);
-    if (i < 2) { printPgmString(PSTR(",")); }
+    if (i < N_AXIS-1) { printPgmString(PSTR(",")); }
   }
+  */
     
   printPgmString(PSTR(">\r\n"));
 }

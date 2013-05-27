@@ -29,7 +29,7 @@
 
 // Version of the EEPROM data. Will be used to migrate existing data from older versions of Grbl
 // when firmware is upgraded. Always stored in byte 0 of eeprom
-#define SETTINGS_VERSION 5
+#define SETTINGS_VERSION 6
 
 // Define bit flag masks for the boolean settings in settings.flag.
 #define BITFLAG_REPORT_INCHES      bit(0)
@@ -54,9 +54,12 @@
 #define SETTING_INDEX_G30    N_COORDINATE_SYSTEM+1  // Home position 2
 // #define SETTING_INDEX_G92    N_COORDINATE_SYSTEM+2  // Coordinate offset (G92.2,G92.3 not supported)
 
+#define clear_coord_vector(a) memset(a, 0.0, sizeof(float)*N_COORDS)
+
+
 // Global persistent settings (Stored from byte EEPROM_ADDR_GLOBAL onwards)
 typedef struct {
-  float steps_per_mm[3];
+  float steps_per_mm[N_AXIS];
   uint8_t microsteps;
   uint8_t pulse_microseconds;
   float default_feed_rate;
@@ -78,9 +81,13 @@ typedef struct {
 //  uint8_t status_report_mask; // Mask to indicate desired report data.
 } settings_t;
 extern settings_t settings;
+extern float report_distance_conversion;
 
 // Initialize the configuration subsystem (load settings from EEPROM)
 void settings_init();
+
+// Reset settings to hardcoded defaults
+void settings_reset(bool reset_all);
 
 // A helper method to set new settings from command line
 uint8_t settings_store_global_setting(int parameter, float value);

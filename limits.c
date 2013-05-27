@@ -96,22 +96,18 @@ static void homing_cycle(uint8_t cycle_mask, int8_t pos_dir, bool invert_pin, fl
   // and speedy homing routine.
   // NOTE: For each axes enabled, the following calculations assume they physically move 
   // an equal distance over each time step until they hit a limit switch, aka dogleg.
-  uint32_t steps[3];
+  uint32_t steps[N_AXIS];
   uint8_t dist = 0;
   clear_vector(steps);
-  if (cycle_mask & (1<<X_AXIS)) { 
-    dist++;
-    steps[X_AXIS] = lround(settings.steps_per_mm[X_AXIS]); 
+  uint32_t step_event_count = 0;
+  int i;
+  EACH_AXIS(i){
+	 if (cycle_mask & (1<<i)) { 
+		dist++;
+		steps[i] = lround(settings.steps_per_mm[i]); 
+		step_event_count = max(steps[i],step_event_count);
+	 }
   }
-  if (cycle_mask & (1<<Y_AXIS)) { 
-    dist++;
-    steps[Y_AXIS] = lround(settings.steps_per_mm[Y_AXIS]); 
-  }
-  if (cycle_mask & (1<<Z_AXIS)) {
-    dist++;
-    steps[Z_AXIS] = lround(settings.steps_per_mm[Z_AXIS]);
-  }
-  uint32_t step_event_count = max(steps[X_AXIS], max(steps[Y_AXIS], steps[Z_AXIS]));  
   
   // To ensure global acceleration is not exceeded, reduce the governing axes nominal rate
   // by adjusting the actual axes distance traveled per step. This is the same procedure
@@ -142,9 +138,8 @@ static void homing_cycle(uint8_t cycle_mask, int8_t pos_dir, bool invert_pin, fl
   if (!pos_dir) { out_bits0 ^= DIRECTION_MASK; }   // Invert bits, if negative dir.
   
   // Initialize stepping variables
-  int32_t counter_x = -(step_event_count >> 1); // Bresenham counters
-  int32_t counter_y = counter_x;
-  int32_t counter_z = counter_x;
+  int32_t counter[N_AXIS];
+  EACH_AXIS(i){ counter[i] = -(step_event_count >> 1);} // Bresenham counters
   uint32_t step_delay = dt-settings.pulse_microseconds;  // Step delay after pulse
   uint32_t step_rate = 0;  // Tracks step rate. Initialized from 0 rate. (in step/min)
   uint32_t trap_counter = MICROSECONDS_PER_ACCELERATION_TICK/2; // Acceleration trapezoid counter
@@ -161,31 +156,16 @@ static void homing_cycle(uint8_t cycle_mask, int8_t pos_dir, bool invert_pin, fl
     
     // Set step pins by Bresenham line algorithm. If limit switch reached, disable and
     // flag for completion.
-    if (cycle_mask & (1<<X_AXIS)) {
-      counter_x += steps[X_AXIS];
-      if (counter_x > 0) {
-        if (limit_state & (1<<X_LIMIT_BIT)) { out_bits ^= (1<<X_STEP_BIT); }
-        else { cycle_mask &= ~(1<<X_AXIS); }
-        counter_x -= step_event_count;
-      }
+	 EACH_AXIS(i){
+		if (cycle_mask & (1<<i)) {
+		  counter[i] += steps[i];
+		  if (counter[i] > 0) {
+			 if (limit_state & AXIS_LIMIT_MASK[i]) { out_bits ^= AXIS_STEP_MASK[i]; }
+			 else { cycle_mask &= ~(1<<i); }
+			 counter[i] -= step_event_count;
+		  }
+		}
     }
-    if (cycle_mask & (1<<Y_AXIS)) {
-      counter_y += steps[Y_AXIS];
-      if (counter_y > 0) {
-        if (limit_state & (1<<Y_LIMIT_BIT)) { out_bits ^= (1<<Y_STEP_BIT); }
-        else { cycle_mask &= ~(1<<Y_AXIS); }
-        counter_y -= step_event_count;
-      }
-    }
-    if (cycle_mask & (1<<Z_AXIS)) {
-      counter_z += steps[Z_AXIS];
-      if (counter_z > 0) {
-        if (limit_state & (1<<Z_LIMIT_BIT)) { out_bits ^= (1<<Z_STEP_BIT); }
-        else { cycle_mask &= ~(1<<Z_AXIS); }
-        counter_z -= step_event_count;
-      }
-    }        
-    
     // Check if we are done or for system abort
     if (!(cycle_mask) || (sys.execute & EXEC_RESET)) { return; }
         

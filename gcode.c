@@ -64,11 +64,10 @@ void gc_init()
 
 // Sets g-code parser position in mm. Input in steps. Called by the system abort and hard
 // limit pull-off routines.
-void gc_set_current_position(int32_t x, int32_t y, int32_t z) 
+void gc_set_current_position(int32_t* pos)
 {
-  gc.position[X_AXIS] = x/settings.steps_per_mm[X_AXIS];
-  gc.position[Y_AXIS] = y/settings.steps_per_mm[Y_AXIS];
-  gc.position[Z_AXIS] = z/settings.steps_per_mm[Z_AXIS]; 
+  int i;
+  EACH_AXIS(i){gc.position[i]= pos[i]/settings.steps_per_mm[i];}
 }
 
 static float to_millimeters(float value) 
@@ -99,7 +98,7 @@ uint8_t gc_execute_line(char *line)
   uint8_t absolute_override = false; // true(1) = absolute motion for this block only {G53}
   uint8_t non_modal_action = NON_MODAL_NONE; // Tracks the actions of modal group 0 (non-modal)
   
-  float target[3], offset[3];  
+  float target[N_AXIS], offset[N_AXIS];  
   clear_vector(target); // XYZ(ABC) axes parameters.
   clear_vector(offset); // IJK Arc offsets are incremental. Value of zero indicates no change.
     
@@ -235,6 +234,8 @@ uint8_t gc_execute_line(char *line)
       case 'X': target[X_AXIS] = to_millimeters(value); bit_true(axis_words,bit(X_AXIS)); break;
       case 'Y': target[Y_AXIS] = to_millimeters(value); bit_true(axis_words,bit(Y_AXIS)); break;
       case 'Z': target[Z_AXIS] = to_millimeters(value); bit_true(axis_words,bit(Z_AXIS)); break;
+      case 'A': target[A_AXIS] = to_millimeters(value); bit_true(axis_words,bit(A_AXIS)); break;
+      case 'B': target[B_AXIS] = to_millimeters(value); bit_true(axis_words,bit(B_AXIS)); break;
       default: FAIL(STATUS_UNSUPPORTED_STATEMENT);
     }
   }
@@ -263,7 +264,7 @@ uint8_t gc_execute_line(char *line)
   
   // [G54,G55,...,G59]: Coordinate system selection
   if ( bit_istrue(modal_group_words,bit(MODAL_GROUP_12)) ) { // Check if called in block
-    float coord_data[N_AXIS];
+    float coord_data[N_COORDS];
     if (!(settings_read_coord_data(gc.coord_select,coord_data))) { return(STATUS_SETTING_READ_FAIL); } 
     memcpy(gc.coord_system,coord_data,sizeof(coord_data));
   }
@@ -289,11 +290,11 @@ uint8_t gc_execute_line(char *line)
       } else {
         if (int_value > 0) { int_value--; } // Adjust P1-P6 index to EEPROM coordinate data indexing.
         else { int_value = gc.coord_select; } // Index P0 as the active coordinate system
-        float coord_data[N_AXIS];
+        float coord_data[N_COORDS];
         if (!settings_read_coord_data(int_value,coord_data)) { return(STATUS_SETTING_READ_FAIL); }
         uint8_t i;
         // Update axes defined only in block. Always in machine coordinates. Can change non-active system.
-        for (i=0; i<N_AXIS; i++) { // Axes indices are consistent, so loop may be used.
+        for (i=0; i<N_COORDS; i++) { // Axes indices are consistent, so loop may be used.
           if (bit_istrue(axis_words,bit(i)) ) {
             if (l == 20) {
               coord_data[i] = gc.position[i]-target[i]; // L20: Update axis current position to target
@@ -317,7 +318,9 @@ uint8_t gc_execute_line(char *line)
         for (i=0; i<N_AXIS; i++) { // Axes indices are consistent, so loop may be used.
           if ( bit_istrue(axis_words,bit(i)) ) {
             if (gc.absolute_mode) {
-              target[i] += gc.coord_system[i] + gc.coord_offset[i];
+				  if (i<N_COORDS){
+					 target[i] += gc.coord_system[i] + gc.coord_offset[i];
+				  }
             } else {
               target[i] += gc.position[i];
             }
@@ -325,17 +328,17 @@ uint8_t gc_execute_line(char *line)
             target[i] = gc.position[i];
           }
         }
-        mc_line(target[X_AXIS], target[Y_AXIS], target[Z_AXIS], settings.default_seek_rate, false);
+        mc_line(target, settings.default_seek_rate, false);
       }
       // Retreive G28/30 go-home position data (in machine coordinates) from EEPROM
-      float coord_data[N_AXIS];
+      float coord_data[N_COORDS];
       if (non_modal_action == NON_MODAL_GO_HOME_1) { 
         if (!settings_read_coord_data(SETTING_INDEX_G30 ,coord_data)) { return(STATUS_SETTING_READ_FAIL); }     
       } else {
         if (!settings_read_coord_data(SETTING_INDEX_G28 ,coord_data)) { return(STATUS_SETTING_READ_FAIL); }     
       }      
-      mc_line(coord_data[X_AXIS], coord_data[Y_AXIS], coord_data[Z_AXIS], settings.default_seek_rate, false); 
       memcpy(gc.position, coord_data, sizeof(coord_data)); // gc.position[] = coord_data[];
+      mc_line(gc.position, settings.default_seek_rate, false); 
       axis_words = 0; // Axis words used. Lock out from motion modes by clearing flags.
       break;
     case NON_MODAL_SET_HOME_0: case NON_MODAL_SET_HOME_1:
@@ -352,7 +355,7 @@ uint8_t gc_execute_line(char *line)
         // Update axes defined only in block. Offsets current system to defined value. Does not update when
         // active coordinate system is selected, but is still active unless G92.1 disables it. 
         uint8_t i;
-        for (i=0; i<=2; i++) { // Axes indices are consistent, so loop may be used.
+        for (i=0; i<N_COORDS; i++) { // Axes indices are consistent, so loop may be used.
           if (bit_istrue(axis_words,bit(i)) ) {
             gc.coord_offset[i] = gc.position[i]-gc.coord_system[i]-target[i];
           }
@@ -387,11 +390,13 @@ uint8_t gc_execute_line(char *line)
     // absolute mode coordinate offsets or incremental mode offsets.
     // NOTE: Tool offsets may be appended to these conversions when/if this feature is added.
     uint8_t i;
-    for (i=0; i<=2; i++) { // Axes indices are consistent, so loop may be used to save flash space.
+    for (i=0; i<N_AXIS; i++) { // Axes indices are consistent, so loop may be used to save flash space.
       if ( bit_istrue(axis_words,bit(i)) ) {
         if (!absolute_override) { // Do not update target in absolute override mode
           if (gc.absolute_mode) {
-            target[i] += gc.coord_system[i] + gc.coord_offset[i]; // Absolute mode
+				if (i<N_COORDS) {
+				  target[i] += gc.coord_system[i] + gc.coord_offset[i]; // Absolute mode
+				}
           } else {
             target[i] += gc.position[i]; // Incremental mode
           }
@@ -407,7 +412,7 @@ uint8_t gc_execute_line(char *line)
         break;
       case MOTION_MODE_SEEK:
         if (!axis_words) { FAIL(STATUS_INVALID_STATEMENT);} 
-        else { mc_line(target[X_AXIS], target[Y_AXIS], target[Z_AXIS], settings.default_seek_rate, false); }
+        else { mc_line(target, settings.default_seek_rate, false); }
         break;
       case MOTION_MODE_LINEAR:
         // TODO: Inverse time requires F-word with each statement. Need to do a check. Also need
@@ -415,7 +420,7 @@ uint8_t gc_execute_line(char *line)
         // and after an inverse time move and then check for non-zero feed rate each time. This
         // should be efficient and effective.
         if (!axis_words) { FAIL(STATUS_INVALID_STATEMENT);} 
-        else { mc_line(target[X_AXIS], target[Y_AXIS], target[Z_AXIS], 
+        else { mc_line(target, 
           (gc.inverse_feed_rate_mode) ? inverse_feed_rate : gc.feed_rate, gc.inverse_feed_rate_mode); }
         break;
       case MOTION_MODE_CW_ARC: case MOTION_MODE_CCW_ARC:

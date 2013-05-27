@@ -47,7 +47,7 @@
 // However, this keeps the memory requirements lower since it doesn't have to call and hold two 
 // plan_buffer_lines in memory. Grbl only has to retain the original line input variables during a
 // backlash segment(s).
-void mc_line(float x, float y, float z, float feed_rate, uint8_t invert_feed_rate)
+void mc_line(float* axes, float feed_rate, uint8_t invert_feed_rate)
 {
   // TODO: Perform soft limit check here. Just check if the target x,y,z values are outside the 
   // work envelope. Should be straightforward and efficient. By placing it here, rather than in 
@@ -69,7 +69,7 @@ void mc_line(float x, float y, float z, float feed_rate, uint8_t invert_feed_rat
     protocol_execute_runtime(); // Check for any run-time commands
     if (sys.abort) { return; } // Bail, if system abort.
   } while ( plan_check_full_buffer() );
-  plan_buffer_line(x, y, z, feed_rate, invert_feed_rate);
+  plan_buffer_line(axes, feed_rate, invert_feed_rate);
   
   // If idle, indicate to the system there is now a planned block in the buffer ready to cycle 
   // start. Otherwise ignore and continue on.
@@ -152,7 +152,7 @@ void mc_arc(float *position, float *target, float *offset, uint8_t axis_0, uint8
   float cos_T = 1-0.5*theta_per_segment*theta_per_segment; // Small angle approximation
   float sin_T = theta_per_segment;
   
-  float arc_target[3];
+  float arc_target[N_AXIS]; //only xyz are used
   float sin_Ti;
   float cos_Ti;
   float r_axisi;
@@ -184,13 +184,16 @@ void mc_arc(float *position, float *target, float *offset, uint8_t axis_0, uint8
     arc_target[axis_0] = center_axis0 + r_axis0;
     arc_target[axis_1] = center_axis1 + r_axis1;
     arc_target[axis_linear] += linear_per_segment;
-    mc_line(arc_target[X_AXIS], arc_target[Y_AXIS], arc_target[Z_AXIS], feed_rate, invert_feed_rate);
+	 //A and B axes go straight
+	 arc_target[A_AXIS]=target[A_AXIS]; 
+	 arc_target[B_AXIS]=target[B_AXIS];
+    mc_line(arc_target, feed_rate, invert_feed_rate);
     
     // Bail mid-circle on system abort. Runtime command check already performed by mc_line.
     if (sys.abort) { return; }
   }
   // Ensure last segment arrives at target location.
-  mc_line(target[X_AXIS], target[Y_AXIS], target[Z_AXIS], feed_rate, invert_feed_rate);
+  mc_line(target, feed_rate, invert_feed_rate);
 }
 
 
@@ -230,22 +233,14 @@ void mc_go_home(uint8_t axis_mask)
   // Pull-off axes (that have been homed) from limit switches before continuing motion. 
   // This provides some initial clearance off the switches and should also help prevent them 
   // from falsely tripping when hard limits are enabled.
-  int8_t x_dir, y_dir, z_dir;
-  x_dir = y_dir = z_dir = 0;
-  if (HOMING_LOCATE_CYCLE & axis_mask & (1<<X_AXIS)) { 
-    if (settings.homing_dir_mask & (1<<X_DIRECTION_BIT)) { x_dir = 1; }
-    else { x_dir = -1; }
-	 sys.position[0]=0.0;
-  }
-  if (HOMING_LOCATE_CYCLE & axis_mask & (1<<Y_AXIS)) { 
-    if (settings.homing_dir_mask & (1<<Y_DIRECTION_BIT)) { y_dir = 1; }
-    else { y_dir = -1; }
-	 sys.position[1]=0.0;
-  }
-  if (HOMING_LOCATE_CYCLE & axis_mask & (1<<Z_AXIS)) { 
-    if (settings.homing_dir_mask & (1<<Z_DIRECTION_BIT)) { z_dir = 1; }
-    else { z_dir = -1; }
-	 sys.position[2]=0.0;
+  float move[N_AXIS]={0};
+  int i;
+  for (i=0;i<N_AXIS;i++){
+	 if (HOMING_LOCATE_CYCLE & axis_mask & (1<<i)) { 
+		move[i] = (settings.homing_dir_mask & AXIS_DIR_MASK[i]) ? 
+		  settings.homing_pulloff : -settings.homing_pulloff;
+		sys.position[i]=0.0;
+	 }
   }
 
   // Upon completion, 
@@ -253,8 +248,7 @@ void mc_go_home(uint8_t axis_mask)
   sys_sync_current_position();
   sys.state = STATE_IDLE; // Set system state to IDLE to complete motion and indicate homed.
 
-  mc_line(x_dir*settings.homing_pulloff, y_dir*settings.homing_pulloff, 
-          z_dir*settings.homing_pulloff, settings.homing_seek_rate, false);
+  mc_line(move, settings.homing_seek_rate, false);
   st_cycle_start(); // Move it. Nothing should be in the buffer except this motion. 
   plan_synchronize(); // Make sure the motion completes.
   

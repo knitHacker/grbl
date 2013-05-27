@@ -240,6 +240,10 @@ uint8_t protocol_execute_line(char *line)
           } else { return(STATUS_IDLE_ERROR); }
         } else { return(STATUS_SETTING_DISABLED); }
         break;
+		  case 'R': //reload settings from defaults
+		  	  settings_reset(true);
+		  	  break;
+
 //    case 'J' : break;  // Jogging methods
       // TODO: Here jogging can be placed for execution as a seperate subprogram. It does not need to be 
       // susceptible to other runtime commands except for e-stop. The jogging function is intended to

@@ -87,12 +87,14 @@ static void set_step_events_per_minute(uint32_t steps_per_minute);
 // enabled. Startup init and limits call this function but shouldn't start the cycle.
 void st_wake_up() 
 {
+#if ENABLE_DISABLE
   // Enable steppers by resetting the stepper disable port
   if (bit_istrue(settings.flags,BITFLAG_INVERT_ST_ENABLE)) { 
     STEPPERS_DISABLE_PORT |= (1<<STEPPERS_DISABLE_BIT); 
   } else { 
     STEPPERS_DISABLE_PORT &= ~(1<<STEPPERS_DISABLE_BIT);
   }
+#endif
   if (sys.state == STATE_CYCLE) {
     // Initialize stepper output bits
 	 out_bits = (0) ^ (settings.pulse_invert_mask);
@@ -123,11 +125,13 @@ void st_go_idle()
     // Force stepper dwell to lock axes for a defined amount of time to ensure the axes come to a complete
     // stop and not drift from residual inertial forces at the end of the last movement.
     delay_ms(settings.stepper_idle_lock_time);
+#if ENABLE_DISABLE
     if (bit_istrue(settings.flags,BITFLAG_INVERT_ST_ENABLE)) { 
       STEPPERS_DISABLE_PORT &= ~(1<<STEPPERS_DISABLE_BIT); 
     } else { 
       STEPPERS_DISABLE_PORT |= (1<<STEPPERS_DISABLE_BIT); 
     }   
+#endif
   }
 }
 
@@ -146,8 +150,12 @@ inline static uint8_t iterate_trapezoid_cycle_counter()
 }          
 
 
-static uint8_t PULSE_MASK[] = {(1<<X_STEP_BIT),(1<<Y_STEP_BIT),(1<<Z_STEP_BIT)};//,(1<<A_STEP_BIT)};
-static uint8_t DIR_MASK[] = {(1<<X_DIRECTION_BIT),(1<<Y_DIRECTION_BIT),(1<<Z_DIRECTION_BIT)};//,(1<<A_DIRECTION_BIT)};
+const uint8_t AXIS_STEP_MASK[] = {(1<<X_STEP_BIT),(1<<Y_STEP_BIT),(1<<Z_STEP_BIT),
+											 (1<<A_STEP_BIT),(1<<B_STEP_BIT)};
+const uint8_t AXIS_DIR_MASK[] = {(1<<X_DIRECTION_BIT),(1<<Y_DIRECTION_BIT),(1<<Z_DIRECTION_BIT),
+											(1<<A_DIRECTION_BIT),(1<<B_DIRECTION_BIT)};
+const uint8_t AXIS_LIMIT_MASK[] = {(1<<X_LIMIT_BIT),(1<<Y_LIMIT_BIT),(1<<Z_LIMIT_BIT),
+											  (1<<A_LIMIT_BIT),(1<<B_LIMIT_BIT)};
 
 
 
@@ -207,36 +215,12 @@ ISR(TIMER1_COMPA_vect)
     dir_bits = current_block->direction_bits;
 	 out_bits = 0;
 
-	 /*
-    st.counter_x += current_block->steps_x;
-    if (st.counter_x > 0) {
-      out_bits |= (1<<X_STEP_BIT);
-      st.counter_x -= st.event_count;
-      if (dir_bits & (1<<X_DIRECTION_BIT)) { sys.position[X_AXIS]--; }
-      else { sys.position[X_AXIS]++; }
-		//OPT?: sys.position[X_AXIS]+=((dir_bits>>(X_DIRECTION_BIT-1))&2)-1
-    }
-    st.counter_y += current_block->steps_y;
-    if (st.counter_y > 0) {
-      out_bits |= (1<<Y_STEP_BIT);
-      st.counter_y -= st.event_count;
-      if (dir_bits & (1<<Y_DIRECTION_BIT)) { sys.position[Y_AXIS]--; }
-      else { sys.position[Y_AXIS]++; }
-    }
-    st.counter_z += current_block->steps_z;
-    if (st.counter_z > 0) {
-      out_bits |= (1<<Z_STEP_BIT);
-      st.counter_z -= st.event_count;
-      if (dir_bits & (1<<Z_DIRECTION_BIT)) { sys.position[Z_AXIS]--; }
-      else { sys.position[Z_AXIS]++; }
-    }
-*/
 	 for (i=0;i<N_AXIS;i++){
 		st.counter[i]+=current_block->steps[i];
 		if (st.counter[i]>0){
 		  st.counter[i]-=st.event_count;
-		  out_bits|=PULSE_MASK[i];
-		  if (dir_bits & DIR_MASK[i]) { sys.position[i]--; }
+		  out_bits|=AXIS_STEP_MASK[i];
+		  if (dir_bits & AXIS_DIR_MASK[i]) { sys.position[i]--; }
 		  else { sys.position[i]++; }
 		}
 	 }
@@ -384,7 +368,9 @@ void st_init()
   STEPPING_PORT = (STEPPING_PORT & ~STEP_MASK) | settings.pulse_invert_mask;
   DIRECTION_DDR |= DIRECTION_MASK;
   DIRECTION_PORT = (DIRECTION_PORT & ~DIRECTION_MASK) | settings.dir_invert_mask;
+#ifdef ENABLE_DISABLE
   STEPPERS_DISABLE_DDR |= 1<<STEPPERS_DISABLE_BIT;
+#endif
 
   // waveform generation = 0100 = CTC
   TCCR1B &= ~(1<<WGM13);

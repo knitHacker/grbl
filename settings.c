@@ -29,6 +29,7 @@
 #include "limits.h"
 
 settings_t settings;
+float report_distance_conversion;
 
 // Version 4 outdated settings record
 typedef struct {
@@ -54,8 +55,8 @@ void settings_store_startup_line(uint8_t n, char *line)
 // Method to store coord data parameters into EEPROM
 void settings_write_coord_data(uint8_t coord_select, float *coord_data)
 {  
-  uint16_t addr = coord_select*(sizeof(float)*N_AXIS+1) + EEPROM_ADDR_PARAMETERS;
-  memcpy_to_eeprom_with_checksum(addr,(char*)coord_data, sizeof(float)*N_AXIS);
+  uint16_t addr = coord_select*(sizeof(float)*N_COORDS+1) + EEPROM_ADDR_PARAMETERS;
+  memcpy_to_eeprom_with_checksum(addr,(char*)coord_data, sizeof(float)*N_COORDS);
 }  
 
 // Method to store Grbl global settings struct and version number into EEPROM
@@ -65,13 +66,16 @@ void write_global_settings()
   memcpy_to_eeprom_with_checksum(EEPROM_ADDR_GLOBAL, (char*)&settings, sizeof(settings_t));
 }
 
+
 // Method to reset Grbl global settings back to defaults. 
 void settings_reset(bool reset_all) {
   // Reset all settings or only the migration settings to the new version.
   if (reset_all) {
-    settings.steps_per_mm[X_AXIS] = DEFAULT_X_STEPS_PER_MM;
+	 settings.steps_per_mm[X_AXIS] = DEFAULT_X_STEPS_PER_MM;
     settings.steps_per_mm[Y_AXIS] = DEFAULT_Y_STEPS_PER_MM;
     settings.steps_per_mm[Z_AXIS] = DEFAULT_Z_STEPS_PER_MM;
+    settings.steps_per_mm[A_AXIS] = DEFAULT_A_STEPS_PER_MM;
+    settings.steps_per_mm[B_AXIS] = DEFAULT_B_STEPS_PER_MM;
     settings.pulse_microseconds = DEFAULT_STEP_PULSE_MICROSECONDS;
     settings.default_feed_rate = DEFAULT_FEEDRATE;
     settings.default_seek_rate = DEFAULT_RAPID_FEEDRATE;
@@ -97,6 +101,9 @@ void settings_reset(bool reset_all) {
   settings.decimal_places = DEFAULT_DECIMAL_PLACES;
   settings.n_arc_correction = DEFAULT_N_ARC_CORRECTION;
   write_global_settings();
+
+  report_distance_conversion = (bit_istrue(settings.flags,BITFLAG_REPORT_INCHES)) ? 
+	 INCH_PER_MM : 1.0;
 }
 
 // Reads startup line from EEPROM. Updated pointed line string data.
@@ -116,10 +123,10 @@ uint8_t settings_read_startup_line(uint8_t n, char *line)
 // Read selected coordinate data from EEPROM. Updates pointed coord_data value.
 uint8_t settings_read_coord_data(uint8_t coord_select, float *coord_data)
 {
-  uint16_t addr = coord_select*(sizeof(float)*N_AXIS+1) + EEPROM_ADDR_PARAMETERS;
-  if (!(memcpy_from_eeprom_with_checksum((char*)coord_data, addr, sizeof(float)*N_AXIS))) {
+  uint16_t addr = coord_select*(sizeof(float)*N_COORDS+1) + EEPROM_ADDR_PARAMETERS;
+  if (!(memcpy_from_eeprom_with_checksum((char*)coord_data, addr, sizeof(float)*N_COORDS))) {
     // Reset with default zero vector
-    clear_vector_float(coord_data); 
+    clear_coord_vector(coord_data); 
     settings_write_coord_data(coord_select,coord_data);
     return(false);
   } else {
@@ -148,7 +155,8 @@ uint8_t read_global_settings() {
       return(false);
     }
   }
-  return(true);
+  //  return(true);
+  return(false);
 }
 
 
@@ -174,8 +182,14 @@ uint8_t settings_store_global_setting(int parameter, float value) {
     case 11: settings.n_arc_correction = round(value); break;
     case 12: settings.decimal_places = round(value); break;
     case 13:
-      if (value) { settings.flags |= BITFLAG_REPORT_INCHES; }
-      else { settings.flags &= ~BITFLAG_REPORT_INCHES; }
+      if (value) { 
+		  settings.flags |= BITFLAG_REPORT_INCHES; 
+		  report_distance_conversion = INCH_PER_MM;
+		 }
+      else { 
+		  settings.flags &= ~BITFLAG_REPORT_INCHES; 
+		  report_distance_conversion = 1.0;
+		}
       break;
     case 14: // Reset to ensure change. Immediate re-init may cause problems.
       if (value) { settings.flags |= BITFLAG_AUTO_START; }
@@ -199,6 +213,9 @@ uint8_t settings_store_global_setting(int parameter, float value) {
     case 20: settings.homing_seek_rate = value; break;
     case 21: settings.homing_debounce_delay = round(value); break;
     case 22: settings.homing_pulloff = value; break;
+    case 23: case 24: 
+      if (value <= 0.0) { return(STATUS_SETTING_VALUE_NEG); } 
+      settings.steps_per_mm[parameter-20] = value; break;
     default: 
       return(STATUS_INVALID_STATEMENT);
   }
