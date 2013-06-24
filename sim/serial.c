@@ -45,8 +45,17 @@ void serial_write(uint8_t data) {
 uint8_t serial_read() {
   int c;
   if((c = fgetc(stdin)) != EOF) {
+	 // Pick off runtime command characters directly from the serial stream. These characters are
+	 // not passed into the buffer, but these set system state flag bits for runtime execution.
+	 switch (c) {
+    case CMD_STATUS_REPORT: sys.execute |= EXEC_STATUS_REPORT; c=0; break; // Set as true
+    case CMD_CYCLE_START:   sys.execute |= EXEC_CYCLE_START; c=0;break; // Set as true
+    case CMD_FEED_HOLD:     sys.execute |= EXEC_FEED_HOLD; c=0;break; // Set as true
+    case CMD_RESET:         mc_reset(); c=0;break; // Call motion control reset routine.
+	 }
+	 
 	serial_write(c);
-    return c;
+	return c;
   }
     
   return SERIAL_NO_DATA;
