@@ -33,7 +33,7 @@ CLOCK      = 16000000
 PROGRAMMER ?= -c avrisp2 -P usb
 OBJECTS    = main.o motion_control.o gcode.o spindle_control.o coolant_control.o serial.o \
              protocol.o stepper.o eeprom.o settings.o planner.o nuts_bolts.o limits.o \
-             print.o report.o
+             print.o report.o system.o
 # FUSES      = -U hfuse:w:0xd9:m -U lfuse:w:0x24:m
 FUSES      = -U hfuse:w:0xd2:m -U lfuse:w:0xff:m
 # update that line with this when programmer is back up:
@@ -42,7 +42,7 @@ FUSES      = -U hfuse:w:0xd2:m -U lfuse:w:0xff:m
 # Tune the lines below only if you know what you are doing:
 
 AVRDUDE = avrdude $(PROGRAMMER) -p $(DEVICE) -B 10 -F
-COMPILE = avr-gcc -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE) -I. -ffunction-sections --std=c99
+COMPILE = avr-gcc -Wall -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE) -I. -ffunction-sections
 
 # symbolic targets:
 all:	grbl.hex
@@ -84,7 +84,7 @@ main.elf: $(OBJECTS)
 grbl.hex: main.elf
 	rm -f grbl.hex
 	avr-objcopy -j .text -j .data -O ihex main.elf grbl.hex
-	avr-size -C --mcu=$(DEVICE) main.elf
+	avr-size --format=berkeley main.elf
 # If you have an EEPROM section, you must also create a hex file for the
 # EEPROM and add it to the "flash" target.
 
@@ -97,4 +97,3 @@ cpp:
 
 # include generated header dependencies
 -include $(OBJECTS:.o=.d)
-

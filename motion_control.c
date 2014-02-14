@@ -2,8 +2,8 @@
   motion_control.c - high level interface for issuing motion commands
   Part of Grbl
 
+  Copyright (c) 2011-2014 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
-  Copyright (c) 2011-2012 Sungeun K. Jeon
   Copyright (c) 2011 Jens Geisler
   
   Grbl is free software: you can redistribute it and/or modify
@@ -20,63 +20,32 @@
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <avr/io.h>
-#include <util/delay.h>
-#include <math.h>
-#include <stdlib.h>
+#include "system.h"
 #include "settings.h"
-#include "config.h"
+#include "protocol.h"
 #include "gcode.h"
+#include "planner.h"
+#include "stepper.h"
 #include "motion_control.h"
 #include "spindle_control.h"
 #include "coolant_control.h"
-#include "nuts_bolts.h"
-#include "stepper.h"
-#include "planner.h"
 #include "limits.h"
-#include "protocol.h"
-#include "report.h"
+
 
 // Execute linear motion in absolute millimeter coordinates. Feed rate given in millimeters/second
 // unless invert_feed_rate is true. Then the feed_rate means that the motion should be completed in
 // (1 minute)/feed_rate time.
 // NOTE: This is the primary gateway to the grbl planner. All line motions, including arc line 
 // segments, must pass through this routine before being passed to the planner. The seperation of
-// mc_line and plan_buffer_line is done primarily to make backlash compensation or canned cycle
-// integration simple and direct.
-// TODO: Check for a better way to avoid having to push the arguments twice for non-backlash cases.
-// However, this keeps the memory requirements lower since it doesn't have to call and hold two 
-// plan_buffer_lines in memory. Grbl only has to retain the original line input variables during a
-// backlash segment(s).
+// mc_line and plan_buffer_line is done primarily to place non-planner-type functions from being
+// in the planner and to let backlash compensation or canned cycle integration simple and direct.
 void mc_line(float *target, float feed_rate, uint8_t invert_feed_rate)
 {
-  // TO TEST: Perform soft limit check here. Just check if the target x,y,z values are outside the 
-  // work envelope. Should be straightforward and efficient. By placing it here, rather than in 
-  // the g-code parser, it directly picks up motions from everywhere in Grbl.
-  // TODO: Eventually move the soft limit check into limits.c.
-  if (bit_istrue(settings.flags,BITFLAG_SOFT_LIMIT_ENABLE)) { 
-    uint8_t i;
-    for (i=0; i<N_AXIS; i++) {
-      // TODO: This does not account for homing switches on the other side of travel, meaning that
-      // the machine travel envelope is flipped or negative, instead of positive. There needs to be
-      // a fix to this problem before release.
-      if ((target[i] < 0) || (target[i] > settings.max_travel[i])) {
-        // TODO: Need to make this more in-line with the rest of the alarm and runtime execution handling.
-        // Not quite right. Also this should force Grbl to feed hold and exit, rather than stopping and alarm
-        // out. This would help retain machine position, but is this really required?
-        if (sys.state != STATE_ALARM) { 
-          if (bit_isfalse(sys.execute,EXEC_ALARM)) {
-            mc_reset(); // Initiate system kill.
-            report_alarm_message(ALARM_SOFT_LIMIT);
-            sys.state = STATE_ALARM;
-            sys.execute |= EXEC_CRIT_EVENT; // Indicate hard limit critical event 
-          }
-        }
-      }
-    }
-  }
-  
-  // If in check gcode mode, prevent motion by blocking planner.
+  // If enabled, check for soft limit violations. Placed here all line motions are picked up
+  // from everywhere in Grbl.
+  if (bit_istrue(settings.flags,BITFLAG_SOFT_LIMIT_ENABLE)) { limits_soft_check(target); }    
+      
+  // If in check gcode mode, prevent motion by blocking planner. Soft limits still work.
   if (sys.state == STATE_CHECK_MODE) { return; }
     
   // TODO: Backlash compensation may be installed here. Only need direction info to track when
@@ -85,31 +54,25 @@ void mc_line(float *target, float feed_rate, uint8_t invert_feed_rate)
   // backlash steps will need to be also tracked. Not sure what the best strategy is for this,
   // i.e. keep the planner independent and do the computations in the status reporting, or let
   // the planner handle the position corrections. The latter may get complicated.
+  // TODO: Backlash comp positioning values may need to be kept at a system level, i.e. tracking 
+  // true position after a feed hold in the middle of a backlash move. The difficulty is in making 
+  // sure that the stepper subsystem and planner are working in sync, and the status report 
+  // position also takes this into account.
 
   // If the buffer is full: good! That means we are well ahead of the robot. 
   // Remain in this loop until there is room in the buffer.
   do {
     protocol_execute_runtime(); // Check for any run-time commands
     if (sys.abort) { return; } // Bail, if system abort.
-  } while ( plan_check_full_buffer() );
-  plan_buffer_line(target[X_AXIS], target[Y_AXIS], target[Z_AXIS], feed_rate, invert_feed_rate);
+    if ( plan_check_full_buffer() ) { protocol_auto_cycle_start(); } // Auto-cycle start when buffer is full.
+    else { break; }
+  } while (1);
+
+  plan_buffer_line(target, feed_rate, invert_feed_rate);
 
   // If idle, indicate to the system there is now a planned block in the buffer ready to cycle 
   // start. Otherwise ignore and continue on.
   if (!sys.state) { sys.state = STATE_QUEUED; }
-  
-  // Auto-cycle start immediately after planner finishes. Enabled/disabled by grbl settings. During 
-  // a feed hold, auto-start is disabled momentarily until the cycle is resumed by the cycle-start 
-  // runtime command.
-  // NOTE: This is allows the user to decide to exclusively use the cycle start runtime command to
-  // begin motion or let grbl auto-start it for them. This is useful when: manually cycle-starting
-  // when the buffer is completely full and primed; auto-starting, if there was only one g-code 
-  // command sent during manual operation; or if a system is prone to buffer starvation, auto-start
-  // helps make sure it minimizes any dwelling/motion hiccups and keeps the cycle going. 
-  // NOTE: Moved into main loop and plan_check_full_buffer() as a test. This forces Grbl to process
-  // all of the commands in the serial read buffer or until the planner buffer is full before auto 
-  // cycle starting. Will eventually need to remove the following command.
-  // if (sys.auto_start) { st_cycle_start(); }
 }
 
 
@@ -145,8 +108,8 @@ void mc_arc(float *position, float *target, float *offset, uint8_t axis_0, uint8
   // Computes: mm_per_arc_segment = sqrt(4*arc_tolerance*(2*radius-arc_tolerance)),
   //           segments = millimeters_of_travel/mm_per_arc_segment
   float millimeters_of_travel = hypot(angular_travel*radius, fabs(linear_travel));
-  uint16_t segments = floor(millimeters_of_travel/
-                          sqrt(4*settings.arc_tolerance*(2*radius - settings.arc_tolerance)) );
+  uint16_t segments = floor(0.5*millimeters_of_travel/
+                          sqrt(settings.arc_tolerance*(2*radius - settings.arc_tolerance)) );
   
   if (segments) { 
     // Multiply inverse feed_rate to compensate for the fact that this movement is approximated
@@ -156,7 +119,7 @@ void mc_arc(float *position, float *target, float *offset, uint8_t axis_0, uint8
    
     float theta_per_segment = angular_travel/segments;
     float linear_per_segment = linear_travel/segments;
-    
+
     /* Vector rotation by transformation matrix: r is the original vector, r_T is the rotated vector,
        and phi is the angle of rotation. Solution approach by Jens Geisler.
            r_T = [cos(phi) -sin(phi);
@@ -181,8 +144,8 @@ void mc_arc(float *position, float *target, float *offset, uint8_t axis_0, uint8
        This is important when there are successive arc motions. 
     */
     // Computes: cos_T = 1 - theta_per_segment^2/2, sin_T = theta_per_segment - theta_per_segment^3/6) in ~52usec
-    float cos_T = 2 - theta_per_segment*theta_per_segment;
-    float sin_T = theta_per_segment*0.16666667*(cos_T + 4);
+    float cos_T = 2.0 - theta_per_segment*theta_per_segment;
+    float sin_T = theta_per_segment*0.16666667*(cos_T + 4.0);
     cos_T *= 0.5;
 
     float arc_target[N_AXIS];
@@ -232,8 +195,8 @@ void mc_arc(float *position, float *target, float *offset, uint8_t axis_0, uint8
 void mc_dwell(float seconds) 
 {
    uint16_t i = floor(1000/DWELL_TIME_STEP*seconds);
-   plan_synchronize();
-   delay_ms(floor(1000*seconds-i*DWELL_TIME_STEP)); // Delay millisecond remainder
+   protocol_buffer_synchronize();
+   delay_ms(floor(1000*seconds-i*DWELL_TIME_STEP)); // Delay millisecond remainder.
    while (i-- > 0) {
      // NOTE: Check and execute runtime commands during dwell every <= DWELL_TIME_STEP milliseconds.
      protocol_execute_runtime();
@@ -246,46 +209,38 @@ void mc_dwell(float seconds)
 // Perform homing cycle to locate and set machine zero. Only '$H' executes this command.
 // NOTE: There should be no motions in the buffer and Grbl must be in an idle state before
 // executing the homing cycle. This prevents incorrect buffered plans after homing.
-void mc_go_home()
+void mc_homing_cycle()
 {
   sys.state = STATE_HOMING; // Set system state variable
-  LIMIT_PCMSK &= ~LIMIT_MASK; // Disable hard limits pin change register for cycle duration
+  limits_disable(); // Disable hard limits pin change register for cycle duration
+    
+  // -------------------------------------------------------------------------------------
+  // Perform homing routine. NOTE: Special motion case. Only system reset works.
   
-  limits_go_home(); // Perform homing routine.
+  // Search to engage all axes limit switches at faster homing seek rate.
+  limits_go_home(HOMING_CYCLE_0);  // Homing cycle 0
+  #ifdef HOMING_CYCLE_1
+    limits_go_home(HOMING_CYCLE_1);  // Homing cycle 1
+  #endif
+  #ifdef HOMING_CYCLE_2
+    limits_go_home(HOMING_CYCLE_2);  // Homing cycle 2
+  #endif
   
   protocol_execute_runtime(); // Check for reset and set system abort.
   if (sys.abort) { return; } // Did not complete. Alarm state set by mc_alarm.
 
-  // The machine should now be homed and machine zero has been located. Upon completion, 
-  // reset system position and sync internal position vectors.
-  clear_vector_float(sys.position); // Set machine zero
-  sys_sync_current_position();
-  sys.state = STATE_IDLE; // Set system state to IDLE to complete motion and indicate homed.
+  // Homing cycle complete! Setup system for normal operation.
+  // -------------------------------------------------------------------------------------
   
-  // Pull-off axes (that have been homed) from limit switches before continuing motion. 
-  // This provides some initial clearance off the switches and should also help prevent them 
-  // from falsely tripping when hard limits are enabled.
-  float target[N_AXIS];
-  target[X_AXIS] = target[Y_AXIS] = target[Z_AXIS] = settings.homing_pulloff;
-  if (HOMING_LOCATE_CYCLE & (1<<X_AXIS)) { 
-    if (bit_isfalse(settings.homing_dir_mask,(1<<X_DIRECTION_BIT))) { target[X_AXIS] = -target[X_AXIS]; }
-  }
-  if (HOMING_LOCATE_CYCLE & (1<<Y_AXIS)) { 
-    if (bit_isfalse(settings.homing_dir_mask,(1<<Y_DIRECTION_BIT))) { target[Y_AXIS] = -target[Y_AXIS]; }
-  }
-  if (HOMING_LOCATE_CYCLE & (1<<Z_AXIS)) { 
-    if (bit_isfalse(settings.homing_dir_mask,(1<<Z_DIRECTION_BIT))) { target[Z_AXIS] = -target[Z_AXIS]; }
-  }
-  mc_line(target, settings.homing_seek_rate, false);
-  st_cycle_start(); // Move it. Nothing should be in the buffer except this motion. 
-  plan_synchronize(); // Make sure the motion completes.
-  
-  // The gcode parser position circumvented by the pull-off maneuver, so sync position vectors.
-  sys_sync_current_position();
+  // Gcode parser position was circumvented by the limits_go_home() routine, so sync position now.
+  gc_sync_position();
+    
+  // Set idle state after homing completes and before returning to main program.  
+  sys.state = STATE_IDLE;
+  st_go_idle(); // Set idle state after homing completes
 
   // If hard limits feature enabled, re-enable hard limits pin change register after homing cycle.
-  if (bit_istrue(settings.flags,BITFLAG_HARD_LIMIT_ENABLE)) { LIMIT_PCMSK |= LIMIT_MASK; }
-  // Finished! 
+  limits_init();
 }
 
 
@@ -308,10 +263,9 @@ void mc_reset()
     // NOTE: If steppers are kept enabled via the step idle delay setting, this also keeps
     // the steppers enabled by avoiding the go_idle call altogether, unless the motion state is
     // violated, by which, all bets are off.
-    switch (sys.state) {
-      case STATE_CYCLE: case STATE_HOLD: case STATE_HOMING: // case STATE_JOG:
-        sys.execute |= EXEC_ALARM; // Execute alarm state.
-        st_go_idle(); // Execute alarm force kills steppers. Position likely lost.
+    if (sys.state & (STATE_CYCLE | STATE_HOLD | STATE_HOMING)) {
+      sys.execute |= EXEC_ALARM; // Flag main program to execute alarm state.
+      st_go_idle(); // Force kill steppers. Position has likely been lost.
     }
   }
 }

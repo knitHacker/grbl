@@ -2,7 +2,7 @@
   report.h - reporting and messaging methods
   Part of Grbl
 
-  Copyright (c) 2012 Sungeun K. Jeon
+  Copyright (c) 2012-2014 Sungeun K. Jeon
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -20,7 +20,6 @@
 #ifndef report_h
 #define report_h
 
-
 // Define Grbl status codes.
 #define STATUS_OK 0
 #define STATUS_BAD_NUMBER_FORMAT 1
@@ -35,11 +34,12 @@
 #define STATUS_SETTING_READ_FAIL 10
 #define STATUS_IDLE_ERROR 11
 #define STATUS_ALARM_LOCK 12
+#define STATUS_SOFT_LIMIT_ERROR 13
+#define STATUS_OVERFLOW 14
 
 // Define Grbl alarm codes. Less than zero to distinguish alarm error from status error.
-#define ALARM_HARD_LIMIT -1
+#define ALARM_LIMIT_ERROR -1
 #define ALARM_ABORT_CYCLE -2
-#define ALARM_SOFT_LIMIT -3
 
 // Define Grbl feedback message codes.
 #define MESSAGE_CRITICAL_EVENT 1
@@ -77,5 +77,8 @@ void report_gcode_modes();
 
 // Prints startup line
 void report_startup_line(uint8_t n, char *line);
+
+// Prints build info and user info
+void report_build_info(char *line);
 
 #endif

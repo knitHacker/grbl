@@ -2,8 +2,8 @@
   print.c - Functions for formatting output strings
   Part of Grbl
 
+  Copyright (c) 2011-2014 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
-  Copyright (c) 2011-2012 Sungeun K. Jeon
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -22,11 +22,10 @@
 /* This code was initially inspired by the wiring_serial module by David A. Mellis which
    used to be a part of the Arduino project. */ 
 
-
-#include <avr/pgmspace.h>
-#include "config.h"
+#include "system.h"
 #include "serial.h"
 #include "settings.h"
+
 
 void printString(const char *s)
 {
@@ -77,7 +76,7 @@ void print_uint8_base2(uint8_t n)
 		serial_write('0' + buf[i - 1]);
 }
 
-static void print_uint32_base10(unsigned long n)
+void print_uint32_base10(unsigned long n)
 { 
   unsigned char buf[10]; 
   uint8_t i = 0;

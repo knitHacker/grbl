@@ -2,8 +2,8 @@
   print.h - Functions for formatting output strings
   Part of Grbl
 
+  Copyright (c) 2011-2014 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
-  Copyright (c) 2011-2012 Sungeun K. Jeon
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -30,6 +30,8 @@ void printString(const char *s);
 void printPgmString(const char *s);
 
 void printInteger(long n);
+
+void print_uint32_base10(uint32_t n);
 
 void print_uint8_base2(uint8_t n);
 

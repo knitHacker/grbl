@@ -2,8 +2,8 @@
   gcode.h - rs274/ngc parser.
   Part of Grbl
 
+  Copyright (c) 2011-2014 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
-  Copyright (c) 2011-2012 Sungeun K. Jeon
   
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -21,8 +21,8 @@
 
 #ifndef gcode_h
 #define gcode_h
-#include <avr/io.h>
-#include "nuts_bolts.h"
+
+#include "system.h"
 
 // Define modal group internal numbers for checking multiple command violations and tracking the 
 // type of command that is called in the block. A modal group is a group of g-code commands that are
@@ -38,7 +38,8 @@
 #define MODAL_GROUP_5 6 // [G93,G94] Feed rate mode
 #define MODAL_GROUP_6 7 // [G20,G21] Units
 #define MODAL_GROUP_7 8 // [M3,M4,M5] Spindle turning
-#define MODAL_GROUP_12 9 // [G54,G55,G56,G57,G58,G59] Coordinate system selection
+#define MODAL_GROUP_8 9 // [M7,M8,M9] Coolant control
+#define MODAL_GROUP_12 10 // [G54,G55,G56,G57,G58,G59] Coordinate system selection
 
 // Define command actions for within execution-type modal groups (motion, stopping, non-modal). Used
 // internally by the parser to know which command to execute.
@@ -69,12 +70,12 @@ typedef struct {
   uint8_t inches_mode;             // 0 = millimeter mode, 1 = inches mode {G20, G21}
   uint8_t absolute_mode;           // 0 = relative motion, 1 = absolute motion {G90, G91}
   uint8_t program_flow;            // {M0, M1, M2, M30}
-  int8_t spindle_direction;        // 1 = CW, -1 = CCW, 0 = Stop {M3, M4, M5}
-  uint8_t coolant_mode;            // 0 = Disable, 1 = Flood Enable {M8, M9}
+  uint8_t coolant_mode;            // 0 = Disable, 1 = Flood Enable, 2 = Mist Enable {M8, M9}
+  uint8_t spindle_direction;        // 1 = CW, 2 = CCW, 0 = Stop {M3, M4, M5}
+  float spindle_speed;             // RPM
   float feed_rate;                 // Millimeters/min
   float position[N_AXIS];          // Where the interpreter considers the tool to be at this point in the code
   uint8_t tool;
-//  uint16_t spindle_speed;          // RPM/100
   uint8_t plane_axis_0, 
           plane_axis_1, 
           plane_axis_2;            // The axes of the selected plane  
@@ -82,7 +83,11 @@ typedef struct {
   float coord_system[N_AXIS];      // Current work coordinate system (G54+). Stores offset from absolute machine
                                    // position in mm. Loaded from EEPROM when called.
   float coord_offset[N_AXIS];      // Retains the G92 coordinate offset (work coordinates) relative to
-                                   // machine zero in mm. Non-persistent. Cleared upon reset and boot.        
+                                   // machine zero in mm. Non-persistent. Cleared upon reset and boot.    
+                                   
+  float arc_radius; 
+  float arc_offset[N_AXIS];
+                                         
 } parser_state_t;
 extern parser_state_t gc;
 
@@ -93,6 +98,6 @@ void gc_init();
 uint8_t gc_execute_line(char *line);
 
 // Set g-code parser position. Input in steps.
-void gc_set_current_position(int32_t x, int32_t y, int32_t z); 
+void gc_sync_position(); 
 
 #endif
