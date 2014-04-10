@@ -50,9 +50,9 @@ void limits_init()
   }
   
   #ifdef ENABLE_SOFTWARE_DEBOUNCE
-    MCUSR &= ~(1<<WDRF);
-    WDTCSR |= (1<<WDCE) | (1<<WDE);
-    WDTCSR = (1<<WDP0); // Set time-out at ~32msec.
+  MCUSR &= ~(1<<WDRF);
+  WDTCSR |= (1<<WDCE) | (1<<WDE);
+  WDTCSR = (1<<WDP0); // Set time-out at ~32msec.
   #endif
 }
 
@@ -76,38 +76,38 @@ void limits_disable()
 // special pinout for an e-stop, but it is generally recommended to just directly connect
 // your e-stop switch to the Arduino reset pin, since it is the most correct way to do this.
 #ifndef ENABLE_SOFTWARE_DEBOUNCE
-  ISR(LIMIT_INT_vect) // DEFAULT: Limit pin change interrupt process. 
-  {
-    // Ignore limit switches if already in an alarm state or in-process of executing an alarm.
-    // When in the alarm state, Grbl should have been reset or will force a reset, so any pending 
-    // moves in the planner and serial buffers are all cleared and newly sent blocks will be 
-    // locked out until a homing cycle or a kill lock command. Allows the user to disable the hard
-    // limit setting if their limits are constantly triggering after a reset and move their axes.
-    if (sys.state != STATE_ALARM) {
-      if (bit_isfalse(sys.execute,EXEC_ALARM)) {
-        mc_reset(); // Initiate system kill.
-        sys.execute |= EXEC_CRIT_EVENT; // Indicate hard limit critical event
-      }
-    }  
+ISR(LIMIT_INT_vect) // DEFAULT: Limit pin change interrupt process. 
+{
+  // Ignore limit switches if already in an alarm state or in-process of executing an alarm.
+  // When in the alarm state, Grbl should have been reset or will force a reset, so any pending 
+  // moves in the planner and serial buffers are all cleared and newly sent blocks will be 
+  // locked out until a homing cycle or a kill lock command. Allows the user to disable the hard
+  // limit setting if their limits are constantly triggering after a reset and move their axes.
+  if (sys.state != STATE_ALARM) { 
+    if (bit_isfalse(sys.execute,EXEC_ALARM)) {
+      mc_reset(); // Initiate system kill.
+      sys.execute |= (EXEC_ALARM | EXEC_CRIT_EVENT); // Indicate hard limit critical event
+    }
   }
+}  
 #else // OPTIONAL: Software debounce limit pin routine.
-  // Upon limit pin change, enable watchdog timer to create a short delay. 
-  ISR(LIMIT_INT_vect) { if (!(WDTCSR & (1<<WDIE))) { WDTCSR |= (1<<WDIE); } }
-  ISR(WDT_vect) // Watchdog timer ISR
-  {
-    WDTCSR &= ~(1<<WDIE); // Disable watchdog timer. 
-    if (sys.state != STATE_ALARM) {  // Ignore if already in alarm state. 
-      if (bit_isfalse(sys.execute,EXEC_ALARM)) {
-        uint8_t bits = LIMIT_PIN;
-        // Check limit pin state. 
-        if (bit_istrue(settings.flags,BITFLAG_INVERT_LIMIT_PINS)) { bits ^= LIMIT_MASK; }
-        if (bits & LIMIT_MASK) {
-          mc_reset(); // Initiate system kill.
-          sys.execute |= EXEC_CRIT_EVENT; // Indicate hard limit critical event
-        }
+// Upon limit pin change, enable watchdog timer to create a short delay. 
+ISR(LIMIT_INT_vect) { if (!(WDTCSR & (1<<WDIE))) { WDTCSR |= (1<<WDIE); } }
+ISR(WDT_vect) // Watchdog timer ISR
+{
+  WDTCSR &= ~(1<<WDIE); // Disable watchdog timer. 
+  if (sys.state != STATE_ALARM) {  // Ignore if already in alarm state. 
+    if (bit_isfalse(sys.execute,EXEC_ALARM)) {
+      uint8_t bits = LIMIT_PIN;
+      // Check limit pin state. 
+      if (bit_istrue(settings.flags,BITFLAG_INVERT_LIMIT_PINS)) { bits ^= LIMIT_MASK; }
+      if (bits & LIMIT_MASK) {
+        mc_reset(); // Initiate system kill.
+        sys.execute |= (EXEC_ALARM | EXEC_CRIT_EVENT); // Indicate hard limit critical event
       }
     }  
   }
+}
 #endif
 
 
@@ -120,14 +120,14 @@ void limits_disable()
 void limits_go_home(uint8_t cycle_mask) 
 {
   if (sys.abort) { return; } // Block if system reset has been issued.
-  
+
   // Initialize homing in search mode to quickly engage the specified cycle_mask limit switches.
   bool approach = true;
   float homing_rate = settings.homing_seek_rate;
   uint8_t invert_pin, idx;
   uint8_t n_cycle = (2*N_HOMING_LOCATE_CYCLE+1);
   float target[N_AXIS];
-
+  
   // Determine travel distance to the furthest homing switch based on user max travel settings.
   // NOTE: settings.max_travel[] is stored as a negative value.
   float max_travel = settings.max_travel[X_AXIS];
@@ -149,7 +149,7 @@ void limits_go_home(uint8_t cycle_mask)
         n_active_axis++;
         if (!approach) { target[idx] = -max_travel; }
         else { target[idx] = max_travel; }
-       } else {
+      } else {
         target[idx] = 0.0;
       }
     }      
@@ -159,7 +159,7 @@ void limits_go_home(uint8_t cycle_mask)
   
     homing_rate *= sqrt(n_active_axis); // [sqrt(N_AXIS)] Adjust so individual axes all move at homing rate.
 
-    // Reset homing axis locks based on cycle mask. 
+      // Reset homing axis locks based on cycle mask. 
     uint8_t axislock = 0;
     if (bit_istrue(cycle_mask,bit(X_AXIS))) { axislock |= (1<<X_STEP_BIT); }
     if (bit_istrue(cycle_mask,bit(Y_AXIS))) { axislock |= (1<<Y_STEP_BIT); }
@@ -168,7 +168,11 @@ void limits_go_home(uint8_t cycle_mask)
   
     // Perform homing cycle. Planner buffer should be empty, as required to initiate the homing cycle.
     uint8_t limit_state;
+    #ifdef USE_LINE_NUMBERS
+    plan_buffer_line(target, homing_rate, false, HOMING_CYCLE_LINE_NUMBER); // Bypass mc_line(). Directly plan homing motion.
+    #else
     plan_buffer_line(target, homing_rate, false); // Bypass mc_line(). Directly plan homing motion.
+    #endif
     st_prep_buffer(); // Prep and fill segment buffer from newly planned block.
     st_wake_up(); // Initiate motion
     do {
@@ -189,16 +193,16 @@ void limits_go_home(uint8_t cycle_mask)
       // Check only for user reset. No time to run protocol_execute_runtime() in this loop.
       if (sys.execute & EXEC_RESET) { protocol_execute_runtime(); return; }
     } while (STEP_MASK & axislock);
-
-    delay_ms(settings.homing_debounce_delay); // Delay to allow transient dynamics to dissipate.  
     
+    st_reset(); // Immediately force kill steppers and reset step segment buffer.
+    plan_reset(); // Reset planner buffer. Zero planner positions. Ensure homing motion is cleared.
+
+    delay_ms(settings.homing_debounce_delay); // Delay to allow transient dynamics to dissipate.
+
     // Reverse direction and reset homing rate for locate cycle(s).
     homing_rate = settings.homing_feed_rate;
     approach = !approach;
     
-    st_reset(); // Force disable steppers and reset step segment buffer. Ensure homing motion is cleared.
-    plan_reset(); // Reset planner buffer. Zero planner positions. Ensure homing motion is cleared.
-
   } while (n_cycle-- > 0);
     
   // The active cycle axes should now be homed and machine limits have been located. By 
@@ -225,12 +229,15 @@ void limits_go_home(uint8_t cycle_mask)
     }
   }
   plan_sync_position(); // Sync planner position to current machine position for pull-off move.
+  #ifdef USE_LINE_NUMBERS
+  plan_buffer_line(target, settings.homing_seek_rate, false, HOMING_CYCLE_LINE_NUMBER); // Bypass mc_line(). Directly plan motion.
+  #else
   plan_buffer_line(target, settings.homing_seek_rate, false); // Bypass mc_line(). Directly plan motion.
-
+  #endif
+  
   // Initiate pull-off using main motion control routines. 
   // TODO : Clean up state routines so that this motion still shows homing state.
   sys.state = STATE_QUEUED;
-//   protocol_cycle_start();   
   sys.execute |= EXEC_CYCLE_START;
   protocol_execute_runtime();
   protocol_buffer_synchronize(); // Complete pull-off motion.
@@ -256,11 +263,11 @@ void limits_soft_check(float *target)
         do {
           protocol_execute_runtime();
           if (sys.abort) { return; }
-        } while (sys.state == STATE_HOLD);
+        } while ( sys.state != STATE_IDLE || sys.state != STATE_QUEUED);
       }
       
       mc_reset(); // Issue system reset and ensure spindle and coolant are shutdown.
-      sys.execute |= EXEC_CRIT_EVENT; // Indicate soft limit critical event
+      sys.execute |= (EXEC_ALARM | EXEC_CRIT_EVENT); // Indicate soft limit critical event
       protocol_execute_runtime(); // Execute to enter critical event loop and system abort
       return;
     

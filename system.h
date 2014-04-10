@@ -59,13 +59,14 @@
 // of Grbl to manage each without overlapping. It is also used as a messaging flag for
 // critical events.
 #define STATE_IDLE       0      // Must be zero. No flags.
-#define STATE_QUEUED     bit(0) // Indicates buffered blocks, awaiting cycle start.
-#define STATE_CYCLE      bit(1) // Cycle is running
-#define STATE_HOLD       bit(2) // Executing feed hold
-#define STATE_HOMING     bit(3) // Performing homing cycle
-#define STATE_ALARM      bit(4) // In alarm state. Locks out all g-code processes. Allows settings access.
-#define STATE_CHECK_MODE bit(5) // G-code check mode. Locks out planner and motion only.
+#define STATE_ALARM      bit(0) // In alarm state. Locks out all g-code processes. Allows settings access.
+#define STATE_CHECK_MODE bit(1) // G-code check mode. Locks out planner and motion only.
+#define STATE_HOMING     bit(2) // Performing homing cycle
+#define STATE_QUEUED     bit(3) // Indicates buffered blocks, awaiting cycle start.
+#define STATE_CYCLE      bit(4) // Cycle is running
+#define STATE_HOLD       bit(5) // Executing feed hold
 // #define STATE_JOG     bit(6) // Jogging mode is unique like homing.
+
 
 // Define global system variables
 typedef struct {
@@ -76,6 +77,8 @@ typedef struct {
   int32_t position[N_AXIS];      // Real-time machine (aka home) position vector in steps. 
                                  // NOTE: This may need to be a volatile variable, if problems arise.                             
   uint8_t auto_start;            // Planner auto-start flag. Toggled off during feed hold. Defaulted by settings.
+  volatile uint8_t probe_state;   // Probing state value.  Used to coordinate the probing cycle with stepper ISR.
+  int32_t probe_position[N_AXIS]; // Last probe position in machine coordinates and steps.
 } system_t;
 extern system_t sys;
 

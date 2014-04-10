@@ -173,9 +173,11 @@ void protocol_execute_runtime()
     if (rt_exec & (EXEC_ALARM | EXEC_CRIT_EVENT)) {      
       sys.state = STATE_ALARM; // Set system alarm state
 
-      // Critical event. Only hard/soft limit errors currently qualify.
+      // Critical events. Hard/soft limit events identified by both critical event and alarm exec
+      // flags. Probe fail is identified by the critical event exec flag only.
       if (rt_exec & EXEC_CRIT_EVENT) {
-        report_alarm_message(ALARM_LIMIT_ERROR); 
+        if (rt_exec & EXEC_ALARM) { report_alarm_message(ALARM_LIMIT_ERROR); }
+        else { report_alarm_message(ALARM_PROBE_FAIL); }
         report_feedback_message(MESSAGE_CRITICAL_EVENT);
         bit_false(sys.execute,EXEC_RESET); // Disable any existing reset
         do { 
@@ -242,9 +244,8 @@ void protocol_execute_runtime()
     // cycle reinitializations. The stepper path should continue exactly as if nothing has happened.   
     // NOTE: EXEC_CYCLE_STOP is set by the stepper subsystem when a cycle or feed hold completes.
     if (rt_exec & EXEC_CYCLE_STOP) {
-      if (sys.state != STATE_QUEUED) {    
-        sys.state = STATE_IDLE;
-      }
+      if ( plan_get_current_block() ) { sys.state = STATE_QUEUED; }
+      else { sys.state = STATE_IDLE; }
       bit_false(sys.execute,EXEC_CYCLE_STOP);
     }
 
