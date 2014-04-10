@@ -28,7 +28,8 @@
 #define DEFAULTS_GENERIC
 
 // Serial baud rate
-#define BAUD_RATE 9600
+//#define BAUD_RATE 9600
+#define BAUD_RATE 57600
 
 // Define pin-assignments
 // NOTE: All step bit and direction pins must be on the same port.
