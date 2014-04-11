@@ -32,6 +32,8 @@
 
 #ifdef CPU_MAP_ATMEGA328P // (Arduino Uno) Officially supported by Grbl.
 
+#error
+  #define GRBL_PLATFORM "Atmega328p"
   // Define serial port pins and interrupt vectors.
   #define SERIAL_RX     USART_RX_vect
   #define SERIAL_UDRE   USART_UDRE_vect
@@ -144,6 +146,7 @@
 
 #ifdef CPU_MAP_ATMEGA2560 // (Arduino Mega 2560) Working @EliteEng
 
+  #define GRBL_PLATFORM "Atmega2560"
   // Serial port pins
   #define SERIAL_RX USART0_RX_vect
   #define SERIAL_UDRE USART0_UDRE_vect
@@ -175,7 +178,7 @@
   // Define stepper driver enable/disable output pin.
   #define STEPPERS_DISABLE_DDR   DDRB
   #define STEPPERS_DISABLE_PORT  PORTB
-  #define STEPPERS_DISABLE_BIT   7 // MEGA2560 Digital Pin 13
+  #define STEPPERS_DISABLE_BIT   7 // MEGA2560 Digital Pin 13 (LED)
   #define STEPPERS_DISABLE_MASK (1<<STEPPERS_DISABLE_BIT)
 
   // NOTE: All limit bit pins must be on the same port

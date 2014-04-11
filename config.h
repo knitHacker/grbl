@@ -29,14 +29,15 @@
 #define config_h
 
 // Default settings. Used when resetting EEPROM. Change to desired name in defaults.h
-#define DEFAULTS_SHERLINE_5400
+//#define DEFAULTS_SHERLINE_5400
+#define DEFAULTS_EXCITRON
 
 // Serial baud rate
-#define BAUD_RATE 115200
+#define BAUD_RATE 57600
 
 // Default cpu mappings. Grbl officially supports the Arduino Uno only. Other processor types
 // may exist from user-supplied templates or directly user-defined in cpu_map.h
-#define CPU_MAP_ATMEGA328P // Arduino Uno CPU
+#define CPU_MAP_ATMEGA2560  //Arduino Mega 2560
 
 // Define runtime command special characters. These characters are 'picked-off' directly from the
 // serial read data stream and are not passed to the grbl line execution parser. Select characters
@@ -52,7 +53,7 @@
 // If homing is enabled, homing init lock sets Grbl into an alarm state upon power up. This forces
 // the user to perform the homing cycle (or override the locks) before doing anything else. This is
 // mainly a safety feature to remind the user to home, since position is unknown to Grbl.
-#define HOMING_INIT_LOCK // Comment to disable
+//ADS: Temporariyl disabled: #define HOMING_INIT_LOCK // Comment to disable
 
 // Define the homing cycle patterns with bitmasks. The homing cycle first performs a search mode
 // to quickly engage the limit switches, followed by a slower locate mode, and finished by a short
@@ -84,9 +85,9 @@
 // parser state depending on user preferences.
 #define N_STARTUP_LINE 2 // Integer (1-3)
 
-// Allows GRBL to tranck and report gcode line numbers.  Enabling this means that the planning buffer
+// Allows GRBL to track and report gcode line numbers.  Enabling this means that the planning buffer
 // goes from 18 or 16 to make room for the additional line number data in the plan_block_t struct
-// #define USE_LINE_NUMBERS // Disabled by default. Uncomment to enable.
+#define USE_LINE_NUMBERS // Disabled by default. Uncomment to enable.
 
 // Enables a second coolant control pin via the mist coolant g-code command M7 on the Arduino Uno
 // analog pin 5. Only use this option if you require a second coolant control pin.
@@ -103,7 +104,7 @@
 // NOTE: Changing this value also changes the execution time of a segment in the step segment buffer. 
 // When increasing this value, this stores less overall time in the segment buffer and vice versa. Make
 // certain the step segment buffer is increased/decreased to account for these changes.
-#define ACCELERATION_TICKS_PER_SECOND 100 
+#define ACCELERATION_TICKS_PER_SECOND 110 
 
 // Adaptive Multi-Axis Step Smoothing (AMASS) is an advanced feature that does what its name implies, 
 // smoothing the stepping of multi-axis motions. This feature smooths motion particularly at low step

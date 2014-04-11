@@ -320,7 +320,7 @@ void report_startup_line(uint8_t n, char *line)
 // Prints build info line
 void report_build_info(char *line)
 {
-  printPgmString(PSTR("[" GRBL_VERSION "." GRBL_VERSION_BUILD ":"));
+  printPgmString(PSTR("[" GRBL_VERSION "." GRBL_VERSION_BUILD "(" GRBL_PLATFORM ") :"));
   printString(line);
   printPgmString(PSTR("]\r\n"));
 }

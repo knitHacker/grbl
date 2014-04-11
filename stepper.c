@@ -242,7 +242,7 @@ void st_go_idle()
    is usually not a physical problem at higher frequencies, although audible.
      To improve Bresenham multi-axis performance, Grbl uses what we call an Adaptive Multi-Axis
    Step Smoothing (AMASS) algorithm, which does what the name implies. At lower step frequencies,
-   AMASS artificially increases the Bresenham resolution without effecting the algorithm's 
+   AMASS artificially increases the Bresenham resolution without affecting the algorithm's 
    innate exactness. AMASS adapts its resolution levels automatically depending on the step
    frequency to be executed, meaning that for even lower step frequencies the step smoothing 
    level increases. Algorithmically, AMASS is acheived by a simple bit-shifting of the Bresenham
@@ -401,7 +401,7 @@ ISR(TIMER1_COMPA_vect)
 
   st.step_outbits ^= settings.step_invert_mask;  // Apply step port invert mask    
   busy = false;
-// SPINDLE_ENABLE_PORT ^= 1<<SPINDLE_ENABLE_BIT; // Debug: Used to time ISR
+ SPINDLE_ENABLE_PORT ^= 1<<SPINDLE_ENABLE_BIT; // Debug: Used to time ISR
 }
 
 
