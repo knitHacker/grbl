@@ -55,6 +55,7 @@
 #define EXEC_CRIT_EVENT     bit(6) // bitmask 01000000
 // #define                  bit(7) // bitmask 10000000
 
+
 // Define system state bit map. The state variable primarily tracks the individual functions
 // of Grbl to manage each without overlapping. It is also used as a messaging flag for
 // critical events.

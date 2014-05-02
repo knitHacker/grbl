@@ -69,13 +69,14 @@ static st_block_t st_block_buffer[SEGMENT_BUFFER_SIZE-1];
 // the planner, where the remaining planner block steps still can.
 typedef struct {
   uint16_t n_step;          // Number of step events to be executed for this segment
-  uint8_t st_block_index;   // Stepper block data index. Uses this information to execute this segment.
   uint16_t cycles_per_tick; // Step distance traveled per ISR tick, aka step rate.
+  uint8_t st_block_index;   // Stepper block data index. Uses this information to execute this segment.
   #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
     uint8_t amass_level;    // Indicates AMASS level for the ISR to execute this segment
   #else
     uint8_t prescaler;      // Without AMASS, a prescaler is required to adjust for slow timing.
   #endif
+  uint8_t block_end;         //true for last segment of a block
 } segment_t;
 static segment_t segment_buffer[SEGMENT_BUFFER_SIZE];
 
@@ -85,9 +86,6 @@ typedef struct {
   uint32_t counter_x,        // Counter variables for the bresenham line tracer
            counter_y, 
            counter_z;
-  #ifdef STEP_PULSE_DELAY
-    uint8_t step_bits;  // Stores out_bits output to complete the step pulse delay
-  #endif
   
   uint8_t execute_step;     // Flags step execution for each interrupt.
   uint8_t step_pulse_time;  // Step pulse reset time after step rise
@@ -95,10 +93,16 @@ typedef struct {
   uint8_t dir_outbits;
   #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
     uint32_t steps[N_AXIS];
+  #else 
+    uint32_t *steps;
   #endif
 
   uint16_t step_count;       // Steps remaining in line segment motion  
   uint8_t exec_block_index; // Tracks the current st_block index. Change indicates new block.
+
+  #ifdef STEP_PULSE_DELAY
+    uint8_t step_bits;  // Stores out_bits output to complete the step pulse delay
+  #endif
   st_block_t *exec_block;   // Pointer to the block data for the segment being executed
   segment_t *exec_segment;  // Pointer to the segment being executed
 } stepper_t;
@@ -337,7 +341,10 @@ ISR(TIMER1_COMPA_vect)
         st.steps[X_AXIS] = st.exec_block->steps[X_AXIS] >> st.exec_segment->amass_level;
         st.steps[Y_AXIS] = st.exec_block->steps[Y_AXIS] >> st.exec_segment->amass_level;
         st.steps[Z_AXIS] = st.exec_block->steps[Z_AXIS] >> st.exec_segment->amass_level;
+		#else
+		  st.steps = st.exec_block->steps;
       #endif
+		  
       
     } else {
       // Segment buffer empty. Shutdown.
@@ -355,33 +362,26 @@ ISR(TIMER1_COMPA_vect)
   st.step_outbits = 0; 
 
   // Execute step displacement profile by Bresenham line algorithm
-  #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
-    st.counter_x += st.steps[X_AXIS];
-  #else
-    st.counter_x += st.exec_block->steps[X_AXIS];
-  #endif  
+  st.counter_x += st.steps[X_AXIS];
+
   if (st.counter_x > st.exec_block->step_event_count) {
     st.step_outbits |= (1<<X_STEP_BIT);
     st.counter_x -= st.exec_block->step_event_count;
     if (st.exec_block->direction_bits & (1<<X_DIRECTION_BIT)) { sys.position[X_AXIS]--; }
     else { sys.position[X_AXIS]++; }
   }
-  #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
-    st.counter_y += st.steps[Y_AXIS];
-  #else
-    st.counter_y += st.exec_block->steps[Y_AXIS];
-  #endif    
+  
+  st.counter_y += st.steps[Y_AXIS];
+
   if (st.counter_y > st.exec_block->step_event_count) {
     st.step_outbits |= (1<<Y_STEP_BIT);
     st.counter_y -= st.exec_block->step_event_count;
     if (st.exec_block->direction_bits & (1<<Y_DIRECTION_BIT)) { sys.position[Y_AXIS]--; }
     else { sys.position[Y_AXIS]++; }
   }
-  #ifdef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
-    st.counter_z += st.steps[Z_AXIS];
-  #else
-    st.counter_z += st.exec_block->steps[Z_AXIS];
-  #endif  
+  
+  st.counter_z += st.steps[Z_AXIS];
+
   if (st.counter_z > st.exec_block->step_event_count) {
     st.step_outbits |= (1<<Z_STEP_BIT);
     st.counter_z -= st.exec_block->step_event_count;
@@ -395,7 +395,9 @@ ISR(TIMER1_COMPA_vect)
   st.step_count--; // Decrement step events count 
   if (st.step_count == 0) {
     // Segment is complete. Discard current segment and advance segment indexing.
+	 sys.execute |= st.exec_segment->block_end;
     st.exec_segment = NULL;
+
     if ( ++segment_buffer_tail == SEGMENT_BUFFER_SIZE) { segment_buffer_tail = 0; }
   }
 
@@ -793,8 +795,10 @@ void st_prep_buffer()
       // Normal operation. Block incomplete. Distance remaining in block to be executed.
       pl_block->millimeters = mm_remaining;      
       prep.steps_remaining = steps_remaining;  
+		prep_segment->block_end = 0;
     } else { 
       // End of planner block or forced-termination. No more distance to be executed.
+		prep_segment->block_end = 1;
       if (mm_remaining > 0.0) { // At end of forced-termination.
         // Reset prep parameters for resuming and then bail.
         // NOTE: Currently only feed holds qualify for this scenario. May change with overrides.       
