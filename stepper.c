@@ -285,7 +285,7 @@ void st_go_idle()
 // with probing and homing cycles that require true real-time positions.
 ISR(TIMER1_COMPA_vect)
 {        
-// SPINDLE_ENABLE_PORT ^= 1<<SPINDLE_ENABLE_BIT; // Debug: Used to time ISR
+  //  TIMING_ENABLE_PORT ^= 1<<TIMING_ENABLE_BIT; // Debug: Used to time ISR
   if (busy) { return; } // The busy-flag is used to avoid reentering this interrupt
   
   // Set the direction pins a couple of nanoseconds before we step the steppers
@@ -403,7 +403,7 @@ ISR(TIMER1_COMPA_vect)
 
   st.step_outbits ^= settings.step_invert_mask;  // Apply step port invert mask    
   busy = false;
- SPINDLE_ENABLE_PORT ^= 1<<SPINDLE_ENABLE_BIT; // Debug: Used to time ISR
+  // TIMING_ENABLE_PORT ^= 1<<TIMING_ENABLE_BIT; // Debug: Used to time ISR
 }
 
 

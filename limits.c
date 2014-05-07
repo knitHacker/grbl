@@ -83,6 +83,7 @@ ISR(LIMIT_INT_vect) // DEFAULT: Limit pin change interrupt process.
   // moves in the planner and serial buffers are all cleared and newly sent blocks will be 
   // locked out until a homing cycle or a kill lock command. Allows the user to disable the hard
   // limit setting if their limits are constantly triggering after a reset and move their axes.
+
   if (sys.state != STATE_ALARM) { 
     if (bit_isfalse(sys.execute,EXEC_ALARM)) {
       mc_reset(); // Initiate system kill.
@@ -196,6 +197,9 @@ void limits_go_home(uint8_t cycle_mask)
     
     st_reset(); // Immediately force kill steppers and reset step segment buffer.
     plan_reset(); // Reset planner buffer. Zero planner positions. Ensure homing motion is cleared.
+
+	 //ADS: get one protocol check in here:
+	 protocol_execute_runtime();
 
     delay_ms(settings.homing_debounce_delay); // Delay to allow transient dynamics to dissipate.
 

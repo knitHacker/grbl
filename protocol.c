@@ -165,6 +165,12 @@ void protocol_main_loop()
 void protocol_execute_runtime()
 {
   uint8_t rt_exec = sys.execute; // Copy to avoid calling volatile multiple times
+  if (LIMIT_PORT&(1<<X_LIMIT_BIT)) {
+	 TIMING_ENABLE_PORT |= 1<<TIMING_ENABLE_BIT; // Debug: Used to indicate limit
+  }
+  else {
+	 TIMING_ENABLE_PORT &= ~(1<<TIMING_ENABLE_BIT); // Debug: Used to indicate limit
+  }
   if (rt_exec) { // Enter only if any bit flag is true
     
     // System alarm. Everything has shutdown by something that has gone severely wrong. Report

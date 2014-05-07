@@ -176,10 +176,11 @@
   #define DIRECTION_MASK ((1<<X_DIRECTION_BIT)|(1<<Y_DIRECTION_BIT)|(1<<Z_DIRECTION_BIT)) // All direction bits
 
   // Define stepper driver enable/disable output pin.
-  #define STEPPERS_DISABLE_DDR   DDRB
-  #define STEPPERS_DISABLE_PORT  PORTB
-  #define STEPPERS_DISABLE_BIT   7 // MEGA2560 Digital Pin 13 (LED)
+  #define STEPPERS_DISABLE_DDR   DDRJ
+  #define STEPPERS_DISABLE_PORT  PORTJ
+  #define STEPPERS_DISABLE_BIT   1 // MEGA2560 Digital Pin 14 
   #define STEPPERS_DISABLE_MASK (1<<STEPPERS_DISABLE_BIT)
+  
 
   // NOTE: All limit bit pins must be on the same port
   #define LIMIT_DDR       DDRB
@@ -192,6 +193,12 @@
   #define LIMIT_INT_vect  PCINT0_vect 
   #define LIMIT_PCMSK     PCMSK0 // Pin change interrupt register
   #define LIMIT_MASK ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<Z_LIMIT_BIT)) // All limit bits
+
+  #define TIMING_ENABLE_PORT PORTB
+  #define TIMING_ENABLE_BIT  7
+  #define TIMING_MASK        (1<<TIMING_ENABLE_BIT)
+
+
 
   // Define spindle enable and spindle direction output pins.
   #define SPINDLE_ENABLE_DDR   DDRH
