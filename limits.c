@@ -43,8 +43,7 @@ void limits_init()
   }
 
   if (bit_istrue(settings.flags,BITFLAG_HARD_LIMIT_ENABLE)) {
-    LIMIT_PCMSK |= LIMIT_MASK; // Enable specific pins of the Pin Change Interrupt
-    PCICR |= (1 << LIMIT_INT); // Enable Pin Change Interrupt
+	 limits_enable()
   } else {
     limits_disable(); 
   }
@@ -56,6 +55,11 @@ void limits_init()
   #endif
 }
 
+void limits_enable(){
+    LIMIT_PCMSK |= LIMIT_MASK; // Enable specific pins of the Pin Change Interrupt
+    PCICR |= (1 << LIMIT_INT); // Enable Pin Change Interrupt
+}
+
 
 void limits_disable()
 {
@@ -63,6 +67,7 @@ void limits_disable()
   PCICR &= ~(1 << LIMIT_INT);  // Disable Pin Change Interrupt
 }
 
+uint8_t sys.limits;
 
 // This is the Limit Pin Change Interrupt, which handles the hard limit feature. A bouncing 
 // limit switch can cause a lot of problems, like false readings and multiple interrupt calls.
@@ -83,8 +88,8 @@ ISR(LIMIT_INT_vect) // DEFAULT: Limit pin change interrupt process.
   // moves in the planner and serial buffers are all cleared and newly sent blocks will be 
   // locked out until a homing cycle or a kill lock command. Allows the user to disable the hard
   // limit setting if their limits are constantly triggering after a reset and move their axes.
-
-  if (sys.state != STATE_ALARM) { 
+  sys.limits = LIMIT_PIN;
+  if (!(sys.state & (STATE_ALARM|STATE_HOMING)) { 
     if (bit_isfalse(sys.execute,EXEC_ALARM)) {
       mc_reset(); // Initiate system kill.
       sys.execute |= (EXEC_ALARM | EXEC_CRIT_EVENT); // Indicate hard limit critical event
@@ -93,13 +98,18 @@ ISR(LIMIT_INT_vect) // DEFAULT: Limit pin change interrupt process.
 }  
 #else // OPTIONAL: Software debounce limit pin routine.
 // Upon limit pin change, enable watchdog timer to create a short delay. 
-ISR(LIMIT_INT_vect) { if (!(WDTCSR & (1<<WDIE))) { WDTCSR |= (1<<WDIE); } }
+ISR(LIMIT_INT_vect) { 
+		sys.limits = LIMIT_PIN;
+		if (!(WDTCSR & (1<<WDIE))) { WDTCSR |= (1<<WDIE); } 
+}
 ISR(WDT_vect) // Watchdog timer ISR
 {
   WDTCSR &= ~(1<<WDIE); // Disable watchdog timer. 
-  if (sys.state != STATE_ALARM) {  // Ignore if already in alarm state. 
+  sys.limits = LIMIT_PIN;
+
+  if (!(sys.state & (STATE_ALARM|STATE_HOMING)) { 
     if (bit_isfalse(sys.execute,EXEC_ALARM)) {
-      uint8_t bits = LIMIT_PIN;
+      uint8_t bits = sys.limits;
       // Check limit pin state. 
       if (bit_istrue(settings.flags,BITFLAG_INVERT_LIMIT_PINS)) { bits ^= LIMIT_MASK; }
       if (bits & LIMIT_MASK) {
@@ -160,8 +170,9 @@ void limits_go_home(uint8_t cycle_mask)
   
     homing_rate *= sqrt(n_active_axis); // [sqrt(N_AXIS)] Adjust so individual axes all move at homing rate.
 
-      // Reset homing axis locks based on cycle mask. 
-    uint8_t axislock = 0;
+      // Reset homing axis locks based on cycle mask.  
+      // axislock bit is high if axis is homing, a 0 prevents it from being moved in stepper.
+    uint8_t axislock = 0; 
     if (bit_istrue(cycle_mask,bit(X_AXIS))) { axislock |= (1<<X_STEP_BIT); }
     if (bit_istrue(cycle_mask,bit(Y_AXIS))) { axislock |= (1<<Y_STEP_BIT); }
     if (bit_istrue(cycle_mask,bit(Z_AXIS))) { axislock |= (1<<Z_STEP_BIT); }
@@ -178,7 +189,8 @@ void limits_go_home(uint8_t cycle_mask)
     st_wake_up(); // Initiate motion
     do {
       // Check limit state. Lock out cycle axes when they change.
-      limit_state = LIMIT_PIN;
+		//ADS      limit_state = LIMIT_PIN;
+		limit_state = sys.limits; //TODO: need to push axislock to the interupt...
       if (invert_pin) { limit_state ^= LIMIT_MASK; }
       if (axislock & (1<<X_STEP_BIT)) {
         if (limit_state & (1<<X_LIMIT_BIT)) { axislock &= ~(1<<X_STEP_BIT); }
@@ -199,6 +211,7 @@ void limits_go_home(uint8_t cycle_mask)
     plan_reset(); // Reset planner buffer. Zero planner positions. Ensure homing motion is cleared.
 
 	 //ADS: get one protocol check in here:
+	 sys.execute |= EXEC_STATUS_REPORT;
 	 protocol_execute_runtime();
 
     delay_ms(settings.homing_debounce_delay); // Delay to allow transient dynamics to dissipate.

@@ -165,7 +165,7 @@ void protocol_main_loop()
 void protocol_execute_runtime()
 {
   uint8_t rt_exec = sys.execute; // Copy to avoid calling volatile multiple times
-  if (LIMIT_PORT&(1<<X_LIMIT_BIT)) {
+  if (LIMIT_PIN&(1<<X_LIMIT_BIT)) {
 	 TIMING_ENABLE_PORT |= 1<<TIMING_ENABLE_BIT; // Debug: Used to indicate limit
   }
   else {
@@ -230,6 +230,7 @@ void protocol_execute_runtime()
     }
         
     // Execute a cycle start by starting the stepper interrupt begin executing the blocks in queue.
+	 //ADS blcok while homing.
     if (rt_exec & EXEC_CYCLE_START) { 
       if (sys.state == STATE_QUEUED) {
         sys.state = STATE_CYCLE;

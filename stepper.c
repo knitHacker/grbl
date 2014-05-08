@@ -395,7 +395,7 @@ ISR(TIMER1_COMPA_vect)
   st.step_count--; // Decrement step events count 
   if (st.step_count == 0) {
     // Segment is complete. Discard current segment and advance segment indexing.
-	 sys.execute |= st.exec_segment->block_end;
+	 sys.execute |= st.exec_segment->block_end; //sets EXEC_STATUS_REPORT when done with block
     st.exec_segment = NULL;
 
     if ( ++segment_buffer_tail == SEGMENT_BUFFER_SIZE) { segment_buffer_tail = 0; }
@@ -798,7 +798,7 @@ void st_prep_buffer()
 		prep_segment->block_end = 0;
     } else { 
       // End of planner block or forced-termination. No more distance to be executed.
-		prep_segment->block_end = 1;
+		prep_segment->block_end = EXEC_STATUS_REPORT;  //force status report when done
       if (mm_remaining > 0.0) { // At end of forced-termination.
         // Reset prep parameters for resuming and then bail.
         // NOTE: Currently only feed holds qualify for this scenario. May change with overrides.       
