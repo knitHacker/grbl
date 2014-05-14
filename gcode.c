@@ -254,9 +254,15 @@ uint8_t gc_execute_line(char *line)
         if (value < 0) { FAIL(STATUS_INVALID_STATEMENT); } // Cannot be negative
         gc.tool = trunc(value); 
         break;
-      case 'X': target[X_AXIS] = to_millimeters(value); bit_true(axis_words,bit(X_AXIS)); break;
-      case 'Y': target[Y_AXIS] = to_millimeters(value); bit_true(axis_words,bit(Y_AXIS)); break;
-      case 'Z': target[Z_AXIS] = to_millimeters(value); bit_true(axis_words,bit(Z_AXIS)); break;
+      case 'X': 
+      case 'Y': 
+      case 'Z': 
+      case 'C': 
+		  {
+			 uint8_t idx = get_axis_idx(letter); //no retval error check, b/c switch validated input
+			 target[idx] = to_millimeters(value); bit_true(axis_words,bit(idx));
+			 break;
+		  }
       default: FAIL(STATUS_UNSUPPORTED_STATEMENT);
     }
   }

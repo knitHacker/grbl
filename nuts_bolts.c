@@ -146,7 +146,19 @@ uint8_t get_direction_mask(uint8_t axis_idx)
     case X_AXIS: axis_mask = (1<<X_DIRECTION_BIT); break;
     case Y_AXIS: axis_mask = (1<<Y_DIRECTION_BIT); break;
     case Z_AXIS: axis_mask = (1<<Z_DIRECTION_BIT); break;
+    case C_AXIS: axis_mask = (1<<C_DIRECTION_BIT); break;
   }
   return(axis_mask);
 }
 
+uint8_t get_axis_idx(char axis_letter)
+{
+  uint8_t axis_idx = N_AXIS; //error indicator
+  switch( axis_letter ) {
+    case 'X': axis_idx = X_AXIS; break;
+    case 'Y': axis_idx = Y_AXIS; break;
+    case 'Z': axis_idx = Z_AXIS; break;
+    case 'C': axis_idx = C_AXIS; break;
+  }
+  return(axis_idx);
+}

@@ -25,10 +25,11 @@
 #define false 0
 #define true 1
 
-#define N_AXIS 3 // Number of axes
+#define N_AXIS 4 // Number of axes
 #define X_AXIS 0 // Axis indexing value. Must start with 0 and be continuous.
 #define Y_AXIS 1
 #define Z_AXIS 2
+#define C_AXIS 3
 
 #define MM_PER_INCH (25.40)
 #define INCH_PER_MM (0.0393701)
@@ -62,5 +63,7 @@ void delay_ms(uint16_t ms);
 void delay_us(uint32_t us);
 
 uint8_t get_direction_mask(uint8_t i);
+
+uint8_t get_axis_idx(char axis_letter);
 
 #endif

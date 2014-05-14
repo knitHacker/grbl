@@ -25,7 +25,7 @@
 #include <avr/io.h>
 #include <avr/pgmspace.h>
 #include <avr/interrupt.h>
-#include <avr/wdt.h>
+//#include <avr/wdt.h>
 #include <util/delay.h>
 #include <math.h>
 #include <inttypes.h>    
@@ -54,6 +54,7 @@
 #define EXEC_ALARM          bit(5) // bitmask 00100000
 #define EXEC_CRIT_EVENT     bit(6) // bitmask 01000000
 // #define                  bit(7) // bitmask 10000000
+#define EXEC_LIMIT_REPORT   bit(7) // bitmask 10000000  //ADS TODO: probably better to roll into EXEC_STATUS and set a type flag elsewhere 
 
 
 // Define system state bit map. The state variable primarily tracks the individual functions

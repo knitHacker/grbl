@@ -65,14 +65,17 @@ void settings_reset() {
   settings.steps_per_mm[X_AXIS] = DEFAULT_X_STEPS_PER_MM;
   settings.steps_per_mm[Y_AXIS] = DEFAULT_Y_STEPS_PER_MM;
   settings.steps_per_mm[Z_AXIS] = DEFAULT_Z_STEPS_PER_MM;
+  settings.steps_per_mm[C_AXIS] = DEFAULT_C_STEPS_PER_MM;
   settings.pulse_microseconds = DEFAULT_STEP_PULSE_MICROSECONDS;
   settings.default_feed_rate = DEFAULT_FEEDRATE;
   settings.max_rate[X_AXIS] = DEFAULT_X_MAX_RATE;
   settings.max_rate[Y_AXIS] = DEFAULT_Y_MAX_RATE;
   settings.max_rate[Z_AXIS] = DEFAULT_Z_MAX_RATE;
+  settings.max_rate[C_AXIS] = DEFAULT_C_MAX_RATE;
   settings.acceleration[X_AXIS] = DEFAULT_X_ACCELERATION;
   settings.acceleration[Y_AXIS] = DEFAULT_Y_ACCELERATION;
   settings.acceleration[Z_AXIS] = DEFAULT_Z_ACCELERATION;
+  settings.acceleration[C_AXIS] = DEFAULT_C_ACCELERATION;
   settings.arc_tolerance = DEFAULT_ARC_TOLERANCE;
   settings.step_invert_mask = DEFAULT_STEPPING_INVERT_MASK;
   settings.dir_invert_mask = DEFAULT_DIRECTION_INVERT_MASK;
@@ -95,6 +98,7 @@ void settings_reset() {
   settings.max_travel[X_AXIS] = (-DEFAULT_X_MAX_TRAVEL);
   settings.max_travel[Y_AXIS] = (-DEFAULT_Y_MAX_TRAVEL);
   settings.max_travel[Z_AXIS] = (-DEFAULT_Z_MAX_TRAVEL);    
+  settings.max_travel[C_AXIS] = (-DEFAULT_Z_MAX_TRAVEL);    
   write_global_settings();
 }
 
@@ -223,6 +227,10 @@ uint8_t settings_store_global_setting(int parameter, float value) {
     case 29: settings.homing_seek_rate = value; break;
     case 30: settings.homing_debounce_delay = round(value); break;
     case 31: settings.homing_pulloff = value; break;
+  case 32: settings.steps_per_mm[C_AXIS] = value; break;
+  case 33: settings.max_rate[C_AXIS] = value; break;
+  case 34: settings.acceleration[C_AXIS] = value; break;
+  case 35: settings.max_travel[C_AXIS] = value; break;
     default: 
       return(STATUS_INVALID_STATEMENT);
   }

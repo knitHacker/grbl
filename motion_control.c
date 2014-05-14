@@ -236,7 +236,9 @@ void mc_dwell(float seconds)
 // Perform homing cycle to locate and set machine zero. Only '$H' executes this command.
 // NOTE: There should be no motions in the buffer and Grbl must be in an idle state before
 // executing the homing cycle. This prevents incorrect buffered plans after homing.
-void mc_homing_cycle()
+// NOTE WELL: only axes indicated by the bits in axis_mask will move, set by arguments to $H
+// User must ensure that travel is clear for axis being homed
+void mc_homing_cycle(uint8_t axis_mask)
 {
   sys.state = STATE_HOMING; // Set system state variable
   limits_disable(); // Disable hard limits pin change register for cycle duration
@@ -245,12 +247,12 @@ void mc_homing_cycle()
   // Perform homing routine. NOTE: Special motion case. Only system reset works.
   
   // Search to engage all axes limit switches at faster homing seek rate.
-  limits_go_home(HOMING_CYCLE_0);  // Homing cycle 0
+  limits_go_home(HOMING_CYCLE_0&axis_mask);  // Homing cycle 0
   #ifdef HOMING_CYCLE_1
-    limits_go_home(HOMING_CYCLE_1);  // Homing cycle 1
+    limits_go_home(HOMING_CYCLE_1&axis_mask);  // Homing cycle 1
   #endif
   #ifdef HOMING_CYCLE_2
-    limits_go_home(HOMING_CYCLE_2);  // Homing cycle 2
+    limits_go_home(HOMING_CYCLE_2&axis_mask);  // Homing cycle 2
   #endif
     
   protocol_execute_runtime(); // Check for reset and set system abort.
@@ -291,7 +293,7 @@ void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate)
   #endif
 
   //TODO - make sure the probe isn't already closed
-  sys.probe_state = PROBE_ACTIVE;
+  sys.probe_state = PROBE_MASK;
 
   sys.execute |= EXEC_CYCLE_START;
   do {
@@ -299,7 +301,7 @@ void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate)
     if (sys.abort) { return; } // Check for system abort
   } while ((sys.state != STATE_IDLE) && (sys.state != STATE_QUEUED));
 
-  if (sys.probe_state == PROBE_ACTIVE) { sys.execute |= EXEC_CRIT_EVENT; }
+  if (sys.probe_state == PROBE_MASK) { sys.execute |= EXEC_CRIT_EVENT; }
   protocol_execute_runtime();   // Check and execute run-time commands
   if (sys.abort) { return; } // Check for system abort
 

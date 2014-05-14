@@ -158,6 +158,7 @@ ISR(SERIAL_RX)
   // not passed into the buffer, but these set system state flag bits for runtime execution.
   switch (data) {
     case CMD_STATUS_REPORT: sys.execute |= EXEC_STATUS_REPORT; break; // Set as true
+    case CMD_LIMIT_REPORT:  sys.execute |= EXEC_LIMIT_REPORT; break; // Set as true
     case CMD_CYCLE_START:   sys.execute |= EXEC_CYCLE_START; break; // Set as true
     case CMD_FEED_HOLD:     sys.execute |= EXEC_FEED_HOLD; break; // Set as true
     case CMD_RESET:         mc_reset(); break; // Call motion control reset routine.

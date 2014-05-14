@@ -157,6 +157,10 @@ void printBlock() {
     else block_position[2]+= b->steps_z;
     fprintf(block_out_file,"%d, ", block_position[2]);
 
+    if(b->direction_bits & (1<<C_DIRECTION_BIT)) block_position[3]-= b->steps_c;
+    else block_position[3]+= b->steps_c;
+    fprintf(block_out_file,"%d, ", block_position[3]);
+
     fprintf(block_out_file,"%f", b->entry_speed_sqr);
     fprintf(block_out_file,"\n");
 

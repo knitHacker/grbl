@@ -186,7 +186,12 @@ void report_grbl_settings() {
   printPgmString(PSTR(" (homing feed, mm/min)\r\n$29=")); printFloat(settings.homing_seek_rate);
   printPgmString(PSTR(" (homing seek, mm/min)\r\n$30=")); printInteger(settings.homing_debounce_delay);
   printPgmString(PSTR(" (homing debounce, msec)\r\n$31=")); printFloat(settings.homing_pulloff);
-  printPgmString(PSTR(" (homing pull-off, mm)\r\n")); 
+  printPgmString(PSTR(" (homing pull-off, mm)\r\n$32=")); 
+                                                         printFloat(settings.steps_per_mm[C_AXIS]);
+  printPgmString(PSTR(" (c, step/mm)\r\n$33="));         printFloat(settings.max_rate[C_AXIS]);
+  printPgmString(PSTR(" (c max rate, mm/min)\r\n$34=")); printFloat(settings.acceleration[C_AXIS]/(60*60)); 
+  printPgmString(PSTR(" (x accel, mm/sec^2)\r\n$35="));   printFloat(-settings.max_travel[C_AXIS]); 
+  printPgmString(PSTR(" (c max travel, mm)\r\n")); 
 }
 
 
@@ -384,6 +389,20 @@ void report_realtime_status()
   } 
   printInteger(ln);
   #endif
+
+
     
   printPgmString(PSTR(">\r\n"));
+}
+
+void report_limit_pins()
+{
+  uint8_t limit_state = LIMIT_PIN & LIMIT_MASK;
+  if (bit_istrue(settings.flags,BITFLAG_INVERT_LIMIT_PINS)) {
+	 limit_state^=LIMIT_MASK;
+  }  
+  printPgmString(PSTR("("));
+  print_uint8_base2(limit_state);
+  printPgmString(PSTR(")\n\r"));
+
 }

@@ -30,7 +30,7 @@
 
 // Version of the EEPROM data. Will be used to migrate existing data from older versions of Grbl
 // when firmware is upgraded. Always stored in byte 0 of eeprom
-#define SETTINGS_VERSION 6
+#define SETTINGS_VERSION 70
 
 // Define bit flag masks for the boolean settings in settings.flag.
 #define BITFLAG_REPORT_INCHES      bit(0)
@@ -51,6 +51,7 @@
 #define EEPROM_ADDR_BUILD_INFO 992
 
 // Define EEPROM address indexing for coordinate parameters
+//@TODO: can reduce this for EEPROM space.
 #define N_COORDINATE_SYSTEM 6  // Number of supported work coordinate systems (from index 1)
 #define SETTING_INDEX_NCOORD N_COORDINATE_SYSTEM+1 // Total number of system stored (from index 0)
 // NOTE: Work coordinate indices are (0=G54, 1=G55, ... , 6=G59)
@@ -58,6 +59,8 @@
 #define SETTING_INDEX_G30    N_COORDINATE_SYSTEM+1  // Home position 2
 // #define SETTING_INDEX_G92    N_COORDINATE_SYSTEM+2  // Coordinate offset (G92.2,G92.3 not supported)
 
+
+//@TODO: chainging N_AXIS invalidates old eeprom.  Make sure this still fits.
 // Global persistent settings (Stored from byte EEPROM_ADDR_GLOBAL onwards)
 typedef struct {
   float steps_per_mm[N_AXIS];

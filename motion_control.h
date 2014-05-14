@@ -49,7 +49,7 @@ void mc_arc(float *position, float *target, float *offset, uint8_t axis_0, uint8
 void mc_dwell(float seconds);
 
 // Perform homing cycle to locate machine zero. Requires limit switches.
-void mc_homing_cycle();
+void mc_homing_cycle(uint8_t axis_mask);
 
 // Perform tool length probe cycle. Requires probe switch.
 #ifdef USE_LINE_NUMBERS

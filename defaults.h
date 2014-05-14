@@ -235,15 +235,19 @@
   #define DEFAULT_X_STEPS_PER_MM 800.0
   #define DEFAULT_Y_STEPS_PER_MM 800.0
   #define DEFAULT_Z_STEPS_PER_MM 800.0
+  #define DEFAULT_C_STEPS_PER_MM 800.0
   #define DEFAULT_X_MAX_RATE 100.0 // rpm
   #define DEFAULT_Y_MAX_RATE 100.0 // rpm
   #define DEFAULT_Z_MAX_RATE 100.0 // rpm
+  #define DEFAULT_C_MAX_RATE 100.0 // rpm
   #define DEFAULT_X_ACCELERATION (10.0*60*60) // 10*60*60 mm/min^2 = 10 rot/sec^2
   #define DEFAULT_Y_ACCELERATION (10.0*60*60) // 10*60*60 mm/min^2 = 10 rot/sec^2
   #define DEFAULT_Z_ACCELERATION (10.0*60*60) // 10*60*60 mm/min^2 = 10 rot/sec^2
+  #define DEFAULT_C_ACCELERATION (10.0*60*60) // 10*60*60 mm/min^2 = 10 rot/sec^2
   #define DEFAULT_X_MAX_TRAVEL 2000.0 // rotations
   #define DEFAULT_Y_MAX_TRAVEL 2000.0 // rotations
   #define DEFAULT_Z_MAX_TRAVEL 2000.0 // rotations
+  #define DEFAULT_C_MAX_TRAVEL 2000.0 // rotations
   #define DEFAULT_STEP_PULSE_MICROSECONDS 15
   #define DEFAULT_FEEDRATE 250.0 // rpm
   #define DEFAULT_STEPPING_INVERT_MASK 0

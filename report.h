@@ -70,6 +70,9 @@ void report_grbl_settings();
 // Prints realtime status report
 void report_realtime_status();
 
+// Prints state of limit pins
+void report_limit_pins();
+
 // Prints recorded probe position
 void report_probe_parameters();
 

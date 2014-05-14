@@ -131,9 +131,10 @@ void limits_go_home(uint8_t cycle_mask)
   
   // Determine travel distance to the furthest homing switch based on user max travel settings.
   // NOTE: settings.max_travel[] is stored as a negative value.
-  float max_travel = settings.max_travel[X_AXIS];
-  if (max_travel > settings.max_travel[Y_AXIS]) { max_travel = settings.max_travel[Y_AXIS]; }
-  if (max_travel > settings.max_travel[Z_AXIS]) { max_travel = settings.max_travel[Z_AXIS]; }
+  float max_travel = settings.max_travel[0];
+  for (idx=1; idx<N_AXIS; idx++){
+	 if (max_travel > settings.max_travel[idx]) { max_travel = settings.max_travel[idx]; }
+  }
   max_travel *= -HOMING_AXIS_SEARCH_SCALAR; // Ensure homing switches engaged by over-estimating max travel.
    
   plan_reset(); // Reset planner buffer to zero planner current position and to clear previous motions.
@@ -157,6 +158,7 @@ void limits_go_home(uint8_t cycle_mask)
     if (bit_istrue(settings.homing_dir_mask,(1<<X_DIRECTION_BIT))) { target[X_AXIS] = -target[X_AXIS]; }
     if (bit_istrue(settings.homing_dir_mask,(1<<Y_DIRECTION_BIT))) { target[Y_AXIS] = -target[Y_AXIS]; }
     if (bit_istrue(settings.homing_dir_mask,(1<<Z_DIRECTION_BIT))) { target[Z_AXIS] = -target[Z_AXIS]; }
+    if (bit_istrue(settings.homing_dir_mask,(1<<C_DIRECTION_BIT))) { target[C_AXIS] = -target[Z_AXIS]; }
   
     homing_rate *= sqrt(n_active_axis); // [sqrt(N_AXIS)] Adjust so individual axes all move at homing rate.
 
@@ -165,6 +167,7 @@ void limits_go_home(uint8_t cycle_mask)
     if (bit_istrue(cycle_mask,bit(X_AXIS))) { axislock |= (1<<X_STEP_BIT); }
     if (bit_istrue(cycle_mask,bit(Y_AXIS))) { axislock |= (1<<Y_STEP_BIT); }
     if (bit_istrue(cycle_mask,bit(Z_AXIS))) { axislock |= (1<<Z_STEP_BIT); }
+    if (bit_istrue(cycle_mask,bit(C_AXIS))) { axislock |= (1<<C_STEP_BIT); }
     sys.homing_axis_lock = axislock;
   
     // Perform homing cycle. Planner buffer should be empty, as required to initiate the homing cycle.
@@ -188,6 +191,9 @@ void limits_go_home(uint8_t cycle_mask)
       }
       if (axislock & (1<<Z_STEP_BIT)) {
         if (limit_state & (1<<Z_LIMIT_BIT)) { axislock &= ~(1<<Z_STEP_BIT); }
+      }
+      if (axislock & (1<<C_STEP_BIT)) {
+        if (limit_state & (1<<C_LIMIT_BIT)) { axislock &= ~(1<<C_STEP_BIT); }
       }
       sys.homing_axis_lock = axislock;
       st_prep_buffer(); // Check and prep segment buffer. NOTE: Should take no longer than 200us.

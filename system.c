@@ -136,10 +136,19 @@ uint8_t system_execute_line(char *line)
           if ( line[++char_counter] != 0 ) { return(STATUS_UNSUPPORTED_STATEMENT); }
           else { report_ngc_parameters(); }
           break;          
-        case 'H' : // Perform homing cycle [IDLE/ALARM]
+        case 'H' : // Perform homing cycle [IDLE/ALARM], only if idle or lost
           if (bit_istrue(settings.flags,BITFLAG_HOMING_ENABLE)) { 
-            // Only perform homing if Grbl is idle or lost.
-            mc_homing_cycle(); 
+				char axis = line[++char_counter];
+				if (axis == '\0' ) {  
+				  axis = HOMING_CYCLE_ALL; //do all axes if none specified
+				}
+				else {
+				  axis = get_axis_idx(axis); 
+				  if (axis == N_AXIS) { return(STATUS_UNSUPPORTED_STATEMENT); }
+				  axis = (1<<axis);  //convert idx to mask
+				}
+				report_status_message(STATUS_OK); //report that we are homing
+            mc_homing_cycle(axis); 
             if (!sys.abort) { system_execute_startup(line); } // Execute startup scripts after successful homing.
           } else { return(STATUS_SETTING_DISABLED); }
           break;

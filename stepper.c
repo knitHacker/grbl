@@ -85,7 +85,8 @@ typedef struct {
   // Used by the bresenham line algorithm
   uint32_t counter_x,        // Counter variables for the bresenham line tracer
            counter_y, 
-           counter_z;
+           counter_z,
+           counter_c;
   
   uint8_t execute_step;     // Flags step execution for each interrupt.
   uint8_t step_pulse_time;  // Step pulse reset time after step rise
@@ -285,7 +286,7 @@ void st_go_idle()
 // with probing and homing cycles that require true real-time positions.
 ISR(TIMER1_COMPA_vect)
 {        
-  //  TIMING_ENABLE_PORT ^= 1<<TIMING_ENABLE_BIT; // Debug: Used to time ISR
+  //  TIMING_ENABLE_PORT ^= TIMING_MASK; // Debug: Used to time ISR
   if (busy) { return; } // The busy-flag is used to avoid reentering this interrupt
   
   // Set the direction pins a couple of nanoseconds before we step the steppers
@@ -341,6 +342,7 @@ ISR(TIMER1_COMPA_vect)
         st.steps[X_AXIS] = st.exec_block->steps[X_AXIS] >> st.exec_segment->amass_level;
         st.steps[Y_AXIS] = st.exec_block->steps[Y_AXIS] >> st.exec_segment->amass_level;
         st.steps[Z_AXIS] = st.exec_block->steps[Z_AXIS] >> st.exec_segment->amass_level;
+        st.steps[C_AXIS] = st.exec_block->steps[C_AXIS] >> st.exec_segment->amass_level;
 		#else
 		  st.steps = st.exec_block->steps;
       #endif
@@ -387,6 +389,15 @@ ISR(TIMER1_COMPA_vect)
     st.counter_z -= st.exec_block->step_event_count;
     if (st.exec_block->direction_bits & (1<<Z_DIRECTION_BIT)) { sys.position[Z_AXIS]--; }
     else { sys.position[Z_AXIS]++; }
+  }  
+
+  st.counter_c += st.steps[C_AXIS];
+
+  if (st.counter_c > st.exec_block->step_event_count) {
+    st.step_outbits |= (1<<C_STEP_BIT);
+    st.counter_c -= st.exec_block->step_event_count;
+    if (st.exec_block->direction_bits & (1<<C_DIRECTION_BIT)) { sys.position[C_AXIS]--; }
+    else { sys.position[C_AXIS]++; }
   }  
 
   // During a homing cycle, lock out and prevent desired axes from moving.
@@ -534,6 +545,7 @@ void st_prep_buffer()
           st_prep_block->steps[X_AXIS] = pl_block->steps[X_AXIS];
           st_prep_block->steps[Y_AXIS] = pl_block->steps[Y_AXIS];
           st_prep_block->steps[Z_AXIS] = pl_block->steps[Z_AXIS];
+          st_prep_block->steps[C_AXIS] = pl_block->steps[C_AXIS];
           st_prep_block->step_event_count = pl_block->step_event_count;
         #else
           // With AMASS enabled, simply bit-shift multiply all Bresenham data by the max AMASS 
@@ -542,6 +554,7 @@ void st_prep_buffer()
           st_prep_block->steps[X_AXIS] = pl_block->steps[X_AXIS] << MAX_AMASS_LEVEL;
           st_prep_block->steps[Y_AXIS] = pl_block->steps[Y_AXIS] << MAX_AMASS_LEVEL;
           st_prep_block->steps[Z_AXIS] = pl_block->steps[Z_AXIS] << MAX_AMASS_LEVEL;
+          st_prep_block->steps[C_AXIS] = pl_block->steps[C_AXIS] << MAX_AMASS_LEVEL;
           st_prep_block->step_event_count = pl_block->step_event_count << MAX_AMASS_LEVEL;
         #endif
         
