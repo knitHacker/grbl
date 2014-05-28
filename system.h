@@ -81,6 +81,9 @@ typedef struct {
   uint8_t auto_start;            // Planner auto-start flag. Toggled off during feed hold. Defaulted by settings.
   volatile uint8_t probe_state;   // Probing state value.  Used to coordinate the probing cycle with stepper ISR.
   int32_t probe_position[N_AXIS]; // Last probe position in machine coordinates and steps.
+#if defined(USE_LINE_NUMBERS) && USE_LINE_NUMBERS == PERSIST_LINE_NUMBERS
+  int32_t last_line_number;
+#endif
 } system_t;
 extern system_t sys;
 

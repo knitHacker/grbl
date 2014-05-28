@@ -60,6 +60,7 @@ typedef struct {
   uint8_t direction_bits;
   uint32_t steps[N_AXIS];
   uint32_t step_event_count;
+  uint32_t line_number;
 } st_block_t;
 static st_block_t st_block_buffer[SEGMENT_BUFFER_SIZE-1];
 
@@ -76,7 +77,7 @@ typedef struct {
   #else
     uint8_t prescaler;      // Without AMASS, a prescaler is required to adjust for slow timing.
   #endif
-  uint8_t block_end;         //true for last segment of a block
+  uint8_t block_end;         //true for last segment of a block - used to force reporting
 } segment_t;
 static segment_t segment_buffer[SEGMENT_BUFFER_SIZE];
 
@@ -328,11 +329,16 @@ ISR(TIMER1_COMPA_vect)
       if ( st.exec_block_index != st.exec_segment->st_block_index ) {
         st.exec_block_index = st.exec_segment->st_block_index;
         st.exec_block = &st_block_buffer[st.exec_block_index];
+
+#if defined(USE_LINE_NUMBERS) && USE_LINE_NUMBERS == PERSIST_LINE_NUMBERS
+		  sys.last_line_number = st.exec_block->line_number;
+#endif
         
         // Initialize Bresenham line and distance counters
         st.counter_x = (st.exec_block->step_event_count >> 1);
         st.counter_y = st.counter_x;
-        st.counter_z = st.counter_x;        
+        st.counter_z = st.counter_x;  
+		  st.counter_c = st.counter_x;
       }
 
       st.dir_outbits = st.exec_block->direction_bits ^ settings.dir_invert_mask; 
@@ -530,6 +536,7 @@ void st_prep_buffer()
                       
       // Check if the segment buffer completed the last planner block. If so, load the Bresenham
       // data for the block. If not, we are still mid-block and the velocity profile was updated. 
+		//ADS TODO: shouldn't this be in the block?
       if (prep.flag_partial_block) {
         prep.flag_partial_block = false; // Reset flag
       } else {
@@ -541,6 +548,10 @@ void st_prep_buffer()
         // segment buffer finishes the prepped block, but the stepper ISR is still executing it. 
         st_prep_block = &st_block_buffer[prep.st_block_index];
         st_prep_block->direction_bits = pl_block->direction_bits;
+
+#if defined(USE_LINE_NUMBERS) &&  USE_LINE_NUMBERS == PERSIST_LINE_NUMBERS
+		  st_prep_block->line_number = pl_block->line_number;
+#endif
         #ifndef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
           st_prep_block->steps[X_AXIS] = pl_block->steps[X_AXIS];
           st_prep_block->steps[Y_AXIS] = pl_block->steps[Y_AXIS];
@@ -811,7 +822,7 @@ void st_prep_buffer()
 		prep_segment->block_end = 0;
     } else { 
       // End of planner block or forced-termination. No more distance to be executed.
-		prep_segment->block_end = 1;
+		prep_segment->block_end = EXEC_STATUS_REPORT;
       if (mm_remaining > 0.0) { // At end of forced-termination.
         // Reset prep parameters for resuming and then bail.
         // NOTE: Currently only feed holds qualify for this scenario. May change with overrides.       

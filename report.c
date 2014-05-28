@@ -345,6 +345,18 @@ void report_realtime_status()
   uint8_t i;
   int32_t current_position[N_AXIS]; // Copy current state of the system position variable
   memcpy(current_position,sys.position,sizeof(sys.position));
+
+#ifdef USE_LINE_NUMBERS
+  int32_t ln = 0;
+#if USE_LINE_NUMBERS != PERSIST_LINE_NUMBERS
+  plan_block_t * pb = plan_get_current_block();
+  if(pb != NULL) {
+    ln = pb->line_number;
+  } 
+#else
+  ln = sys.last_line_number;
+#endif
+#endif
   float print_position[N_AXIS];
  
   // Report current machine state
@@ -382,11 +394,6 @@ void report_realtime_status()
   #ifdef USE_LINE_NUMBERS
   // Report current line number
   printPgmString(PSTR(",Ln:")); 
-  int32_t ln=0;
-  plan_block_t * pb = plan_get_current_block();
-  if(pb != NULL) {
-    ln = pb->line_number;
-  } 
   printInteger(ln);
   #endif
 

@@ -91,7 +91,9 @@
 
 // Allows GRBL to track and report gcode line numbers.  Enabling this means that the planning buffer
 // goes from 18 or 16 to make room for the additional line number data in the plan_block_t struct
-#define USE_LINE_NUMBERS // Disabled by default. Uncomment to enable.
+//#define USE_LINE_NUMBERS // Disabled by default. Uncomment to enable.
+#define PERSIST_LINE_NUMBERS 1
+#define USE_LINE_NUMBERS PERSIST_LINE_NUMBERS
 //- could get rid of somany inline defines with something like this
 //#define plan_buffer_line(t,f,i,l) plan_buffer_line_number((t),(f),(i),(l))
 //#define plan_buffer_line(t,f,i,l) plan_buffer_line_x((t),(f),(i))

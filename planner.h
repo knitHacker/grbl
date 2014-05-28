@@ -46,7 +46,7 @@ typedef struct {
   float entry_speed_sqr;         // The current planned entry speed at block junction in (mm/min)^2
   float max_entry_speed_sqr;     // Maximum allowable entry speed based on the minimum of junction limit and 
                                  //   neighboring nominal speeds with overrides in (mm/min)^2
-  float max_junction_speed_sqr;  // Junction entry speed limit based on direction vectors in (mm/min)^2
+  float max_junction_speed_sqr;  // Junction entry speed limit based on direction vectors in (mm/min)^2  //TODO ADS: not dynamic.
   float nominal_speed_sqr;       // Axis-limit adjusted nominal speed for this block in (mm/min)^2
   float acceleration;            // Axis-limit adjusted line acceleration in (mm/min^2)
   float millimeters;             // The remaining distance for this block to be executed in (mm)
