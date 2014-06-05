@@ -274,8 +274,9 @@ void report_gcode_modes()
     else { printPgmString(PSTR(" G18")); }
   } else { printPgmString(PSTR(" G19")); }
   
-  if (gc.inches_mode) { printPgmString(PSTR(" G20")); }
-  else { printPgmString(PSTR(" G21")); }
+  if (gc.units_mode == UNITS_MODE_MM) { printPgmString(PSTR(" G21")); }
+  else if (gc.units_mode == UNITS_MODE_INCH) { printPgmString(PSTR(" G20")); }
+  else { printPgmString(PSTR(" G66")); }
   
   if (gc.absolute_mode) { printPgmString(PSTR(" G90")); }
   else { printPgmString(PSTR(" G91")); }
@@ -307,7 +308,7 @@ void report_gcode_modes()
   printInteger(gc.tool);
   
   printPgmString(PSTR(" F"));
-  if (gc.inches_mode) { printFloat(gc.feed_rate*INCH_PER_MM); }
+  if (gc.units_mode==UNITS_MODE_INCH) { printFloat(gc.feed_rate*INCH_PER_MM); }
   else { printFloat(gc.feed_rate); }
 
   printPgmString(PSTR("]\r\n"));

@@ -50,6 +50,7 @@ static void select_plane(uint8_t axis_0, uint8_t axis_1, uint8_t axis_2)
 
 void gc_init() 
 {
+  uint8_t i;
   memset(&gc, 0, sizeof(gc));
   gc.feed_rate = settings.default_feed_rate;
   select_plane(X_AXIS, Y_AXIS, Z_AXIS);
@@ -59,6 +60,12 @@ void gc_init()
   if (!(settings_read_coord_data(gc.coord_select,gc.coord_system))) { 
     report_status_message(STATUS_SETTING_READ_FAIL); 
   } 
+  gc.step_rate = DEFAULT_SINGLE_STEP_RATE / settings.steps_per_mm[0];
+  for (i=1; i<N_AXIS; i++) {
+	 gc.step_rate = min(gc.step_rate, DEFAULT_SINGLE_STEP_RATE / settings.steps_per_mm[i]);
+  }
+
+
 }
 
 
@@ -73,9 +80,18 @@ void gc_sync_position()
 }
 
 
-static float to_millimeters(float value) 
+static float to_millimeters(float value, int axis) 
 {
-  return(gc.inches_mode ? (value * MM_PER_INCH) : value);
+  float mm = value;
+  switch (gc.units_mode) {
+    case UNITS_MODE_MM: break;
+    case UNITS_MODE_INCH: mm *= MM_PER_INCH; break;
+    case UNITS_MODE_STEP:
+		if (axis<0) {  mm = 0; FAIL(STATUS_INVALID_STATEMENT);}  //can only do straight axis moves in step mode
+		mm /= settings.steps_per_mm[axis];  
+		break;
+  }
+  return mm;
 }
 
          
@@ -121,7 +137,7 @@ uint8_t gc_execute_line(char *line)
           case 4: case 10: case 28: case 30: case 53: case 92: group_number = MODAL_GROUP_0; break;
           case 0: case 1: case 2: case 3: case 38: case 80: group_number = MODAL_GROUP_1; break;
           case 17: case 18: case 19: group_number = MODAL_GROUP_2; break;
-          case 90: case 91: group_number = MODAL_GROUP_3; break;
+          case 90: case 91: case 66: group_number = MODAL_GROUP_3; break;
           case 93: case 94: group_number = MODAL_GROUP_5; break;
           case 20: case 21: group_number = MODAL_GROUP_6; break;
           case 54: case 55: case 56: case 57: case 58: case 59: group_number = MODAL_GROUP_12; break;
@@ -137,8 +153,8 @@ uint8_t gc_execute_line(char *line)
           case 17: select_plane(X_AXIS, Y_AXIS, Z_AXIS); break;
           case 18: select_plane(Z_AXIS, X_AXIS, Y_AXIS); break;
           case 19: select_plane(Y_AXIS, Z_AXIS, X_AXIS); break;
-          case 20: gc.inches_mode = true; break;
-          case 21: gc.inches_mode = false; break;
+          case 20: gc.units_mode = UNITS_MODE_INCH; break;
+          case 21: gc.units_mode = UNITS_MODE_MM; break;
           case 28: case 30: 
             int_value = trunc(10*value); // Multiply by 10 to pick up Gxx.1
             switch(int_value) {
@@ -163,6 +179,9 @@ uint8_t gc_execute_line(char *line)
           case 54: case 55: case 56: case 57: case 58: case 59:
             gc.coord_select = int_value-54;
             break;
+		  case 66: 
+			 gc.units_mode = UNITS_MODE_STEP;
+			 break;
           case 80: gc.motion_mode = MOTION_MODE_CANCEL; break;
           case 90: gc.absolute_mode = true; break;
           case 91: gc.absolute_mode = false; break;
@@ -232,12 +251,12 @@ uint8_t gc_execute_line(char *line)
       case 'F': 
         if (value <= 0) { FAIL(STATUS_INVALID_STATEMENT); } // Must be greater than zero
         if (gc.inverse_feed_rate_mode) {
-          inverse_feed_rate = to_millimeters(value); // seconds per motion for this motion only
+          inverse_feed_rate = to_millimeters(value,-1); // seconds per motion for this motion only
         } else {          
-          gc.feed_rate = to_millimeters(value); // millimeters per minute
+          gc.feed_rate = to_millimeters(value,-1); // millimeters per minute
         }
         break;
-      case 'I': case 'J': case 'K': gc.arc_offset[letter-'I'] = to_millimeters(value); break;
+	 case 'I': case 'J': case 'K': gc.arc_offset[letter-'I'] = to_millimeters(value,-1); break;
       case 'L': l = trunc(value); break;
       case 'N': 
         #ifdef USE_LINE_NUMBERS
@@ -245,7 +264,7 @@ uint8_t gc_execute_line(char *line)
         #endif
         break;
       case 'P': p = value; break;                    
-      case 'R': gc.arc_radius = to_millimeters(value); break;
+	 case 'R': gc.arc_radius = to_millimeters(value,-1); break;
       case 'S': 
         if (value < 0) { FAIL(STATUS_INVALID_STATEMENT); } // Cannot be negative
         gc.spindle_speed = value;
@@ -260,7 +279,7 @@ uint8_t gc_execute_line(char *line)
       case 'C': 
 		  {
 			 uint8_t idx = get_axis_idx(letter); //no retval error check, b/c switch validated input
-			 target[idx] = to_millimeters(value); bit_true(axis_words,bit(idx));
+			 target[idx] = to_millimeters(value,idx); bit_true(axis_words,bit(idx));
 			 break;
 		  }
       default: FAIL(STATUS_UNSUPPORTED_STATEMENT);
@@ -455,11 +474,15 @@ uint8_t gc_execute_line(char *line)
         // and after an inverse time move and then check for non-zero feed rate each time. This
         // should be efficient and effective.
         if (!axis_words) { FAIL(STATUS_INVALID_STATEMENT);} 
+		  else if (gc.inverse_feed_rate_mode && gc.units_mode == UNITS_MODE_STEP) { 
+			 FAIL(STATUS_MODAL_GROUP_VIOLATION);  //should probably get own error
+		  }
         else { 
+			 float feed_rate = (gc.units_mode == UNITS_MODE_STEP) ? gc.step_rate : gc.feed_rate;
           #ifdef USE_LINE_NUMBERS
-          mc_line(target, (gc.inverse_feed_rate_mode) ? inverse_feed_rate : gc.feed_rate, gc.inverse_feed_rate_mode, line_number);
+          mc_line(target, (gc.inverse_feed_rate_mode) ? inverse_feed_rate : feed_rate, gc.inverse_feed_rate_mode, line_number);
           #else
-          mc_line(target, (gc.inverse_feed_rate_mode) ? inverse_feed_rate : gc.feed_rate, gc.inverse_feed_rate_mode);
+          mc_line(target, (gc.inverse_feed_rate_mode) ? inverse_feed_rate : feed_rate, gc.inverse_feed_rate_mode);
           #endif
         }
         break;

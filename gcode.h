@@ -64,12 +64,26 @@
 #define NON_MODAL_SET_COORDINATE_OFFSET 7 // G92
 #define NON_MODAL_RESET_COORDINATE_OFFSET 8 //G92.1
 
+#define UNITS_MODE_MM 0
+#define UNITS_MODE_INCH 1
+#define UNITS_MODE_STEP 2
+
+
+/* todo maybe: use bits for modes:
+
+0 feedrate/inverse
+1 inches/mm
+2 relative/abs
+3 normal/step
+*/
+
+
 typedef struct {
   uint8_t status_code;             // Parser status for current block
   uint8_t motion_mode;             // {G0, G1, G2, G3, G80}
   uint8_t inverse_feed_rate_mode;  // {G93, G94}
-  uint8_t inches_mode;             // 0 = millimeter mode, 1 = inches mode {G20, G21}
-  uint8_t absolute_mode;           // 0 = relative motion, 1 = absolute motion {G90, G91}
+  uint8_t units_mode;             // 0 = millimeter mode, 1 = inches mode {G20, G21} 2 = step mode {G66}
+  uint8_t absolute_mode;           // 0 = relative motion, 1 = absolute motion {G90, G91} step = rel{G66}
   uint8_t program_flow;            // {M0, M1, M2, M30}
   uint8_t coolant_mode;            // 0 = Disable, 1 = Flood Enable, 2 = Mist Enable {M8, M9}
   uint8_t spindle_direction;        // 1 = CW, 2 = CCW, 0 = Stop {M3, M4, M5}
@@ -88,6 +102,7 @@ typedef struct {
                                    
   float arc_radius; 
   float arc_offset[N_AXIS];
+  float step_rate;                 //rate for single step move hack
                                          
 } parser_state_t;
 extern parser_state_t gc;
