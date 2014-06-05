@@ -22,6 +22,7 @@
 #include "coolant_control.h"
 #include "protocol.h"
 
+#ifdef CNC_CONFIGURATION
 
 void coolant_init()
 {
@@ -57,3 +58,12 @@ void coolant_run(uint8_t mode)
     coolant_stop();
   }
 }
+
+#else
+void coolant_init()
+{}
+void coolant_stop()
+{}
+void coolant_run(uint8_t m)
+{}
+#endif

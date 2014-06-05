@@ -190,8 +190,8 @@ static st_prep_t prep;
 void st_wake_up() 
 {
   // Enable stepper drivers.
-  if (bit_istrue(settings.flags,BITFLAG_INVERT_ST_ENABLE)) { STEPPERS_DISABLE_PORT |= (1<<STEPPERS_DISABLE_BIT); }
-  else { STEPPERS_DISABLE_PORT &= ~(1<<STEPPERS_DISABLE_BIT); }
+  if (bit_istrue(settings.flags,BITFLAG_INVERT_ST_ENABLE)) { STEPPERS_DISABLE_PORT |= (STEPPERS_DISABLE_MASK); }
+  else { STEPPERS_DISABLE_PORT &= ~(STEPPERS_DISABLE_MASK); }
 
   if (sys.state & (STATE_CYCLE | STATE_HOMING)){
     // Initialize stepper output bits
@@ -232,8 +232,8 @@ void st_go_idle()
     pin_state = true; // Override. Disable steppers.
   }
   if (bit_istrue(settings.flags,BITFLAG_INVERT_ST_ENABLE)) { pin_state = !pin_state; } // Apply pin invert.
-  if (pin_state) { STEPPERS_DISABLE_PORT |= (1<<STEPPERS_DISABLE_BIT); }
-  else { STEPPERS_DISABLE_PORT &= ~(1<<STEPPERS_DISABLE_BIT); }
+  if (pin_state) { STEPPERS_DISABLE_PORT |= (STEPPERS_DISABLE_MASK); }
+  else { STEPPERS_DISABLE_PORT &= ~(STEPPERS_DISABLE_MASK); }
 }
 
 
@@ -478,7 +478,7 @@ void stepper_init()
   // Configure step and direction interface pins
   STEP_DDR |= STEP_MASK;
   STEP_PORT = (STEP_PORT & ~STEP_MASK) | settings.step_invert_mask;
-  STEPPERS_DISABLE_DDR |= 1<<STEPPERS_DISABLE_BIT;
+  STEPPERS_DISABLE_DDR |= STEPPERS_DISABLE_MASK;
   DIRECTION_DDR |= DIRECTION_MASK;
   DIRECTION_PORT = (DIRECTION_PORT & ~DIRECTION_MASK) | settings.dir_invert_mask;
 

@@ -23,6 +23,7 @@
 #include "spindle_control.h"
 #include "protocol.h"
 
+#ifdef CNC_CONFIGURATION
 
 void spindle_init()
 {    
@@ -90,3 +91,13 @@ void spindle_run(uint8_t direction, float rpm)
 
   }
 }
+
+
+#else
+void spindle_init()
+{}
+void spindle_stop()
+{}
+void spindle_run(uint8_t d,float r)
+{}
+#endif
