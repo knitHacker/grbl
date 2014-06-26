@@ -223,7 +223,7 @@ void st_go_idle()
   
   // Set stepper driver idle state, disabled or enabled, depending on settings and circumstances.
   bool pin_state = false; // Keep enabled.
-  if (((settings.stepper_idle_lock_time != 0xff) || bit_istrue(sys.execute,EXEC_ALARM)) && sys.state != STATE_HOMING) {
+  if (((settings.stepper_idle_lock_time != 0xff) || bit_istrue(sysflags.execute,EXEC_ALARM)) && sys.state != STATE_HOMING) {
     // Force stepper dwell to lock axes for a defined amount of time to ensure the axes come to a complete
     // stop and not drift from residual inertial forces at the end of the last movement.
     delay_ms(settings.stepper_idle_lock_time);
@@ -349,7 +349,7 @@ ISR(TIMER1_COMPA_vect)
     } else {
       // Segment buffer empty. Shutdown.
       st_go_idle();
-      bit_true(sys.execute,EXEC_CYCLE_STOP); // Flag main program for cycle end
+      bit_true(sysflags.execute,EXEC_CYCLE_STOP); // Flag main program for cycle end
       return; // Nothing to do but exit.
     }  
   }
@@ -390,12 +390,12 @@ ISR(TIMER1_COMPA_vect)
   }  
 
   // During a homing cycle, lock out and prevent desired axes from moving.
-  if (sys.state == STATE_HOMING) { st.step_outbits &= sys.homing_axis_lock; }   
+  if (sys.state == STATE_HOMING) { st.step_outbits &= sysflags.homing_axis_lock; }   
 
   st.step_count--; // Decrement step events count 
   if (st.step_count == 0) {
     // Segment is complete. Discard current segment and advance segment indexing.
-	 sys.execute |= st.exec_segment->block_end; //sets EXEC_STATUS_REPORT when done with block
+	 sysflags.execute |= st.exec_segment->block_end; //sets EXEC_STATUS_REPORT when done with block
     st.exec_segment = NULL;
 
     if ( ++segment_buffer_tail == SEGMENT_BUFFER_SIZE) { segment_buffer_tail = 0; }

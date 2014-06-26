@@ -145,6 +145,7 @@ void report_grbl_help() {
                       "~ (cycle start)\r\n"
                       "! (feed hold)\r\n"
                       "? (current status)\r\n"
+                      "^ (limit pins)\r\n"
                       "ctrl-x (reset Grbl)\r\n"));
 }
 
@@ -387,3 +388,17 @@ void report_realtime_status()
     
   printPgmString(PSTR(">\r\n"));
 }
+
+
+void report_limit_pins()
+{
+  uint8_t limit_state = LIMIT_PIN & LIMIT_MASK;
+  if (bit_istrue(settings.flags,BITFLAG_INVERT_LIMIT_PINS)) {
+	 limit_state^=LIMIT_MASK;
+  }  
+  printPgmString(PSTR("("));
+  print_uint8_base2(limit_state);
+  printPgmString(PSTR(")\n\r"));
+
+}
+

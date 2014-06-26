@@ -26,6 +26,7 @@
 // Initialize the limits module
 void limits_init();
 
+void limits_enable();
 void limits_disable();
 
 // Perform one portion of the homing cycle based on the input settings.

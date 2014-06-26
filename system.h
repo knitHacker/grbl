@@ -53,7 +53,7 @@
 #define EXEC_RESET          bit(4) // bitmask 00010000
 #define EXEC_ALARM          bit(5) // bitmask 00100000
 #define EXEC_CRIT_EVENT     bit(6) // bitmask 01000000
-// #define                  bit(7) // bitmask 10000000
+#define EXEC_LIMIT_REPORT   bit(7) // bitmask 10000000
 
 
 // Define system state bit map. The state variable primarily tracks the individual functions
@@ -73,15 +73,22 @@
 typedef struct {
   uint8_t abort;                 // System abort flag. Forces exit back to main loop for reset.
   uint8_t state;                 // Tracks the current state of Grbl.
-  volatile uint8_t execute;      // Global system runtime executor bitflag variable. See EXEC bitmasks.
-  uint8_t homing_axis_lock;
+  uint8_t auto_start;            // Planner auto-start flag. Toggled off during feed hold. Defaulted by settings.  
+  
   int32_t position[N_AXIS];      // Real-time machine (aka home) position vector in steps. 
                                  // NOTE: This may need to be a volatile variable, if problems arise.                             
-  uint8_t auto_start;            // Planner auto-start flag. Toggled off during feed hold. Defaulted by settings.
-  volatile uint8_t probe_state;   // Probing state value.  Used to coordinate the probing cycle with stepper ISR.
   int32_t probe_position[N_AXIS]; // Last probe position in machine coordinates and steps.
+
 } system_t;
 extern system_t sys;
+
+typedef struct {
+  uint8_t execute;      // Global system runtime executor bitflag variable. See EXEC bitmasks.
+  uint8_t probe_state;   // Probing state value.  Used to coordinate the probing cycle with stepper ISR.
+  uint8_t homing_axis_lock;
+  uint8_t limits;                 //limit
+} sys_flags_t;
+extern volatile sys_flags_t sysflags;
 
 
 // Initialize the serial protocol

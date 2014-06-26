@@ -76,6 +76,9 @@
   #define LIMIT_INT        PCIE0  // Pin change interrupt enable pin
   #define LIMIT_INT_vect   PCINT0_vect 
   #define LIMIT_PCMSK      PCMSK0 // Pin change interrupt register
+  #define LIMIT_BIT_SHIFT  -1      //shift limit pins 1 left to align w/ step bits.
+                                   // won't work with variable spindle, unless we move limits to 10,11,12 and
+                                   // put spindle on pwm 9, leave dir on 13.  (then shift=0)
 
   // Define spindle enable and spindle direction output pins.
   #define SPINDLE_ENABLE_DDR    DDRB
@@ -193,6 +196,7 @@
   #define LIMIT_INT_vect  PCINT0_vect 
   #define LIMIT_PCMSK     PCMSK0 // Pin change interrupt register
   #define LIMIT_MASK ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<Z_LIMIT_BIT)) // All limit bits
+  #define LIMIT_BIT_SHIFT 2  // shift 2 right to align with step bits
 
   #define TIMING_ENABLE_PORT PORTB
   #define TIMING_ENABLE_BIT  7

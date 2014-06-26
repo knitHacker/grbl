@@ -85,4 +85,6 @@ void report_startup_line(uint8_t n, char *line);
 // Prints build info and user info
 void report_build_info(char *line);
 
+// Prints current limit word
+void report_limit_pins();
 #endif
