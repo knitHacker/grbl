@@ -76,6 +76,10 @@
   #define LIMIT_INT        PCIE0  // Pin change interrupt enable pin
   #define LIMIT_INT_vect   PCINT0_vect 
   #define LIMIT_PCMSK      PCMSK0 // Pin change interrupt register
+  #define LIMIT_INT_ENABLE LIMIT_MASK
+  #define LIMIT_BIT_SHIFT  -1      //shift limit pins 1 left to align w/ step bits.
+                                   // won't work with variable spindle, unless we move limits to 10,11,12 and
+                                   // put spindle on pwm 9, leave dir on 13.  (then shift=0)
 
   #define CNC_CONFIGURATION
 
@@ -191,16 +195,19 @@
   #define LIMIT_DDR       DDRB
   #define LIMIT_PORT      PORTB
   #define LIMIT_PIN       PINB
-  #define X_LIMIT_BIT     4 // MEGA2560 Digital Pin 10
-  #define Y_LIMIT_BIT     5 // MEGA2560 Digital Pin 11
-  #define Z_LIMIT_BIT     6 // MEGA2560 Digital Pin 12
-  #define C_LIMIT_BIT     3 // MEGA2650 Digital Pin 50
+  #define X_LIMIT_BIT     3 // MEGA2560 Digital Pin 50
+  #define Y_LIMIT_BIT     4 // MEGA2560 Digital Pin 10
+  #define Z_LIMIT_BIT     5 // MEGA2560 Digital Pin 11
+  #define C_LIMIT_BIT     6 // MEGA2650 Digital Pin 12
   #define LIMIT_INT       PCIE0  // Pin change interrupt enable pin
   #define LIMIT_INT_vect  PCINT0_vect 
   #define LIMIT_PCMSK     PCMSK0 // Pin change interrupt register
-#define LIMIT_MASK ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<Z_LIMIT_BIT)|(1<<C_LIMIT_BIT)) // All limit bits
+  #define LIMIT_MASK ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<Z_LIMIT_BIT)|(1<<C_LIMIT_BIT)) // All limit bits
+  #define LIMIT_INT_ENABLE LIMIT_MASK
+  #define LIMIT_BIT_SHIFT 3  // shift right to align with step bits
 
-  #define TIMING_ENABLE_PORT PORTB
+
+  #define TIMING_PORT PORTB
   #define TIMING_ENABLE_BIT  7
   #define TIMING_MASK        (1<<TIMING_ENABLE_BIT) // LED
 
@@ -323,11 +330,18 @@
   #define LIMIT_INT       PCIE0  // Pin change interrupt enable pin
   #define LIMIT_INT_vect  PCINT0_vect 
   #define LIMIT_PCMSK     PCMSK0 // Pin change interrupt register
-#define LIMIT_MASK ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<Z_LIMIT_BIT)|(1<<C_LIMIT_BIT)) // All limit bits
+//#define LIMIT_MASK ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<Z_LIMIT_BIT)|(1<<C_LIMIT_BIT)) // All limit bits
+#define LIMIT_MASK ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT))
+  #define LIMIT_INT_ENABLE LIMIT_MASK
+#define LIMIT_BIT_SHIFT   0
 
-  #define TIMING_ENABLE_PORT PORTA
-  #define TIMING_ENABLE_BIT  7 // Atmega2560 pin 71 / Arduino Digital Pin 29
-  #define TIMING_MASK        (1<<TIMING_ENABLE_BIT) // LED
+  /* #define TIMING_PORT PORTA */
+  /* #define TIMING_ENABLE_BIT  7 // Atmega2560 pin 71 / Arduino Digital Pin 29 */
+  /* #define TIMING_MASK        (1<<TIMING_ENABLE_BIT) // LED */
+#define TIMING_DDR DDRB
+#define TIMING_PORT PORTB  ///TODO: move later
+  #define TIMING_BIT  7
+  #define TIMING_MASK        (1<<TIMING_BIT) // LED
 
 
 #ifdef CNC_CONFIGURATION
@@ -393,6 +407,9 @@
     #define SPINDLE_PWM_PORT    PORTH
     #define SPINDLE_PWM_BIT		6 // Atmega2560 pin X / Arduino Digital Pin 9
   #endif // End of VARIABLE_SPINDLE
+
+
+
 
 #endif
 

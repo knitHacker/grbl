@@ -145,6 +145,7 @@ void report_grbl_help() {
                       "~ (cycle start)\r\n"
                       "! (feed hold)\r\n"
                       "? (current status)\r\n"
+                      "^ (limit pins)\r\n"
                       "ctrl-x (reset Grbl)\r\n"));
 }
 
@@ -326,7 +327,7 @@ void report_startup_line(uint8_t n, char *line)
 // Prints build info line
 void report_build_info(char *line)
 {
-  printPgmString(PSTR("[" GRBL_VERSION "." GRBL_VERSION_BUILD "(" GRBL_PLATFORM ") :"));
+  printPgmString(PSTR("[" GRBL_VERSION ", " GRBL_VERSION_BUILD " (" GRBL_PLATFORM ") :"));
   printString(line);
   printPgmString(PSTR("]\r\n"));
 }
@@ -397,8 +398,6 @@ void report_realtime_status()
   printPgmString(PSTR(",Ln:")); 
   printInteger(ln);
   #endif
-
-
     
   printPgmString(PSTR(">\r\n"));
 }

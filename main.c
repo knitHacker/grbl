@@ -36,6 +36,7 @@
 
 // Declare system global variable structure
 system_t sys; 
+volatile sys_flags_t sysflags; 
 
 
 int main(void)
@@ -47,6 +48,7 @@ int main(void)
   system_init();   // Configure pinout pins and pin-change interrupt
   
   memset(&sys, 0, sizeof(sys));  // Clear all system variables
+  memset((void*)&sysflags, 0, sizeof(sysflags));  // and volatiles
   sys.abort = true;   // Set abort to complete initialization
   sei(); // Enable interrupts
 
@@ -84,7 +86,7 @@ int main(void)
 
     // Reset system variables.
     sys.abort = false;
-    sys.execute = 0;
+    sysflags.execute = 0;
     if (bit_istrue(settings.flags,BITFLAG_AUTO_START)) { sys.auto_start = true; }
     else { sys.auto_start = false; }
           

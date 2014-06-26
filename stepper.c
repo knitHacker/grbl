@@ -225,7 +225,7 @@ void st_go_idle()
   
   // Set stepper driver idle state, disabled or enabled, depending on settings and circumstances.
   bool pin_state = false; // Keep enabled.
-  if (((settings.stepper_idle_lock_time != 0xff) || bit_istrue(sys.execute,EXEC_ALARM)) && sys.state != STATE_HOMING) {
+  if (((settings.stepper_idle_lock_time != 0xff) || bit_istrue(sysflags.execute,EXEC_ALARM)) && sys.state != STATE_HOMING) {
     // Force stepper dwell to lock axes for a defined amount of time to ensure the axes come to a complete
     // stop and not drift from residual inertial forces at the end of the last movement.
     delay_ms(settings.stepper_idle_lock_time);
@@ -287,7 +287,7 @@ void st_go_idle()
 // with probing and homing cycles that require true real-time positions.
 ISR(TIMER1_COMPA_vect)
 {        
-  //  TIMING_ENABLE_PORT ^= TIMING_MASK; // Debug: Used to time ISR
+  // TIMING_PORT ^= TIMING_MASK; // Debug: Used to time ISR
   if (busy) { return; } // The busy-flag is used to avoid reentering this interrupt
   
   // Set the direction pins a couple of nanoseconds before we step the steppers
@@ -357,7 +357,7 @@ ISR(TIMER1_COMPA_vect)
     } else {
       // Segment buffer empty. Shutdown.
       st_go_idle();
-      bit_true(sys.execute,EXEC_CYCLE_STOP); // Flag main program for cycle end
+      bit_true(sysflags.execute,EXEC_CYCLE_STOP); // Flag main program for cycle end
       return; // Nothing to do but exit.
     }  
   }
@@ -407,12 +407,12 @@ ISR(TIMER1_COMPA_vect)
   }  
 
   // During a homing cycle, lock out and prevent desired axes from moving.
-  if (sys.state == STATE_HOMING) { st.step_outbits &= sys.homing_axis_lock; }   
+  if (sys.state == STATE_HOMING) { st.step_outbits &= sysflags.homing_axis_lock; }   
 
   st.step_count--; // Decrement step events count 
   if (st.step_count == 0) {
     // Segment is complete. Discard current segment and advance segment indexing.
-	 sys.execute |= st.exec_segment->block_end;
+	 sysflags.execute |= st.exec_segment->block_end; //sets EXEC_STATUS_REPORT when done with block
     st.exec_segment = NULL;
 
     if ( ++segment_buffer_tail == SEGMENT_BUFFER_SIZE) { segment_buffer_tail = 0; }
@@ -420,7 +420,7 @@ ISR(TIMER1_COMPA_vect)
 
   st.step_outbits ^= settings.step_invert_mask;  // Apply step port invert mask    
   busy = false;
-  // TIMING_ENABLE_PORT ^= 1<<TIMING_ENABLE_BIT; // Debug: Used to time ISR
+  // TIMING_PORT ^= TIMING_MASK; // Debug: Used to time ISR
 }
 
 
@@ -822,7 +822,7 @@ void st_prep_buffer()
 		prep_segment->block_end = 0;
     } else { 
       // End of planner block or forced-termination. No more distance to be executed.
-		prep_segment->block_end = EXEC_STATUS_REPORT;
+		prep_segment->block_end = EXEC_STATUS_REPORT;  //force status report when done
       if (mm_remaining > 0.0) { // At end of forced-termination.
         // Reset prep parameters for resuming and then bail.
         // NOTE: Currently only feed holds qualify for this scenario. May change with overrides.       

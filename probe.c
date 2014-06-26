@@ -35,12 +35,12 @@ void probe_init()
 // NOTE: This function must be extremely efficient as to not bog down the stepper ISR.
 void probe_state_monitor()
 {
-  if (sys.probe_state) { 
+  if (sysflags.probe_state) { 
 	 //opt?	 if (!(sys.probe_state &= PROBE_PIN)){
     if (!(PROBE_PIN & PROBE_MASK)) {
-      sys.probe_state = PROBE_OFF;
+      sysflags.probe_state = PROBE_OFF;
       memcpy(sys.probe_position, sys.position, sizeof(float)*N_AXIS);
-      sys.execute |= EXEC_FEED_HOLD;
+      sysflags.execute |= EXEC_FEED_HOLD;
     }
   }
 }
