@@ -40,7 +40,7 @@ void probe_state_monitor()
     if (!(PROBE_PIN & PROBE_MASK)) {
       sysflags.probe_state = PROBE_OFF;
       memcpy(sys.probe_position, sys.position, sizeof(float)*N_AXIS);
-      sysflags.execute |= EXEC_FEED_HOLD;
+      SYS_EXEC |= EXEC_FEED_HOLD;
     }
   }
 }

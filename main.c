@@ -86,7 +86,7 @@ int main(void)
 
     // Reset system variables.
     sys.abort = false;
-    sysflags.execute = 0;
+    SYS_EXEC = 0;
     if (bit_istrue(settings.flags,BITFLAG_AUTO_START)) { sys.auto_start = true; }
     else { sys.auto_start = false; }
           

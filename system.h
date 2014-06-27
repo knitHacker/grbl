@@ -96,7 +96,7 @@ typedef struct {
 extern volatile sys_flags_t sysflags;
 
 
-#ifdef USE_GPIO_FOR_VOLATILES
+#ifndef UNPROTECTED_VOLATILES
   #define SYS_EXEC GPIOR0 
 #else
   #define SYS_EXEC sysflags.execute

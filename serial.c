@@ -83,7 +83,7 @@ void serial_write(uint8_t data) {
 
   // Wait until there is space in the buffer
   while (next_head == tx_buffer_tail) { 
-    if (sysflags.execute & EXEC_RESET) { return; } // Only check for abort to avoid an endless loop.
+    if (SYS_EXEC & EXEC_RESET) { return; } // Only check for abort to avoid an endless loop.
   }
 
   // Store data and advance head
@@ -157,10 +157,10 @@ ISR(SERIAL_RX)
   // Pick off runtime command characters directly from the serial stream. These characters are
   // not passed into the buffer, but these set system state flag bits for runtime execution.
   switch (data) {
-    case CMD_STATUS_REPORT: sysflags.execute |= EXEC_STATUS_REPORT; break; // Set as true
-    case CMD_LIMIT_REPORT:  sysflags.execute |= EXEC_LIMIT_REPORT; break; // Set as true
-    case CMD_CYCLE_START:   sysflags.execute |= EXEC_CYCLE_START; break; // Set as true
-    case CMD_FEED_HOLD:     sysflags.execute |= EXEC_FEED_HOLD; break; // Set as true
+    case CMD_STATUS_REPORT: SYS_EXEC |= EXEC_STATUS_REPORT; break; // Set as true
+    case CMD_LIMIT_REPORT:  SYS_EXEC |= EXEC_LIMIT_REPORT; break; // Set as true
+    case CMD_CYCLE_START:   SYS_EXEC |= EXEC_CYCLE_START; break; // Set as true
+    case CMD_FEED_HOLD:     SYS_EXEC |= EXEC_FEED_HOLD; break; // Set as true
     case CMD_RESET:         mc_reset(); break; // Call motion control reset routine.
     default: // Write character to buffer    
       next_head = rx_buffer_head + 1;

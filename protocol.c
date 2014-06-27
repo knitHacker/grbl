@@ -164,7 +164,7 @@ void protocol_main_loop()
 // limit switches, or the main program.
 void protocol_execute_runtime()
 {
-  uint8_t rt_exec = sysflags.execute; // Copy to avoid calling volatile multiple times
+  uint8_t rt_exec = SYS_EXEC; // Copy to avoid calling volatile multiple times
 
   if (rt_exec) { // Enter only if any bit flag is true
     
@@ -180,14 +180,14 @@ void protocol_execute_runtime()
         if (rt_exec & EXEC_ALARM) { report_alarm_message(ALARM_LIMIT_ERROR); }
         else { report_alarm_message(ALARM_PROBE_FAIL); }
         report_feedback_message(MESSAGE_CRITICAL_EVENT);
-        bit_false(sysflags.execute,EXEC_RESET); // Disable any existing reset
+        bit_false(SYS_EXEC,EXEC_RESET); // Disable any existing reset
         do { 
           // Nothing. Block EVERYTHING until user issues reset or power cycles. Hard limits
           // typically occur while unattended or not paying attention. Gives the user time
           // to do what is needed before resetting, like killing the incoming stream. The 
           // same could be said about soft limits. While the position is not lost, the incoming
           // stream could be still engaged and cause a serious crash if it continues afterwards.
-        } while (bit_isfalse(sysflags.execute,EXEC_RESET));
+        } while (bit_isfalse(SYS_EXEC,EXEC_RESET));
 
       // Standard alarm event. Only abort during motion qualifies.
       } else {
@@ -196,7 +196,7 @@ void protocol_execute_runtime()
         // to indicate the possible severity of the problem.
         report_alarm_message(ALARM_ABORT_CYCLE);
       }
-      bit_false(sysflags.execute,(EXEC_ALARM | EXEC_CRIT_EVENT));
+      bit_false(SYS_EXEC,(EXEC_ALARM | EXEC_CRIT_EVENT));
     } 
   
     // Execute system abort. 
@@ -208,16 +208,16 @@ void protocol_execute_runtime()
     // Execute and serial print status
     if (rt_exec & EXEC_STATUS_REPORT) { 
       report_realtime_status();
-      bit_false(sysflags.execute,EXEC_STATUS_REPORT);
+      bit_false(SYS_EXEC,EXEC_STATUS_REPORT);
     }
     // Execute and serial print status
     if (rt_exec & EXEC_LIMIT_REPORT) { 
       report_limit_pins();
-      bit_false(sysflags.execute,EXEC_LIMIT_REPORT);
+      bit_false(SYS_EXEC,EXEC_LIMIT_REPORT);
     }
     if (rt_exec & EXEC_LIMIT_REPORT) { 
       report_limit_pins();
-      bit_false(sysflags.execute,EXEC_LIMIT_REPORT);
+      bit_false(SYS_EXEC,EXEC_LIMIT_REPORT);
     }
     
     // Execute a feed hold with deceleration, only during cycle.
@@ -230,7 +230,7 @@ void protocol_execute_runtime()
         st_prep_buffer();
         sys.auto_start = false; // Disable planner auto start upon feed hold.
       }
-      bit_false(sysflags.execute,EXEC_FEED_HOLD);
+      bit_false(SYS_EXEC,EXEC_FEED_HOLD);
     }
         
     // Execute a cycle start by starting the stepper interrupt begin executing the blocks in queue.
@@ -246,7 +246,7 @@ void protocol_execute_runtime()
           sys.auto_start = false; // Reset auto start per settings.
         }
       }    
-      bit_false(sysflags.execute,EXEC_CYCLE_START);
+      bit_false(SYS_EXEC,EXEC_CYCLE_START);
     }
     
     // Reinitializes the cycle plan and stepper system after a feed hold for a resume. Called by 
@@ -257,7 +257,7 @@ void protocol_execute_runtime()
     if (rt_exec & EXEC_CYCLE_STOP) {
       if ( plan_get_current_block() ) { sys.state = STATE_QUEUED; }
       else { sys.state = STATE_IDLE; }
-      bit_false(sysflags.execute,EXEC_CYCLE_STOP);
+      bit_false(SYS_EXEC,EXEC_CYCLE_STOP);
     }
 
   }
@@ -294,4 +294,4 @@ void protocol_buffer_synchronize()
 // NOTE: This function is called from the main loop and mc_line() only and executes when one of
 // two conditions exist respectively: There are no more blocks sent (i.e. streaming is finished, 
 // single commands), or the planner buffer is full and ready to go.
-void protocol_auto_cycle_start() { if (sys.auto_start) { sysflags.execute |= EXEC_CYCLE_START; } } 
+void protocol_auto_cycle_start() { if (sys.auto_start) { SYS_EXEC |= EXEC_CYCLE_START; } } 

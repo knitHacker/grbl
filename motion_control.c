@@ -249,14 +249,22 @@ void mc_homing_cycle(uint8_t axis_mask)
   // Search to engage all axes limit switches at faster homing seek rate.
   limits_go_home(HOMING_CYCLE_0&axis_mask);  // Homing cycle 0
   #ifdef HOMING_CYCLE_1
+  report_build_info("Starting home 1");
     limits_go_home(HOMING_CYCLE_1&axis_mask);  // Homing cycle 1
+  report_build_info("Done home 1");
   #endif
   #ifdef HOMING_CYCLE_2
     limits_go_home(HOMING_CYCLE_2&axis_mask);  // Homing cycle 2
   #endif
+
+
     
   protocol_execute_runtime(); // Check for reset and set system abort.
-  if (sys.abort) { return; } // Did not complete. Alarm state set by mc_alarm.
+  if (sys.abort) { 
+  report_build_info("Aborting?");
+return; } // Did not complete. Alarm state set by mc_alarm.
+
+  report_build_info("Done Homing Cycle");
 
   // Homing cycle complete! Setup system for normal operation.
   // -------------------------------------------------------------------------------------
@@ -295,13 +303,13 @@ void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate)
   //TODO - make sure the probe isn't already closed
   sysflags.probe_state = PROBE_MASK;
 
-  sysflags.execute |= EXEC_CYCLE_START;
+  SYS_EXEC |= EXEC_CYCLE_START;
   do {
     protocol_execute_runtime(); 
     if (sys.abort) { return; } // Check for system abort
   } while ((sys.state != STATE_IDLE) && (sys.state != STATE_QUEUED));
 
-  if (sysflags.probe_state == PROBE_MASK) { sysflags.execute |= EXEC_CRIT_EVENT; }
+  if (sysflags.probe_state == PROBE_MASK) { SYS_EXEC |= EXEC_CRIT_EVENT; }
   protocol_execute_runtime();   // Check and execute run-time commands
   if (sys.abort) { return; } // Check for system abort
 
@@ -323,7 +331,7 @@ void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate)
   mc_line(target, feed_rate, invert_feed_rate); // Bypass mc_line(). Directly plan homing motion.
   #endif
 
-  sysflags.execute |= EXEC_CYCLE_START;
+  SYS_EXEC |= EXEC_CYCLE_START;
   protocol_buffer_synchronize(); // Complete pull-off motion.
   if (sys.abort) { return; } // Did not complete. Alarm state set by mc_alarm.
 
@@ -343,8 +351,8 @@ void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate)
 void mc_reset()
 {
   // Only this function can set the system reset. Helps prevent multiple kill calls.
-  if (bit_isfalse(sysflags.execute, EXEC_RESET)) {
-    sysflags.execute |= EXEC_RESET;
+  if (bit_isfalse(SYS_EXEC, EXEC_RESET)) {
+    SYS_EXEC |= EXEC_RESET;
 
     // Kill spindle and coolant.   
     spindle_stop();
@@ -355,7 +363,7 @@ void mc_reset()
     // the steppers enabled by avoiding the go_idle call altogether, unless the motion state is
     // violated, by which, all bets are off.
     if (sys.state & (STATE_CYCLE | STATE_HOLD | STATE_HOMING)) {
-      sysflags.execute |= EXEC_ALARM; // Flag main program to execute alarm state.
+      SYS_EXEC |= EXEC_ALARM; // Flag main program to execute alarm state.
       st_go_idle(); // Force kill steppers. Position has likely been lost.
     }
   }
