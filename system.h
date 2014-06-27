@@ -41,6 +41,7 @@
 #include "nuts_bolts.h"
 
 
+
 // Define system executor bit map. Used internally by runtime protocol as runtime command flags, 
 // which notifies the main program to execute the specified runtime command asynchronously.
 // NOTE: The system executor uses an unsigned 8-bit volatile variable (8 flag limit.) The default
@@ -94,6 +95,12 @@ typedef struct {
 } sys_flags_t;
 extern volatile sys_flags_t sysflags;
 
+
+#ifdef USE_GPIO_FOR_VOLATILES
+  #define SYS_EXEC GPIOR0 
+#else
+  #define SYS_EXEC sysflags.execute
+#endif
 
 // Initialize the serial protocol
 void system_init();

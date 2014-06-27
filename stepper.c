@@ -25,7 +25,8 @@
 #include "settings.h"
 #include "planner.h"
 #include "probe.h"
-
+#include "limits.h"
+#include "motion_control.h"
 
 // Some useful constants.
 #define DT_SEGMENT (1.0/(ACCELERATION_TICKS_PER_SECOND*60.0)) // min/segment 
@@ -225,7 +226,7 @@ void st_go_idle()
   
   // Set stepper driver idle state, disabled or enabled, depending on settings and circumstances.
   bool pin_state = false; // Keep enabled.
-  if (((settings.stepper_idle_lock_time != 0xff) || bit_istrue(sysflags.execute,EXEC_ALARM)) && sys.state != STATE_HOMING) {
+  if (((settings.stepper_idle_lock_time != 0xff) || bit_istrue(SYS_EXEC,EXEC_ALARM)) && sys.state != STATE_HOMING) {
     // Force stepper dwell to lock axes for a defined amount of time to ensure the axes come to a complete
     // stop and not drift from residual inertial forces at the end of the last movement.
     delay_ms(settings.stepper_idle_lock_time);
@@ -357,7 +358,7 @@ ISR(TIMER1_COMPA_vect)
     } else {
       // Segment buffer empty. Shutdown.
       st_go_idle();
-      bit_true(sysflags.execute,EXEC_CYCLE_STOP); // Flag main program for cycle end
+      bit_true(SYS_EXEC,EXEC_CYCLE_STOP); // Flag main program for cycle end
       return; // Nothing to do but exit.
     }  
   }
@@ -406,13 +407,25 @@ ISR(TIMER1_COMPA_vect)
     else { sys.position[C_AXIS]++; }
   }  
 
-  // During a homing cycle, lock out and prevent desired axes from moving.
-  if (sys.state == STATE_HOMING) { st.step_outbits &= sysflags.homing_axis_lock; }   
+  // While homing or if hard limits enabled
+  
+  uint8_t must_stop = ((LIMIT_PIN^limits.expected)&limits.active);  
+  if (must_stop) {
+	 st.step_outbits &= ~must_stop;
+	 //	 if (sys.state & STATE_HOMING) { limits.homenext|=1;}
+	 limits.homenext|=1;
+	 if ( !(sys.state & (STATE_ALARM|STATE_HOMING)) &&
+				  bit_isfalse(SYS_EXEC,EXEC_ALARM)) {
+		mc_reset(); // Initiate system kill.
+		SYS_EXEC |= (EXEC_LIMIT_REPORT |EXEC_ALARM | EXEC_CRIT_EVENT); // Indicate hard limit critical event
+	 }
+  }
+
 
   st.step_count--; // Decrement step events count 
   if (st.step_count == 0) {
     // Segment is complete. Discard current segment and advance segment indexing.
-	 sysflags.execute |= st.exec_segment->block_end; //sets EXEC_STATUS_REPORT when done with block
+	 SYS_EXEC |= st.exec_segment->block_end; //sets EXEC_STATUS_REPORT when done with block
     st.exec_segment = NULL;
 
     if ( ++segment_buffer_tail == SEGMENT_BUFFER_SIZE) { segment_buffer_tail = 0; }

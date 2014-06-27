@@ -33,6 +33,9 @@
 
 uint8_t limit_approach = 0; //bits are 1 when homing toward limit.
 
+limit_t limits={0};
+
+
 
 void limits_init() 
 {
@@ -46,11 +49,14 @@ void limits_init()
     LIMIT_PORT |= (LIMIT_MASK);  // Enable internal pull-up resistors. Normal high operation.
   }
 
+
+  /*  LIMIT_PCMSK &= ~LIMIT_MASK;  // prevent spurious interrupts while configuring
+  PCICR |= LIMIT_INT; // Enable Pin Change Interrupt on correct port.
+  */
+
   if (bit_istrue(settings.flags,BITFLAG_HARD_LIMIT_ENABLE)) {
-	 report_build_info("Enabling LIMITS");
-	 limits_enable();
+	 limits_enable(LIMIT_MASK,0);
   } else {
-	 report_build_info("Disabling LIMITS");
     limits_disable(); 
   }
   
@@ -61,16 +67,20 @@ void limits_init()
   #endif
 }
 
-void limits_enable(){
-    LIMIT_PCMSK |= LIMIT_MASK; // Enable specific pins of the Pin Change Interrupt
-    PCICR |= (1 << LIMIT_INT); // Enable Pin Change Interrupt
+void limits_enable(uint8_t axes, uint8_t expected) {
+  //    LIMIT_PCMSK |= LIMIT_MASK; // Enable specific pins of the Pin Change Interrupt
+  limits.expected = bit_istrue(settings.flags,BITFLAG_INVERT_LIMIT_PINS)?~expected:expected;
+  limits.active = axes;
+
 }
 
 
 void limits_disable()
 {
-  LIMIT_PCMSK &= ~LIMIT_MASK;  // Disable specific pins of the Pin Change Interrupt
-  PCICR &= ~(1 << LIMIT_INT);  // Disable Pin Change Interrupt
+  //LIMIT_PCMSK &= ~LIMIT_MASK;  // Disable specific pins of the Pin Change Interrupt
+  limits.expected = 0;
+  limits.active = 0;
+
 }
 
 // This is the Limit Pin Change Interrupt, which handles the hard limit feature. A bouncing 
@@ -96,7 +106,7 @@ void check_limit_pins()
 {
   uint8_t invert_mask = (bit_istrue(settings.flags,BITFLAG_INVERT_LIMIT_PINS)) ? LIMIT_MASK : 0;
   //sysflags.limit bits are set when limit is triggered
-  sysflags.execute |= EXEC_LIMIT_REPORT;
+  SYS_EXEC |= EXEC_LIMIT_REPORT;
   sysflags.limits = (LIMIT_PIN ^ invert_mask );
 
  
@@ -108,9 +118,9 @@ void check_limit_pins()
   }
   else if (sysflags.limits & LIMIT_MASK) {
 	 if (!(sys.state & STATE_ALARM)) { 
-		if (bit_isfalse(sysflags.execute,EXEC_ALARM)) {
+		if (bit_isfalse(SYS_EXEC,EXEC_ALARM)) {
 		  mc_reset(); // Initiate system kill.
-		  sysflags.execute |= (EXEC_ALARM | EXEC_CRIT_EVENT); // Indicate hard limit critical event
+		  SYS_EXEC |= (EXEC_ALARM | EXEC_CRIT_EVENT); // Indicate hard limit critical event
 		}
 	 }
   }
@@ -120,7 +130,7 @@ void check_limit_pins()
 ISR(LIMIT_INT_vect) // DEFAULT: Limit pin change interrupt process. 
 {
   TIMING_PORT ^= TIMING_MASK; // Debug: Used to time ISR
-  check_limit_pins();
+  //  check_limit_pins();
 }
 #else // OPTIONAL: Software debounce limit pin routine.
 // Upon limit pin change, enable watchdog timer to create a short delay. 
@@ -194,6 +204,13 @@ void limits_go_home(uint8_t cycle_mask)
 	 // axis_lock bit is high if axis is homing, a 0 prevents it from being moved in stepper.
     sysflags.homing_axis_lock = axislock;
 	 limit_approach = approach;  //limit_approach bits is high if approaching limit switch 
+	 if (approach){
+		TIMING_PORT |= TIMING_MASK;
+	 }
+	 else {
+		TIMING_PORT &= ~TIMING_MASK;
+	 }
+
   
     // Perform homing cycle. Planner buffer should be empty, as required to initiate the homing cycle.
     #ifdef USE_LINE_NUMBERS
@@ -201,9 +218,11 @@ void limits_go_home(uint8_t cycle_mask)
     #else
     plan_buffer_line(target, homing_rate, false); // Bypass mc_line(). Directly plan homing motion.
     #endif
+	 limits_enable(axislock,~approach);  //expect 0 on approach (stop when 1). vice versa for pulloff
+	 limits.homenext =0;
+
     st_prep_buffer(); // Prep and fill segment buffer from newly planned block.
     st_wake_up(); // Initiate motion
-	 limits_enable();
     do {
 		/*
       // Check limit state. Lock out cycle axes when they change.
@@ -228,16 +247,17 @@ void limits_go_home(uint8_t cycle_mask)
       st_prep_buffer(); // Check and prep segment buffer. NOTE: Should take no longer than 200us.
       // Check only for user reset. No time to run protocol_execute_runtime() in this loop.
 		protocol_execute_runtime();
-      if (sysflags.execute & EXEC_RESET) { protocol_execute_runtime(); return; }
-    } while (STEP_MASK & axislock);
-    
+      if (SYS_EXEC & EXEC_RESET) { protocol_execute_runtime(); return; }
+		//  } while (STEP_MASK & axislock);
+	 } while (!limits.homenext);
+    limits_disable();
     st_reset(); // Immediately force kill steppers and reset step segment buffer.
     plan_reset(); // Reset planner buffer. Zero planner positions. Ensure homing motion is cleared.
 
 
 
 	 //ADS: get one protocol check in here:
-	 sysflags.execute |= EXEC_STATUS_REPORT;
+	 SYS_EXEC |= EXEC_STATUS_REPORT;
 	 protocol_execute_runtime();
 
     delay_ms(settings.homing_debounce_delay); // Delay to allow transient dynamics to dissipate.
@@ -246,12 +266,7 @@ void limits_go_home(uint8_t cycle_mask)
     homing_rate = settings.homing_feed_rate;
     approach = ~approach; //toggle all bits
 
-	 if (!bit_istrue(settings.flags,BITFLAG_HARD_LIMIT_ENABLE)){
-		limits_disable();
-	 }
   } while (n_cycle-- > 0);
-
-
 
     
   // The active cycle axes should now be homed and machine limits have been located. By 
@@ -287,11 +302,11 @@ void limits_go_home(uint8_t cycle_mask)
   // Initiate pull-off using main motion control routines. 
   // TODO : Clean up state routines so that this motion still shows homing state.
   sys.state = STATE_QUEUED;
-  sysflags.execute |= EXEC_CYCLE_START;
+  SYS_EXEC |= EXEC_CYCLE_START;
   protocol_execute_runtime();
   protocol_buffer_synchronize(); // Complete pull-off motion.
 
-  
+
   // Set system state to homing before returning. 
   sys.state = STATE_HOMING; 
 }
@@ -309,7 +324,7 @@ void limits_soft_check(float *target)
       // workspace volume so just come to a controlled stop so position is not lost. When complete
       // enter alarm mode.
       if (sys.state == STATE_CYCLE) {
-        sysflags.execute |= EXEC_FEED_HOLD;
+        SYS_EXEC |= EXEC_FEED_HOLD;
         do {
           protocol_execute_runtime();
           if (sys.abort) { return; }
@@ -317,7 +332,7 @@ void limits_soft_check(float *target)
       }
       
       mc_reset(); // Issue system reset and ensure spindle and coolant are shutdown.
-      sysflags.execute |= (EXEC_ALARM | EXEC_CRIT_EVENT); // Indicate soft limit critical event
+      SYS_EXEC |= (EXEC_ALARM | EXEC_CRIT_EVENT); // Indicate soft limit critical event
       protocol_execute_runtime(); // Execute to enter critical event loop and system abort
       return;
     
