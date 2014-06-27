@@ -88,7 +88,7 @@ static float to_millimeters(float value, int axis)
     case UNITS_MODE_INCH: mm *= MM_PER_INCH; break;
     case UNITS_MODE_STEP:
 		if (axis<0) {  mm = 0; FAIL(STATUS_INVALID_STATEMENT);}  //can only do straight axis moves in step mode
-		mm /= settings.steps_per_mm[axis];  
+		else {mm /= settings.steps_per_mm[axis];}  
 		break;
   }
   return mm;
