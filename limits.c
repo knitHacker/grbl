@@ -155,7 +155,7 @@ ISR(WDT_vect) // Watchdog timer ISR
 // NOTE: Only the abort runtime command can interrupt this process.
 void limits_go_home(uint8_t cycle_mask) 
 {
-  if (sys.abort) { return; } // Block if system reset has been issued.
+  if (sys.abort || !cycle_mask) { return; } // Block if system reset has been issued.
 
   // Initialize homing in search mode to quickly engage the specified cycle_mask limit switches.
   uint8_t approach = ~0;  //approach has all bits set or none
