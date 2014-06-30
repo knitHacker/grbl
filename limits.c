@@ -199,6 +199,12 @@ void limits_go_home(uint8_t cycle_mask)
       st_prep_buffer(); // Check and prep segment buffer. NOTE: Should take no longer than 200us.
       // Check only for user reset. No time to run protocol_execute_runtime() in this loop.
       if (sys.execute & EXEC_RESET) { protocol_execute_runtime(); return; }
+		// Check if we never reached limit switch.  call it a Probe fail.
+		if (sys.execute && EXEC_CYCLE_STOP) {
+		  sys.execute|=EXEC_CRIT_EVENT;
+		  protocol_execute_runtime();
+		  return;
+		}
     } while (STEP_MASK & axislock);
     
     st_reset(); // Immediately force kill steppers and reset step segment buffer.

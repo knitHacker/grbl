@@ -536,7 +536,6 @@ void st_prep_buffer()
                       
       // Check if the segment buffer completed the last planner block. If so, load the Bresenham
       // data for the block. If not, we are still mid-block and the velocity profile was updated. 
-		//ADS TODO: shouldn't this be in the block?
       if (prep.flag_partial_block) {
         prep.flag_partial_block = false; // Reset flag
       } else {
