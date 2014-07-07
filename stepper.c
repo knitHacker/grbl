@@ -412,7 +412,6 @@ ISR(TIMER1_COMPA_vect)
   uint8_t must_stop = ((LIMIT_PIN^limits.expected)&limits.active);  
   if (must_stop) {
 	 st.step_outbits &= ~must_stop;
-	 //	 if (sys.state & STATE_HOMING) { limits.homenext|=1;}
 	 limits.homenext|=1;
 	 if ( !(sys.state & (STATE_ALARM|STATE_HOMING)) &&
 				  bit_isfalse(SYS_EXEC,EXEC_ALARM)) {

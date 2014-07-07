@@ -49,7 +49,7 @@ int main(void)
   
   memset(&sys, 0, sizeof(sys));  // Clear all system variables
   memset((void*)&sysflags, 0, sizeof(sysflags));  // and volatile
-  sysflags.execute = 0;   //and mapped port
+  SYS_EXEC = 0;   //and mapped port if different
 
   sys.abort = true;   // Set abort to complete initialization
   sei(); // Enable interrupts

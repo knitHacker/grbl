@@ -25,7 +25,7 @@
 typedef struct {
   uint8_t expected;
   uint8_t active;
-  uint8_t homenext;
+  volatile uint8_t homenext;
   uint8_t homecount;
 } limit_t;
 

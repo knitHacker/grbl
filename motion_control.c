@@ -50,10 +50,10 @@ void mc_line(float *target, float feed_rate, uint8_t invert_feed_rate)
   // If enabled, check for soft limit violations. Placed here all line motions are picked up
   // from everywhere in Grbl.
   if (bit_istrue(settings.flags,BITFLAG_SOFT_LIMIT_ENABLE)) { limits_soft_check(target); }    
-      
+  
   // If in check gcode mode, prevent motion by blocking planner. Soft limits still work.
   if (sys.state == STATE_CHECK_MODE) { return; }
-    
+  
   // NOTE: Backlash compensation may be installed here. It will need direction info to track when
   // to insert a backlash line motion(s) before the intended line motion and will require its own
   // plan_check_full_buffer() and check for system abort loop. Also for position reporting 
@@ -131,7 +131,7 @@ void mc_arc(float *position, float *target, float *offset, float radius, float f
     // by a number of discrete segments. The inverse feed_rate should be correct for the sum of 
     // all segments.
     if (invert_feed_rate) { feed_rate *= segments; }
-   
+
     float theta_per_segment = angular_travel/segments;
     float linear_per_segment = (target[axis_linear] - position[axis_linear])/segments;
 
@@ -244,9 +244,7 @@ void mc_homing_cycle(uint8_t axis_mask)
   // Search to engage all axes limit switches at faster homing seek rate.
   limits_go_home(HOMING_CYCLE_0&axis_mask);  // Homing cycle 0
   #ifdef HOMING_CYCLE_1
-  report_build_info("Starting home 1");
     limits_go_home(HOMING_CYCLE_1&axis_mask);  // Homing cycle 1
-  report_build_info("Done home 1");
   #endif
   #ifdef HOMING_CYCLE_2
     limits_go_home(HOMING_CYCLE_2&axis_mask);  // Homing cycle 2
@@ -255,11 +253,8 @@ void mc_homing_cycle(uint8_t axis_mask)
 
     
   protocol_execute_runtime(); // Check for reset and set system abort.
-  if (sys.abort) { 
-  report_build_info("Aborting?");
-return; } // Did not complete. Alarm state set by mc_alarm.
+  if (sys.abort) { return; } // Did not complete. Alarm state set by mc_alarm.
 
-  report_build_info("Done Homing Cycle");
 
   // Homing cycle complete! Setup system for normal operation.
   // -------------------------------------------------------------------------------------

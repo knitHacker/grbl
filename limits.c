@@ -224,25 +224,6 @@ void limits_go_home(uint8_t cycle_mask)
     st_prep_buffer(); // Prep and fill segment buffer from newly planned block.
     st_wake_up(); // Initiate motion
     do {
-		/*
-      // Check limit state. Lock out cycle axes when they change.
-      limit_state = LIMIT_PIN;
-      if (invert_pin) { limit_state ^= LIMIT_MASK; }
-      if (axislock & (1<<X_STEP_BIT)) {
-        if (limit_state & (1<<X_LIMIT_BIT)) { axislock &= ~(1<<X_STEP_BIT); }
-      }
-      if (axislock & (1<<Y_STEP_BIT)) {
-        if (limit_state & (1<<Y_LIMIT_BIT)) { axislock &= ~(1<<Y_STEP_BIT); }
-      }
-      if (axislock & (1<<Z_STEP_BIT)) {
-        if (limit_state & (1<<Z_LIMIT_BIT)) { axislock &= ~(1<<Z_STEP_BIT); }
-      }
-      if (axislock & (1<<C_STEP_BIT)) {
-        if (limit_state & (1<<C_LIMIT_BIT)) { axislock &= ~(1<<C_STEP_BIT); }
-      }
-      sys.homing_axis_lock = axislock;
-		*/
-      // limit isr will turn off axis lock when limits toggle.
 		
       st_prep_buffer(); // Check and prep segment buffer. NOTE: Should take no longer than 200us.
       // Check only for user reset. No time to run protocol_execute_runtime() in this loop.
@@ -250,24 +231,19 @@ void limits_go_home(uint8_t cycle_mask)
       if (SYS_EXEC & EXEC_RESET) { protocol_execute_runtime(); return; }
 
 		// Check if we never reached limit switch.  call it a Probe fail.
-		if (sysflags.execute && EXEC_CYCLE_STOP) {
-		  sysflags.execute|=EXEC_CRIT_EVENT;
+		if (SYS_EXEC & EXEC_CYCLE_STOP) {
+		  SYS_EXEC|=EXEC_CRIT_EVENT;
 		  protocol_execute_runtime();
 		  return;
 		}
 
-	 } while (!limits.homenext);
+    } while (!limits.homenext);  //stepper isr sets this when limit is hit
     limits_disable();
 
     st_reset(); // Immediately force kill steppers and reset step segment buffer.
     plan_reset(); // Reset planner buffer. Zero planner positions. Ensure homing motion is cleared.
 
-
-
-	 //ADS: get one protocol check in here:
-	 SYS_EXEC |= EXEC_STATUS_REPORT;
-	 protocol_execute_runtime();
-
+    SYS_EXEC |= EXEC_STATUS_REPORT;  //debug reporting of intermediate stages
     delay_ms(settings.homing_debounce_delay); // Delay to allow transient dynamics to dissipate.
 
     // Reverse direction and reset homing rate for locate cycle(s).
@@ -293,8 +269,8 @@ void limits_go_home(uint8_t cycle_mask)
         target[idx] = settings.homing_pulloff+settings.max_travel[idx];
         sys.position[idx] = lround(settings.max_travel[idx]*settings.steps_per_mm[idx]);
       } else {
-        target[idx] = -settings.homing_pulloff;
-        sys.position[idx] = 0;
+        sys.position[idx] = settings.homing_pulloff*settings.steps_per_mm[idx];
+        target[idx] = 0;
       }
     } else { // Non-active cycle axis. Set target to not move during pull-off. 
       target[idx] = (float)sys.position[idx]/settings.steps_per_mm[idx];
@@ -302,6 +278,7 @@ void limits_go_home(uint8_t cycle_mask)
   }
   plan_sync_position(); // Sync planner position to current machine position for pull-off move.
   #ifdef USE_LINE_NUMBERS
+
   plan_buffer_line(target, settings.homing_seek_rate, false, HOMING_CYCLE_LINE_NUMBER); // Bypass mc_line(). Directly plan motion.
   #else
   plan_buffer_line(target, settings.homing_seek_rate, false); // Bypass mc_line(). Directly plan motion.
@@ -311,6 +288,7 @@ void limits_go_home(uint8_t cycle_mask)
   // TODO : Clean up state routines so that this motion still shows homing state.
   sys.state = STATE_QUEUED;
   SYS_EXEC |= EXEC_CYCLE_START;
+  SYS_EXEC |= EXEC_STATUS_REPORT;
   protocol_execute_runtime();
   protocol_buffer_synchronize(); // Complete pull-off motion.
 
