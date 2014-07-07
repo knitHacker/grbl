@@ -39,7 +39,7 @@
 // Useful macros
 #define clear_vector(a) memset(a, 0, sizeof(a))
 #define clear_vector_float(a) memset(a, 0.0, sizeof(float)*N_AXIS)
-#define clear_vector_long(a) memset(a, 0.0, sizeof(long)*N_AXIS)
+// #define clear_vector_long(a) memset(a, 0.0, sizeof(long)*N_AXIS)
 #define max(a,b) (((a) > (b)) ? (a) : (b))
 #define min(a,b) (((a) < (b)) ? (a) : (b))
 
@@ -54,7 +54,7 @@
 // Read a floating point value from a string. Line points to the input buffer, char_counter 
 // is the indexer pointing to the current character of the line, while float_ptr is 
 // a pointer to the result variable. Returns true when it succeeds
-int read_float(char *line, uint8_t *char_counter, float *float_ptr);
+uint8_t read_float(char *line, uint8_t *char_counter, float *float_ptr);
 
 // Delays variable-defined milliseconds. Compiler compatibility fix for _delay_ms().
 void delay_ms(uint16_t ms);
@@ -65,5 +65,6 @@ void delay_us(uint32_t us);
 uint8_t get_direction_mask(uint8_t i);
 
 uint8_t get_axis_idx(char axis_letter);
+float hypot_f(float x, float y);
 
 #endif

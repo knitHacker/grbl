@@ -24,6 +24,7 @@
 
 #define MAX_INT_DIGITS 8 // Maximum number of digits in int32 (and float)
 
+
 // Extracts a floating point value from a string. The following code is based loosely on
 // the avr-libc strtod() function by Michael Stumpf and Dmitry Xmelkov and many freely
 // available conversion method examples, but has been highly optimized for Grbl. For known
@@ -31,7 +32,7 @@
 // Scientific notation is officially not supported by g-code, and the 'E' character may
 // be a g-code word on some CNC systems. So, 'E' notation will not be recognized. 
 // NOTE: Thanks to Radu-Eosif Mihailescu for identifying the issues with using strtod().
-int read_float(char *line, uint8_t *char_counter, float *float_ptr)                  
+uint8_t read_float(char *line, uint8_t *char_counter, float *float_ptr)                  
 {
   char *ptr = line + *char_counter;
   unsigned char c;
@@ -151,6 +152,7 @@ uint8_t get_direction_mask(uint8_t axis_idx)
   return(axis_mask);
 }
 
+
 uint8_t get_axis_idx(char axis_letter)
 {
   uint8_t axis_idx = N_AXIS; //error indicator
@@ -162,3 +164,10 @@ uint8_t get_axis_idx(char axis_letter)
   }
   return(axis_idx);
 }
+
+
+float hypot_f(float x, float y)
+{
+   return(sqrt(x*x + y*y));
+}
+
