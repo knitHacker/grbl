@@ -22,10 +22,19 @@
 #ifndef limits_h
 #define limits_h 
 
+typedef struct {
+  uint8_t expected;
+  uint8_t active;
+  uint8_t homenext;
+  uint8_t homecount;
+} limit_t;
+
+extern limit_t limits;
 
 // Initialize the limits module
 void limits_init();
 
+void limits_enable(uint8_t axes,uint8_t expected);
 void limits_disable();
 
 // Perform one portion of the homing cycle based on the input settings.

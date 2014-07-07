@@ -243,10 +243,10 @@
   #define DEFAULT_Y_ACCELERATION (10.0*60*60) // 10*60*60 mm/min^2 = 10 rot/sec^2
   #define DEFAULT_Z_ACCELERATION (10.0*60*60) // 10*60*60 mm/min^2 = 10 rot/sec^2
   #define DEFAULT_C_ACCELERATION (10.0*60*60) // 10*60*60 mm/min^2 = 10 rot/sec^2
-  #define DEFAULT_X_MAX_TRAVEL 2000.0 // rotations
-  #define DEFAULT_Y_MAX_TRAVEL 2000.0 // rotations
-  #define DEFAULT_Z_MAX_TRAVEL 2000.0 // rotations
-  #define DEFAULT_C_MAX_TRAVEL 2000.0 // rotations
+  #define DEFAULT_X_MAX_TRAVEL 50.0 // rotations
+  #define DEFAULT_Y_MAX_TRAVEL 50.0 // rotations
+  #define DEFAULT_Z_MAX_TRAVEL 50.0 // rotations
+  #define DEFAULT_C_MAX_TRAVEL 50.0 // rotations
   #define DEFAULT_STEP_PULSE_MICROSECONDS 15
   #define DEFAULT_STEPPING_INVERT_MASK 0
   #define DEFAULT_DIRECTION_INVERT_MASK ((1<<Y_DIRECTION_BIT)|(1<<Z_DIRECTION_BIT))
@@ -260,7 +260,7 @@
   #define DEFAULT_INVERT_LIMIT_PINS 0 // false
   #define DEFAULT_SOFT_LIMIT_ENABLE 0 // false
   #define DEFAULT_HARD_LIMIT_ENABLE 0  // false
-  #define DEFAULT_HOMING_ENABLE 0  // false
+  #define DEFAULT_HOMING_ENABLE 1  // false
   #define DEFAULT_HOMING_DIR_MASK 0 // move positive dir
   #define DEFAULT_HOMING_FEED_RATE 25.0 // mm/min
   #define DEFAULT_HOMING_SEEK_RATE 50.0 // mm/min

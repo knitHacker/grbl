@@ -41,11 +41,11 @@ uint8_t probe_get_state()
 // NOTE: This function must be extremely efficient as to not bog down the stepper ISR.
 void probe_state_monitor()
 {
-  if (sys.probe_state == PROBE_ACTIVE) { 
+  if (sysflags.probe_state == PROBE_ACTIVE) { 
     if (probe_get_state()) {
-      sys.probe_state = PROBE_OFF;
+      sysflags.probe_state = PROBE_OFF;
       memcpy(sys.probe_position, sys.position, sizeof(float)*N_AXIS);
-      sys.execute |= EXEC_FEED_HOLD;
+      SYS_EXEC |= EXEC_FEED_HOLD;
     }
   }
 }
