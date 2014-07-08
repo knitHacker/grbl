@@ -244,7 +244,7 @@ void limits_go_home(uint8_t cycle_mask)
     st_reset(); // Immediately force kill steppers and reset step segment buffer.
     plan_reset(); // Reset planner buffer. Zero planner positions. Ensure homing motion is cleared.
 
-    SYS_EXEC |= EXEC_STATUS_REPORT;  //debug reporting of intermediate stages
+    //    SYS_EXEC |= EXEC_STATUS_REPORT;  //debug reporting of intermediate stages
     delay_ms(settings.homing_debounce_delay); // Delay to allow transient dynamics to dissipate.
 
     // Reverse direction and reset homing rate for locate cycle(s).
@@ -290,7 +290,7 @@ void limits_go_home(uint8_t cycle_mask)
   // TODO : Clean up state routines so that this motion still shows homing state.
   sys.state = STATE_QUEUED;
   SYS_EXEC |= EXEC_CYCLE_START;
-  //  SYS_EXEC |= EXEC_STATUS_REPORT;
+  //  SYS_EXEC |= EXEC_STATUS_REPORT; //enable for intermediate reporting
   protocol_execute_runtime();
   protocol_buffer_synchronize(); // Complete pull-off motion.
 
