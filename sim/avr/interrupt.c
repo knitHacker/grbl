@@ -22,12 +22,14 @@
 
 #include "interrupt.h"
 #include "io.h"
+#include "wdt.h"
 
 //pseudo-Interrupt vector table  
 isr_fp compa_vect[6]={0};
 isr_fp compb_vect[6]={0};
 isr_fp ovf_vect[6]={0};
-
+isr_fp wdt_vect = 0;
+isr_fp pc_vect = 0;
 
 void sei() {io.sreg|=SEI;}
 void cli() {io.sreg&=~SEI;}
@@ -129,7 +131,6 @@ void timer_interrupts() {
     // maybe need to cli on interrupt entry
   
 }
-
 
 
 

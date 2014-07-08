@@ -4,7 +4,7 @@
 
   Part of Grbl Simulator
 
-  Copyright (c) 2012 Jens Geisler
+  Copyright (c) 2012-2104 Jens Geisler, Adam Shelly
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -60,6 +60,9 @@ typedef struct io_sim {
   uint8_t pcmsk[3];
   uint8_t ucsr0[3];
   uint8_t udr[3];
+  uint8_t gpior[3];
+  uint8_t mcusr;
+  uint8_t wdtcsr;
   union hilo16 ubrr0;
 
   uint16_t prescaler; //continuously running
@@ -70,10 +73,19 @@ typedef struct io_sim {
 volatile extern io_sim_t io;
 
 
+//hooks for monitoring io port writes
+typedef void(*port_monitor_fp)(uint8_t);
+
+typedef struct io_sim_monitor {
+  volatile uint8_t* ddr_addr;
+  port_monitor_fp access_func;
+} io_sim_monitor_t;
+
+
 
 
 // dummy macros for interrupt related registers
-#define PORTA io.port[SIM_A]
+/*#define PORTA io.port[SIM_A]
 #define PORTB io.port[SIM_B]
 #define PORTC io.port[SIM_C]
 #define PORTD io.port[SIM_D]
@@ -84,6 +96,18 @@ volatile extern io_sim_t io;
 #define PORTJ io.port[SIM_J]
 #define PORTK io.port[SIM_K]
 #define PORTL io.port[SIM_L]
+*/
+#define PORTA (*io_port(SIM_A))
+#define PORTB (*io_port(SIM_B))
+#define PORTC (*io_port(SIM_C))
+#define PORTD (*io_port(SIM_D))
+#define PORTE (*io_port(SIM_E))
+#define PORTF (*io_port(SIM_F))
+#define PORTG (*io_port(SIM_G))
+#define PORTH (*io_port(SIM_H))
+#define PORTJ (*io_port(SIM_J))
+#define PORTK (*io_port(SIM_K))
+#define PORTL (*io_port(SIM_L))
 
 #define DDRA io.ddr[SIM_A]
 #define DDRB io.ddr[SIM_B]
@@ -94,6 +118,8 @@ volatile extern io_sim_t io;
 #define DDRG io.ddr[SIM_G]
 #define DDRH io.ddr[SIM_H]
 #define DDRJ io.ddr[SIM_J]
+#define DDRK io.ddr[SIM_K]
+#define DDRL io.ddr[SIM_L]
 
 #define PINA io.pin[SIM_A]
 #define PINB io.pin[SIM_B]
@@ -179,6 +205,7 @@ volatile extern io_sim_t io;
 #define PCICR io.pcicr
 #define PCIE0 0
 #define PCIE1 1
+#define PCIE2 2
 
 //serial channel
 #define UCSR0A io.ucsr0[SIM_A]
@@ -196,6 +223,22 @@ volatile extern io_sim_t io;
 #define PCMSK1 io.pcmsk[1]
 #define PCMSK2 io.pcmsk[2]
 
+//GPIO
+#define GPIOR0 io.gpior[0]
+#define GPIOR1 io.gpior[1]
+#define GPIOR2 io.gpior[2]
+
+//MCU Status
+#define MCUSR io.mcusr
+
+#define PORF 0
+#define EXTRF 1
+#define BORF 2
+#define WDRF 3
+#define JTRF 4
+
+extern void io_sim_init(io_sim_monitor_t* hooks);
+extern volatile uint8_t *io_port(uint8_t portid); //port access func
 
 
 #endif

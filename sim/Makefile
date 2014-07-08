@@ -15,9 +15,10 @@
 #  You should have received a copy of the GNU General Public License
 #  along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 
-PLATFORM   = WINDOWS
+# PLATFORM   = WINDOWS
+PLATFORM   = LINUX
 
-OBJECTS    = main.o simulator.o serial.o ../main.o ../protocol.o ../planner.o ../settings.o ../print.o ../nuts_bolts.o eeprom.o ../serial.o avr/pgmspace.o avr/interrupt.o avr/io.o util/delay.o util/floatunsisf.o ../stepper.o ../gcode.o ../spindle_control.o ../motion_control.o ../limits.o ../report.o ../coolant_control.o ../probe.o ../system.o platform_$(PLATFORM).o
+OBJECTS    = main.o simulator.o serial.o ../main.o ../protocol.o ../planner.o ../settings.o ../print.o ../nuts_bolts.o eeprom.o ../serial.o avr/pgmspace.o avr/interrupt.o avr/io.o avr/wdt.o util/delay.o util/floatunsisf.o ../stepper.o ../gcode.o ../spindle_control.o ../motion_control.o ../limits.o ../report.o ../coolant_control.o ../probe.o ../system.o platform_$(PLATFORM).o
 CLOCK      = 16000000
 EXE_NAME   = grbl_sim.exe
 COMPILE    = $(CC) -Wall -g -DF_CPU=$(CLOCK) -include config.h -I. -DPLAT_$(PLATFORM)

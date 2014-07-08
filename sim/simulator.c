@@ -4,7 +4,7 @@
 
   Part of Grbl Simulator
 
-  Copyright (c) 2012 Jens Geisler
+  Copyright (c) 2012-2014 Jens Geisler, Adam Shelly
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -27,18 +27,27 @@
 #include "../stepper.h"
 #include "../planner.h"
 #include "../nuts_bolts.h"
+#include "../settings.h"
 #include "simulator.h"
 #include "avr/interrupt.h" //for registers and isr declarations.
 #include "eeprom.h"
 
 
-int block_position[]= {0,0,0}; //step count after most recently planned block
+int block_position[N_AXIS]= {0}; //step count after most recently planned block
+int raw_steps[N_AXIS] = {0}; //step count based on pin change
 uint32_t block_number= 0;
 
 sim_vars_t sim={0};
 
 //local prototypes 
 void print_steps(bool force);
+void sim_monitor_step_port(uint8_t portval);
+
+
+io_sim_monitor_t port_monitors[] =  {
+  {&STEP_DDR,sim_monitor_step_port},
+  {0,0}
+};
 
 
 //setup 
@@ -50,6 +59,13 @@ void init_simulator(float time_multiplier) {
 #ifdef STEP_PULSE_DELAY
   compa_vect[0] = interrupt_TIMER0_COMPA_vect;
 #endif
+#ifdef ENABLE_SOFTWARE_DEBOUNCE
+  wdt_vect = interrupt_WDT_vect;
+#endif
+  pc_vect = interrupt_LIMIT_INT_vect;
+
+
+  io_sim_init(port_monitors);
 
   sim.next_print_time = args.step_time;
   sim.speedup = time_multiplier;
@@ -69,6 +85,24 @@ int shutdown_simulator(uint8_t exitflag) {
 }
 
 
+void sim_monitor_step_port(uint8_t portval) {
+  static uint8_t last_step_state=0;
+  uint8_t i,step_state; 
+  uint8_t disabled = (STEPPERS_DISABLE_PORT & STEPPERS_DISABLE_MASK);
+
+  if (bit_istrue(settings.flags,BITFLAG_INVERT_ST_ENABLE)) { disabled = ~disabled; }
+  step_state = portval & STEP_MASK;
+  if (step_state != last_step_state && !disabled) {
+    for (i=0;i<N_AXIS;i++) {
+      if (step_state & get_step_mask(i)) {
+        uint8_t dir = (DIRECTION_PORT ^ settings.dir_invert_mask) & get_direction_mask(i);
+        raw_steps[i]+= dir ? 1 : -1;
+      }
+    }
+  }
+}
+
+
 
 void simulate_hardware(bool do_serial){
 
@@ -77,6 +111,8 @@ void simulate_hardware(bool do_serial){
   sim.sim_time = (float)sim.masterclock/F_CPU;
 
   timer_interrupts();
+  watchdog_sim();
+
   
   if (do_serial) simulate_serial();
 
