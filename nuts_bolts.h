@@ -63,8 +63,10 @@ void delay_ms(uint16_t ms);
 void delay_us(uint32_t us);
 
 uint8_t get_direction_mask(uint8_t i);
+uint8_t get_step_mask(uint8_t i);
 
 uint8_t get_axis_idx(char axis_letter);
+
 float hypot_f(float x, float y);
 
 #endif

@@ -152,6 +152,19 @@ uint8_t get_direction_mask(uint8_t axis_idx)
   return(axis_mask);
 }
 
+// Returns step mask according to Grbl internal axis indexing.
+uint8_t get_step_mask(uint8_t axis_idx)
+{
+  uint8_t axis_mask = 0;
+  switch( axis_idx ) {
+    case X_AXIS: axis_mask = (1<<X_STEP_BIT); break;
+    case Y_AXIS: axis_mask = (1<<Y_STEP_BIT); break;
+    case Z_AXIS: axis_mask = (1<<Z_STEP_BIT); break;
+    case C_AXIS: axis_mask = (1<<C_STEP_BIT); break;
+  }
+  return(axis_mask);
+}
+
 
 uint8_t get_axis_idx(char axis_letter)
 {
