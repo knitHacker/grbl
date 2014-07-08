@@ -109,8 +109,6 @@ void check_limit_pins()
   SYS_EXEC |= EXEC_LIMIT_REPORT;
   sysflags.limits = (LIMIT_PIN ^ invert_mask );
 
- 
-
 
   if (sys.state & STATE_HOMING) {
 	 //clear axislock bits when limit toggled.
@@ -165,12 +163,15 @@ void limits_go_home(uint8_t cycle_mask)
   float target[N_AXIS];
   
   // Determine travel distance to the furthest homing switch based on user max travel settings.
-  // NOTE: settings.max_travel[] is stored as a negative value.
+  // NOTE: settings.max_travel[] is stored as a negative value
   float max_travel = settings.max_travel[0];
   for (idx=1; idx<N_AXIS; idx++){
-	 if (max_travel > settings.max_travel[idx]) { max_travel = settings.max_travel[idx]; }
+    if (bit_istrue(cycle_mask,bit(idx))) {
+        if (max_travel > settings.max_travel[idx]) { max_travel = settings.max_travel[idx]; }
+      }
   }
   max_travel *= -HOMING_AXIS_SEARCH_SCALAR; // Ensure homing switches engaged by over-estimating max travel.
+  //max travel is now positive
    
   plan_reset(); // Reset planner buffer to zero planner current position and to clear previous motions.
   
@@ -181,8 +182,8 @@ void limits_go_home(uint8_t cycle_mask)
     for (idx=0; idx<N_AXIS; idx++) {
       if (bit_istrue(cycle_mask,bit(idx))) { 
         n_active_axis++;
-        if (!approach) { target[idx] = -max_travel; }
-        else { target[idx] = max_travel; }
+        if (!approach) { target[idx] = max_travel; } 
+        else { target[idx] = -max_travel; }         
       } else {
         target[idx] = 0.0;
       }
@@ -266,12 +267,13 @@ void limits_go_home(uint8_t cycle_mask)
     // NOTE: settings.max_travel[] is stored as a negative value.
     if (cycle_mask & bit(idx)) {
       if ( settings.homing_dir_mask & get_direction_mask(idx) ) {
-        target[idx] = settings.homing_pulloff+settings.max_travel[idx];
-        sys.position[idx] = lround(settings.max_travel[idx]*settings.steps_per_mm[idx]);
+        target[idx] = -settings.max_travel[idx];
+        sys.position[idx] = lround((settings.homing_pulloff-settings.max_travel[idx])*settings.steps_per_mm[idx]);
       } else {
-        sys.position[idx] = settings.homing_pulloff*settings.steps_per_mm[idx];
+        sys.position[idx] = -settings.homing_pulloff*settings.steps_per_mm[idx];
         target[idx] = 0;
       }
+      if (settings.homing_pulloff == 0.0) { SYS_EXEC|=EXEC_STATUS_REPORT; } //force report if we are not going to move
     } else { // Non-active cycle axis. Set target to not move during pull-off. 
       target[idx] = (float)sys.position[idx]/settings.steps_per_mm[idx];
     }
@@ -288,7 +290,7 @@ void limits_go_home(uint8_t cycle_mask)
   // TODO : Clean up state routines so that this motion still shows homing state.
   sys.state = STATE_QUEUED;
   SYS_EXEC |= EXEC_CYCLE_START;
-  SYS_EXEC |= EXEC_STATUS_REPORT;
+  //  SYS_EXEC |= EXEC_STATUS_REPORT;
   protocol_execute_runtime();
   protocol_buffer_synchronize(); // Complete pull-off motion.
 
@@ -304,7 +306,7 @@ void limits_soft_check(float *target)
 {
   uint8_t idx;
   for (idx=0; idx<N_AXIS; idx++) { 
-    if (target[idx] > 0 || target[idx] < settings.max_travel[idx]) {  // NOTE: max_travel is stored as negative
+    if (target[idx] < 0 || target[idx] > -settings.max_travel[idx]) {  // NOTE: max_travel is stored as negative
     
       // Force feed hold if cycle is active. All buffered blocks are guaranteed to be within 
       // workspace volume so just come to a controlled stop so position is not lost. When complete
