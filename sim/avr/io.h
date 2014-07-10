@@ -40,7 +40,7 @@ enum {
   SIM_PORT_COUNT
 };
 
-#define SIM_N_TIMERS 6
+#define SIM_N_TIMERS 3 //328p has 3, Mega has 6
 
 
 // dummy register variables
@@ -147,6 +147,7 @@ typedef struct io_sim_monitor {
 #define SIM_OCB 2
 #define SIM_OCC 3
 #define SIM_ICI 5
+#define SIM_ROLL 7  //stealing reserved TIFR bit
 
 #define OCIE0A SIM_OCA
 #define OCIE0B SIM_OCB
@@ -174,8 +175,8 @@ typedef struct io_sim_monitor {
 #define TCNT1  io.tcnt[1]
 #define TCNT2  io.tcnt[2]
 
-#define TCCR0B io.tccra[0]
-#define TCCR0A io.tccrb[0]
+#define TCCR0A io.tccra[0]
+#define TCCR0B io.tccrb[0]
 #define TCCR1A io.tccra[1]
 #define TCCR1B io.tccrb[1]
 #define TCCR2A io.tccra[2]

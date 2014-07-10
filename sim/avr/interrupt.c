@@ -47,9 +47,20 @@ enum sim_wgm_mode {
   wgm_RESERVED
 };
 
-enum sim_wgm_mode sim_wgm0[4] = {wgm_NORMAL,wgm_PHASE_PWM,wgm_CTC,wgm_FAST_PWM};
-enum sim_wgm_mode sim_wgmN[8] = {wgm_NORMAL,wgm_PHASE_PWM,wgm_PHASE_PWM,wgm_PH_F_PWM,
-											wgm_CTC, wgm_FAST_PWM, wgm_FAST_PWM, wgm_FAST_PWM};
+//3-bit wgm table for 8-bit timers
+enum sim_wgm_mode sim_wgm_3[] = {wgm_NORMAL,wgm_PHASE_PWM,wgm_CTC,wgm_FAST_PWM,
+                                  wgm_RESERVED,wgm_PHASE_PWM, wgm_RESERVED, wgm_FAST_PWM};
+
+//4-bit wgm modes for 16-bit timers
+enum sim_wgm_mode sim_wgm_4[16] = {wgm_NORMAL,wgm_PHASE_PWM,wgm_PHASE_PWM,wgm_PHASE_PWM,
+                                   wgm_CTC, wgm_FAST_PWM, wgm_FAST_PWM, wgm_FAST_PWM,
+                                   wgm_PH_F_PWM, wgm_PH_F_PWM, wgm_PHASE_PWM, wgm_PHASE_PWM,
+                                   wgm_CTC, wgm_RESERVED, wgm_FAST_PWM, wgm_FAST_PWM};
+
+static const uint16_t timer_bitdepth[SIM_N_TIMERS] = {
+  0xFF,0xFFFF,0xFF,
+  //0xFFFF,0xFFFF,0xFFFF   3 more for mega
+};
 
 void timer_interrupts() {
   int i;
@@ -57,51 +68,59 @@ void timer_interrupts() {
   io.prescaler++;
  
   //all clocks
-  for (i=0;i<2;i++){
+  for (i=0;i<SIM_N_TIMERS;i++){
+    uint8_t cs = io.tccrb[i]&7; //clock select bits 
+    int16_t increment = sim_scaling[cs];
+    uint16_t bitmask = timer_bitdepth[i]; 
 
-	 uint8_t cs = io.tccrb[i]&7; //clock select bits 
-	 int16_t increment = sim_scaling[cs];
-	 //check scaling to see if timer fires
-	 if (increment && (io.prescaler&(increment-1))==0) { 
+    //check scaling to see if timer fires
+    if (increment && (io.prescaler&(increment-1))==0) { 
 
 		//select waveform generation mode 
 		enum sim_wgm_mode mode;
-		if (i==0 || i==2) {  //(T0 and T2 are different from rest)
-		  uint8_t wgm = io.tccra[i]&3; //look at low 2 bits
-		  mode = sim_wgm0[wgm];
+		if (i==0 || i==2) {  //(T0 and T2 use only 3 wgm bits)
+		  uint8_t wgm = ((io.tccrb[i]&0x08)>>1) | (io.tccra[i]&3); 
+		  mode = sim_wgm_3[wgm];
 		}
-		else {
-		  uint8_t wgm = ((io.tccrb[i]&8)>>1) | (io.tccra[i]&3); //only using 3 bits for now
-		  mode = sim_wgmN[wgm];
+		else {   
+		  uint8_t wgm = ((io.tccrb[i]&0x18)>>1) | (io.tccra[i]&3);  //4 wgm bits
+		  mode = sim_wgm_4[wgm];
 		}
 		
 		//tick
-		io.tcnt[i]++;
-		//comparators
-		if ((io.timsk[i]&(1<<SIM_OCA)) && io.tcnt[i]==io.ocra[i]) io.tifr[i]|=(1<<SIM_OCA);
-		if ((io.timsk[i]&(1<<SIM_OCB)) && io.tcnt[i]==io.ocrb[i]) io.tifr[i]|=(1<<SIM_OCB);
-		if ((io.timsk[i]&(1<<SIM_OCC)) && io.tcnt[i]==io.ocrc[i]) io.tifr[i]|=(1<<SIM_OCC);
-		  
+    if (io.tifr[i]&(1<<SIM_ROLL)) { 
+      io.tcnt[i]=0; 
+      io.tifr[i]&=~(1<<SIM_ROLL);
+    } 
+		else { 
+      io.tcnt[i]++; 
+    }
+    io.tcnt[i]&=bitmask; //limit the 8 bit timers
 
 		switch (mode) {
-		  case wgm_NORMAL: //Normal mode
-			 if (i==0) io.tcnt[i]&=0xFF; //timer0 is 8 bit;
-			 if (i==2) io.tcnt[i]&=0xFF; //timer2 is 8 bit;
-			 if (io.tcnt[i]==0) io.tifr[i]|=(1<<SIM_TOV); 
+		  case wgm_NORMAL: //Normal mode, ovf on rollover
+        if (io.tcnt[i]==0) io.tifr[i]|=(1<<SIM_TOV);  //overflow
 			 break;
 
-   	  case wgm_CTC: //CTC mode
-			 if (io.tcnt[i]==io.ocra[i]) io.tcnt[i]=0;
+   	  case wgm_CTC: //CTC mode, ovf at TOP, 0 next tick
+        if (io.tcnt[0]==io.ocra[i]) {
+          io.tifr[i]|=(1<<SIM_TOV)|(1<<SIM_ROLL);  //overflow
+        }
 			 break;
   		  default:  //unsupported
 			 break; 
 		}
+
+		//comparators
+		if ((io.timsk[i]&(1<<SIM_OCA)) && io.tcnt[i]==(io.ocra[i]&bitmask)) io.tifr[i]|=(1<<SIM_OCA);
+    if ((io.timsk[i]&(1<<SIM_OCB)) && io.tcnt[i]==(io.ocrb[i]&bitmask)) io.tifr[i]|=(1<<SIM_OCB);
+    if ((io.timsk[i]&(1<<SIM_OCC)) && io.tcnt[i]==(io.ocrc[i]&bitmask)) io.tifr[i]|=(1<<SIM_OCC);
+
 		//call any triggered interupts
 		if (ien && io.tifr[i]) {
 		  if (compa_vect[i] && (io.tifr[i]&(1<<SIM_OCA))) {
 			 compa_vect[i]();
 			 io.tifr[i]&=~(1<<SIM_OCA);
-			 //TODO: insert port_monitor call here
 		  }
 		  if (compb_vect[i] && (io.tifr[i]&(1<<SIM_OCB))) {
 			 compb_vect[i]();
@@ -116,7 +135,6 @@ void timer_interrupts() {
   }
 	 //// TODO for more complete timer sim. 
 	 // pwm modes. (only used for variable spindle, I think).
-    // -- would require fixing wgm mode for Timers1..5
     // -- phase correct modes need updown counter.
     // output pins (also only for variable spindle, I think).
 

@@ -84,6 +84,19 @@ int shutdown_simulator(uint8_t exitflag) {
   return 1/(!exitflag);  //force exception, since avr_main() has no returns.
 }
 
+void simulate_limits(int idx, int raw_steps) {
+  int min = -settings.homing_pulloff * settings.steps_per_mm[idx];
+  int max = -settings.max_travel[idx]*settings.steps_per_mm[idx] - min;
+  if (raw_steps < min) {
+    printf("LOWER LIMIT HIT\n");
+    //TODO: set limit pins, cause pin change interrupt
+  }
+  else if (raw_steps>max) {
+    printf("UPPEER LIMIT HIT\n");
+    //TODO: set limit pins, cause pin change interrupt
+  }
+}
+
 
 void sim_monitor_step_port(uint8_t portval) {
   static uint8_t last_step_state=0;
@@ -96,10 +109,12 @@ void sim_monitor_step_port(uint8_t portval) {
     for (i=0;i<N_AXIS;i++) {
       if (step_state & get_step_mask(i)) {
         uint8_t dir = (DIRECTION_PORT ^ settings.dir_invert_mask) & get_direction_mask(i);
-        raw_steps[i]+= dir ? 1 : -1;
+        raw_steps[i]+= dir ? -1 : 1;
+        simulate_limits(i,raw_steps[i]);
       }
     }
   }
+  last_step_state = step_state;
 }
 
 
@@ -130,43 +145,43 @@ void sim_loop(){
 
   while (!sim.exit || sys.state>2 ) { //don't quit until idle
 
-	 if (sim.speedup) {
-		//calculate how many ticks to do.
-		uint32_t ns_now = platform_ns();
-		uint32_t ns_elapsed = (ns_now-ns_prev)*sim.speedup; //todo: try multipling nsnow
-		simulated_ticks += F_CPU/1e9*ns_elapsed;
-		ns_prev = ns_now;
-	 }
-	 else {
-		simulated_ticks++;  //as fast as possible
-	 }
-		
-	 while (sim.masterclock < simulated_ticks){
-
-		//only read serial port as fast as the baud rate allows
-		bool read_serial = (sim.masterclock >= next_byte_tick);
-
-		//do low level hardware
-		simulate_hardware(read_serial);
-
-		//print the steps. 
-		//For further decoupling, could maintain own counter of STEP_PORT pulses, 
+    if (sim.speedup) {
+      //calculate how many ticks to do.
+      uint32_t ns_now = platform_ns();
+      uint32_t ns_elapsed = (ns_now-ns_prev)*sim.speedup; //todo: try multipling nsnow
+      simulated_ticks += F_CPU/1e9*ns_elapsed;
+      ns_prev = ns_now;
+    }
+    else {
+      simulated_ticks++;  //as fast as possible
+    }
+    
+    while (sim.masterclock < simulated_ticks){
+      
+      //only read serial port as fast as the baud rate allows
+      bool read_serial = (sim.masterclock >= next_byte_tick);
+      
+      //do low level hardware
+      simulate_hardware(read_serial);
+      
+      //print the steps. 
+      //For further decoupling, could maintain own counter of STEP_PORT pulses, 
       // print that instead of sys.position.
-		print_steps(0);  
-		
-		if (read_serial){
-		  next_byte_tick+=sim.baud_ticks;
-		  //recent block can only change after input, so check here.
-		  printBlock();
-		}
-
-		//TODO:
-		//  set limit pins based on position,
-		//  set probe pin when probing.
-		//  if VARIABLE_SPINDLE, measure pwm pin to report speed?
-	 }
-
-	 platform_sleep(0); //yield
+      print_steps(0);  
+      
+      if (read_serial){
+	next_byte_tick+=sim.baud_ticks;
+	//recent block can only change after input, so check here.
+	printBlock();
+      }
+      
+      //TODO:
+      //  set limit pins based on position,
+      //  set probe pin when probing.
+      //  if VARIABLE_SPINDLE, measure pwm pin to report speed?
+    }
+    //    printf("%d %d %d\n",raw_steps[0],raw_steps[1],raw_steps[2]);
+    platform_sleep(0); //yield
   }
 }
 
