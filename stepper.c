@@ -173,7 +173,7 @@ static st_prep_t prep;
  current_speed -> +            \                                         /  |  + <- exit_speed
                   |             + <- exit_speed                         /   |  |                       
                   +-------------+                     current_speed -> +----+--+                   
-                   time -->  ^  ^                                           ^  ^                       
+                   time --  ^  ^                                           ^  ^                       
                              |  |                                           |  |                       
                 decelerate_after(in mm)                             decelerate_after(in mm)
                     ^           ^                                           ^  ^
@@ -513,6 +513,10 @@ void stepper_init()
   #ifdef STEP_PULSE_DELAY
     TIMSK0 |= (1<<OCIE0A); // Enable Timer0 Compare Match A interrupt
   #endif
+
+  //Keyme PORTG for drive enable
+  DDRG |= 1; //portG0 is output
+  PORTG|=1;  //which must be high.
 }
   
 
