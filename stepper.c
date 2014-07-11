@@ -409,22 +409,25 @@ ISR(TIMER1_COMPA_vect)
 
   // While homing or if hard limits enabled
   
-  uint8_t must_stop = ((LIMIT_PIN^limits.expected)&limits.active);  
+  uint8_t must_stop = ((LIMIT_PIN^limits.expected)&limits.active);
   if (must_stop) {
-	 st.step_outbits &= ~must_stop;
-	 limits.homenext|=1;
-	 if ( !(sys.state & (STATE_ALARM|STATE_HOMING)) &&
-				  bit_isfalse(SYS_EXEC,EXEC_ALARM)) {
-		mc_reset(); // Initiate system kill.
-		SYS_EXEC |= (EXEC_LIMIT_REPORT |EXEC_ALARM | EXEC_CRIT_EVENT); // Indicate hard limit critical event
-	 }
+    st.step_outbits &= ~(must_stop>>LIMIT_BIT_SHIFT);
+    if (!st.step_outbits) {
+      limits.homenext|=1;
+    }
+    if ( !(sys.state & (STATE_ALARM|STATE_HOMING)) && 
+         bit_isfalse(SYS_EXEC,EXEC_ALARM)) {
+      mc_reset(); // Initiate system kill.
+      // Indicate hard limit critical event
+      SYS_EXEC |= (EXEC_LIMIT_REPORT |EXEC_ALARM | EXEC_CRIT_EVENT); 
+    }
   }
 
 
   st.step_count--; // Decrement step events count 
   if (st.step_count == 0) {
     // Segment is complete. Discard current segment and advance segment indexing.
-	 SYS_EXEC |= st.exec_segment->block_end; //sets EXEC_STATUS_REPORT when done with block
+   SYS_EXEC |= st.exec_segment->block_end; //sets EXEC_STATUS_REPORT when done with block
     st.exec_segment = NULL;
 
     if ( ++segment_buffer_tail == SEGMENT_BUFFER_SIZE) { segment_buffer_tail = 0; }

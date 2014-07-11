@@ -72,12 +72,12 @@
 // may be reduced to one pin, if all axes are homed with seperate cycles, or vice versa, all three axes
 // on separate pin, but homed in one cycle. Also, it should be noted that the function of hard limits 
 // will not be affected by pin sharing.
-// NOTE: Defaults are set for a traditional 3-axis CNC machine. Z-axis first to clear, followed by X & Y.
-#define HOMING_CYCLE_0 (1<<X_AXIS)                // REQUIRED: First move 
-#define HOMING_CYCLE_1 (1<<Y_AXIS)                // REQUIRED: First move 
-#define HOMING_CYCLE_2 ((1<<Z_AXIS)|(1<<C_AXIS))                // REQUIRED: First move 
-#define HOMING_CYCLE_3 (1<<C_AXIS)                // OPTIONAL: Then move 
-// #define HOMING_CYCLE_2                         // OPTIONAL: Uncomment and add axes mask to enable
+// NOTE: CYCLE is set for the keyme machine.  Gripper open first. Then Y, then X & Carousel
+#define HOMING_CYCLE_0 (1<<Z_AXIS)                // REQUIRED: First move 
+#define HOMING_CYCLE_1 (1<<Y_AXIS)                // Clear Y Axis
+#define HOMING_CYCLE_2 ((1<<X_AXIS)|(1<<C_AXIS))  // X and carousel ok at same time.
+//#define HOMING_CYCLE_3 (1<<C_AXIS)                // OPTIONAL: Then move 
+
 
 #define HOMING_CYCLE_ALL  (HOMING_CYCLE_0|HOMING_CYCLE_1|HOMING_CYCLE_2)
 // Number of homing cycles performed after when the machine initially jogs to limit switches.
