@@ -28,6 +28,9 @@
 
 void system_init() 
 {
+  TIMING_DDR |= TIMING_MASK;  //timing output
+
+#ifndef KEYME_BOARD
   PINOUT_DDR &= ~(PINOUT_MASK); // Configure as input pins
   PINOUT_PORT |= PINOUT_MASK;   // Enable internal pull-up resistors. Normal high operation.
   PINOUT_PCMSK |= PINOUT_MASK;  // Enable specific pins of the Pin Change Interrupt
@@ -52,6 +55,9 @@ ISR(PINOUT_INT_vect)
     } 
   }
 }
+#else
+}
+#endif
 
 
 // Executes user startup script, if stored.
@@ -111,7 +117,14 @@ uint8_t system_execute_line(char *line)
         sys.state = STATE_IDLE;
         // Don't run startup script. Prevents stored moves in startup from causing accidents.
       } // Otherwise, no effect.
-      break;               
+      break;      
+    case 'E':
+      report_counters();
+      break;
+    case 'S':
+      report_sys_info();
+      break;
+         
 //  case 'J' : break;  // Jogging methods
     // TODO: Here jogging can be placed for execution as a seperate subprogram. It does not need to be 
     // susceptible to other runtime commands except for e-stop. The jogging function is intended to
@@ -136,6 +149,7 @@ uint8_t system_execute_line(char *line)
           if ( line[++char_counter] != 0 ) { return(STATUS_INVALID_STATEMENT); }
           else { report_ngc_parameters(); }
           break;          
+
         case 'H' : // Perform homing cycle [IDLE/ALARM], only if idle or lost
           if (bit_istrue(settings.flags,BITFLAG_HOMING_ENABLE)) { 
 				char axis = line[++char_counter];

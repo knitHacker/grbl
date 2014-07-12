@@ -90,6 +90,12 @@ void report_realtime_status();
 // Prints state of limit pins
 void report_limit_pins();
 
+// Prinst state of counters
+void report_counters();
+
+// Prints system info (estop & power)
+void report_sys_info();
+
 // Prints recorded probe position
 void report_probe_parameters();
 

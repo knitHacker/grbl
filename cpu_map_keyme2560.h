@@ -3,6 +3,10 @@
 #endif
 
 #define GRBL_PLATFORM "KeyMe 2560"
+
+//KeyMe specific control pins
+#define KEYME_BOARD
+
 // Serial port pins
 #define SERIAL_RX USART0_RX_vect
 #define SERIAL_UDRE USART0_UDRE_vect
@@ -61,10 +65,10 @@
 #define LIMIT_INT_vect  INT0_vect 
 #define LIMIT_INT2_vect INT1_vect
 
-#define TIMING_DDR DDRB
-#define TIMING_PORT PORTB  ///TODO: move later
+#define TIMING_DDR DDRA
+#define TIMING_PORT PORTA  ///TODO: move later
 #define TIMING_BIT  7
-#define TIMING_MASK        (1<<TIMING_BIT) // LED
+#define TIMING_MASK       (1<<TIMING_BIT) // LED
 
 #ifdef CNC_CONFIGURATION
 
@@ -129,7 +133,53 @@
   #define SPINDLE_PWM_BIT		6 // Atmega2560 pin X / Arduino Digital Pin 9
 #endif // End of VARIABLE_SPINDLE
 
+#ifdef KEYME_BOARD
+  #define ESTOP_DDR DDRG
+  #define ESTOP_PORT PORTG 
+  #define ESTOP_PIN PING
+#define ESTOP_BIT  2
+#define RUN_ENABLE_BIT  0
 
+#define MS_DDR DDRC
+#define MS_PORT PORTC
+#define MS_MASK 0xFF //all 8 bits are used, in XYZC order
+#define SET_MICROSTEP(axis,val) (val<<((axis*2)&3)) //2 bits each
+
+#define PFD_DDR DDRL
+#define PFD_PORT PORTL
+#define PFD_MASK 0xFF //all 8 bits are used, in XYZC order
+#define SET_DECAY_MODE(axis,val) (val<<((axis*2)&3)) //2 bits
+
+#define FDBK_DDR DDRK
+#define FDBK_PORT PORTK
+#define FDBK_PIN  PINK
+
+#define MAG_SENSE_BIT 3
+#define Z_ENC_IDX_BIT 4
+#define Z_ENC_CHA_BIT 5
+#define Z_ENC_CHB_BIT 6
+
+#define FDBK_INT       PCIE2  // Pin change interrupt enable pin
+#define FDBK_INT_vect  PCINT2_vect
+#define FDBK_PCMSK     PCMSK2 // Pin change interrupt register
+#define FDBK_MASK ((1<<MAG_SENSE_BIT)|(1<<Z_ENC_IDX_BIT)|(1<<Z_ENC_CHA_BIT)|(1<<Z_ENC_CHB_BIT))
+
+#define MVOLT_DDR DDRD
+#define MVOLT_PORT PORTD
+#define MVOLT_PIN PIND
+#define X_MVOLT_BIT 1
+#define Y_MVOLT_BIT 2
+#define Z_MVOLT_BIT 3
+#define C_MVOLT_BIT 0
+#define MVOLT_MASK ((1<<X_MVOLT_BIT)|(1<<Y_MVOLT_BIT)|(1<<Z_MVOLT_BIT)|(1<<C_MVOLT_BIT))
+
+#define IO_RESET_DDR DDRF
+#define IO_RESET_PORT PORTF
+#define IO_RESET_BIT 0
+#define IO_RESET_MASK (1<<IO_RESET_BIT)
+
+
+#endif
 
 
 

@@ -96,7 +96,11 @@ void settings_reset() {
   settings.max_travel[X_AXIS] = (-DEFAULT_X_MAX_TRAVEL);
   settings.max_travel[Y_AXIS] = (-DEFAULT_Y_MAX_TRAVEL);
   settings.max_travel[Z_AXIS] = (-DEFAULT_Z_MAX_TRAVEL);    
-  settings.max_travel[C_AXIS] = (-DEFAULT_Z_MAX_TRAVEL);    
+  settings.max_travel[C_AXIS] = (-DEFAULT_Z_MAX_TRAVEL);  
+#ifdef KEYME_BOARD  
+  settings.microsteps = 0; //full stepping
+  settings.decay_mode = 0; //slow
+#endif
   write_global_settings();
 }
 
@@ -226,6 +230,10 @@ uint8_t settings_store_global_setting(int parameter, float value) {
     case 31: settings.homing_seek_rate = value; break;
     case 32: settings.homing_debounce_delay = round(value); break;
     case 33: settings.homing_pulloff = value; break;
+#ifdef KEYME_BOARD  
+    case 34: settings.microsteps = value; break;
+    case 35: settings.decay_mode = value; break;
+#endif
     default: 
       return(STATUS_INVALID_STATEMENT);
   }

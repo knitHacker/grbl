@@ -35,6 +35,7 @@
 #include "planner.h"
 #include "spindle_control.h"
 #include "stepper.h"
+#include "counters.h"
 
 
 // Handles the primary confirmation protocol response for streaming interfaces and human-feedback.
@@ -196,7 +197,14 @@ void report_grbl_settings() {
   printPgmString(PSTR(" (homing feed, mm/min)\r\n$31=")); printFloat_SettingValue(settings.homing_seek_rate);
   printPgmString(PSTR(" (homing seek, mm/min)\r\n$32=")); printInteger(settings.homing_debounce_delay);
   printPgmString(PSTR(" (homing debounce, msec)\r\n$33=")); printFloat_SettingValue(settings.homing_pulloff);
-  printPgmString(PSTR(" (homing pull-off, mm)\r\n")); 
+  printPgmString(PSTR(" (homing pull-off, mm)"));
+#ifdef KEYME_BOARD
+  printPgmString(PSTR("\r\n$34=")); print_uint8_base10(settings.microsteps);  //TODO: unpack for display
+  printPgmString(PSTR(" (microsteps : ")); print_uint8_base2(settings.microsteps);
+  printPgmString(PSTR(")\r\n$35=")); print_uint8_base10(settings.decay_mode);
+  printPgmString(PSTR(" (decay mode, (0..3))"));
+#endif
+  printPgmString(PSTR("\r\n"));
 }
 
 
@@ -333,6 +341,37 @@ void report_build_info(char *line)
   printPgmString(PSTR("]\r\n"));
 }
 
+#ifdef KEYME_BOARD
+//Prints sys info line: Estop and voltage
+void report_sys_info()
+{
+  uint8_t volts = MVOLT_PIN&MVOLT_MASK;
+  //prints system info: 
+  //estop, & motor voltage indicators  
+  printPgmString(PSTR("{e:"));
+  print_uint8_base10((ESTOP_PIN>>ESTOP_BIT)&1);
+  printPgmString(PSTR(", v:"));
+  volts = (volts>>1|volts<<3); //shuffle bits to get xyzc order
+  print_uint8_base2(volts&MVOLT_MASK);
+  printPgmString(PSTR("}\n\r"));
+}
+
+//Prints encoder line: Counts and encoder pins
+void report_counters()
+{
+  uint8_t pinval = FDBK_PIN&FDBK_MASK;
+  printPgmString(PSTR("{z: "));
+  printInteger(counters_get_count(Z_AXIS));
+  printPgmString(PSTR(" (:"));
+  print_uint8_base2((pinval>>Z_ENC_IDX_BIT)&7); //3 bits
+  printPgmString(PSTR("), c(:"));
+  printInteger(counters_get_count(C_AXIS));
+  printPgmString(PSTR(" (:"));
+  print_uint8_base2((pinval>>MAG_SENSE_BIT)&1); //1 bit
+  printPgmString(PSTR("}\n\r"));
+
+}
+#endif
 
  // Prints real-time data. This function grabs a real-time snapshot of the stepper subprogram 
  // and the actual location of the CNC machine. Users may change the following function to their

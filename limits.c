@@ -39,7 +39,6 @@ limit_t limits={0};
 
 void limits_init() 
 {
-  TIMING_DDR |= TIMING_MASK;  //timing output
 
   LIMIT_DDR &= ~(LIMIT_MASK); // Set as input pins
 
