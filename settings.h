@@ -63,7 +63,7 @@
 // #define SETTING_INDEX_G92    N_COORDINATE_SYSTEM+2  // Coordinate offset (G92.2,G92.3 not supported)
 
 
-//@TODO: chainging N_AXIS invalidates old eeprom.  Make sure this still fits.
+
 // Global persistent settings (Stored from byte EEPROM_ADDR_GLOBAL onwards)
 typedef struct {
   float steps_per_mm[N_AXIS];
@@ -82,6 +82,9 @@ typedef struct {
   float homing_seek_rate;
   uint16_t homing_debounce_delay;
   float homing_pulloff ;
+  uint8_t microsteps; //2 bits per motor
+  uint8_t decay_mode; //0..3  slow-->fast
+
 //  uint8_t status_report_mask; // Mask to indicate desired report data.
 } settings_t;
 extern settings_t settings;

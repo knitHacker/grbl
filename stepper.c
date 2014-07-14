@@ -173,7 +173,7 @@ static st_prep_t prep;
  current_speed -> +            \                                         /  |  + <- exit_speed
                   |             + <- exit_speed                         /   |  |                       
                   +-------------+                     current_speed -> +----+--+                   
-                   time -->  ^  ^                                           ^  ^                       
+                   time --  ^  ^                                           ^  ^                       
                              |  |                                           |  |                       
                 decelerate_after(in mm)                             decelerate_after(in mm)
                     ^           ^                                           ^  ^
@@ -288,7 +288,7 @@ void st_go_idle()
 // with probing and homing cycles that require true real-time positions.
 ISR(TIMER1_COMPA_vect)
 {        
-  // TIMING_PORT ^= TIMING_MASK; // Debug: Used to time ISR
+  TIMING_PORT ^= TIMING_MASK; // Debug: Used to time ISR
   if (busy) { return; } // The busy-flag is used to avoid reentering this interrupt
   
   // Set the direction pins a couple of nanoseconds before we step the steppers
@@ -409,22 +409,25 @@ ISR(TIMER1_COMPA_vect)
 
   // While homing or if hard limits enabled
   
-  uint8_t must_stop = ((LIMIT_PIN^limits.expected)&limits.active);  
+  uint8_t must_stop = ((LIMIT_PIN^limits.expected)&limits.active);
   if (must_stop) {
-	 st.step_outbits &= ~must_stop;
-	 limits.homenext|=1;
-	 if ( !(sys.state & (STATE_ALARM|STATE_HOMING)) &&
-				  bit_isfalse(SYS_EXEC,EXEC_ALARM)) {
-		mc_reset(); // Initiate system kill.
-		SYS_EXEC |= (EXEC_LIMIT_REPORT |EXEC_ALARM | EXEC_CRIT_EVENT); // Indicate hard limit critical event
-	 }
+    st.step_outbits &= ~(must_stop>>LIMIT_BIT_SHIFT);
+    if (!st.step_outbits) {
+      limits.homenext|=1;
+    }
+    if ( !(sys.state & (STATE_ALARM|STATE_HOMING)) && 
+         bit_isfalse(SYS_EXEC,EXEC_ALARM)) {
+      mc_reset(); // Initiate system kill.
+      // Indicate hard limit critical event
+      SYS_EXEC |= (EXEC_LIMIT_REPORT |EXEC_ALARM | EXEC_CRIT_EVENT); 
+    }
   }
 
 
   st.step_count--; // Decrement step events count 
   if (st.step_count == 0) {
     // Segment is complete. Discard current segment and advance segment indexing.
-	 SYS_EXEC |= st.exec_segment->block_end; //sets EXEC_STATUS_REPORT when done with block
+   SYS_EXEC |= st.exec_segment->block_end; //sets EXEC_STATUS_REPORT when done with block
     st.exec_segment = NULL;
 
     if ( ++segment_buffer_tail == SEGMENT_BUFFER_SIZE) { segment_buffer_tail = 0; }
@@ -432,7 +435,7 @@ ISR(TIMER1_COMPA_vect)
 
   st.step_outbits ^= settings.step_invert_mask;  // Apply step port invert mask    
   busy = false;
-  // TIMING_PORT ^= TIMING_MASK; // Debug: Used to time ISR
+  TIMING_PORT ^= TIMING_MASK; // Debug: Used to time ISR
 }
 
 
@@ -484,6 +487,41 @@ void st_reset()
 }
 
 
+
+void keyme_init(){
+
+  //PORTG0 for drive enable
+  ESTOP_DDR  |= (1<<RUN_ENABLE_BIT);    //set enable as outupt
+  ESTOP_DDR  &= ~(ESTOP_BIT);           //estop as input
+  ESTOP_PORT |= (1<<RUN_ENABLE_BIT);  //allow motors to run
+  ESTOP_PORT &= ~(ESTOP_BIT);           //estop input normal-low
+
+
+  //Microstepping
+  MS_DDR = MS_MASK; //all output
+
+
+  MS_PORT = settings.microsteps&MS_MASK;
+  //Phase Current Decay. 
+  PFD_DDR = PFD_MASK; //all output
+  uint8_t axis,value=0;
+  for (axis=0;axis<N_AXIS;axis++) {
+    value|=SET_DECAY_MODE(axis,settings.decay_mode);
+  }
+  PFD_PORT = value&PFD_MASK;
+
+  //PORTA  for voltage sensors
+  //TODO -sset pins 0..3 as input.  Read on command.  (create command)
+  MVOLT_DDR &= ~(MVOLT_MASK);
+  MVOLT_PORT |= MVOLT_MASK; //internal pull-up, normal high  //TODO: should have been analog?
+
+  //TODO Add command for IO reset.
+  //& Setup Port F0 as output
+  IO_RESET_DDR |= IO_RESET_MASK;
+  IO_RESET_PORT &= ~IO_RESET_MASK; //don't reset
+}
+
+
 // Initialize and start the stepper motor subsystem
 void stepper_init()
 {
@@ -510,6 +548,10 @@ void stepper_init()
   #ifdef STEP_PULSE_DELAY
     TIMSK0 |= (1<<OCIE0A); // Enable Timer0 Compare Match A interrupt
   #endif
+  //Setup KeyMe specific ports
+  keyme_init();
+ 
+
 }
   
 

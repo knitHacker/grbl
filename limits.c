@@ -39,7 +39,6 @@ limit_t limits={0};
 
 void limits_init() 
 {
-  TIMING_DDR |= TIMING_MASK;  //timing output
 
   LIMIT_DDR &= ~(LIMIT_MASK); // Set as input pins
 
@@ -70,7 +69,7 @@ void limits_init()
 void limits_enable(uint8_t axes, uint8_t expected) {
   //    LIMIT_PCMSK |= LIMIT_MASK; // Enable specific pins of the Pin Change Interrupt
   limits.expected = bit_istrue(settings.flags,BITFLAG_INVERT_LIMIT_PINS)?~expected:expected;
-  limits.active = axes;
+  limits.active = axes<<LIMIT_BIT_SHIFT;
 
 }
 
