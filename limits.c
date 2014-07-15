@@ -54,7 +54,7 @@ void limits_init()
   */
 
   if (bit_istrue(settings.flags,BITFLAG_HARD_LIMIT_ENABLE)) {
-	 limits_enable(LIMIT_MASK,0);
+	 limits_enable(LIMIT_MASK & HARDSTOP_MASK,0);
   } else {
     limits_disable(); 
   }
@@ -305,8 +305,9 @@ void limits_soft_check(float *target)
 {
   uint8_t idx;
   for (idx=0; idx<N_AXIS; idx++) { 
-    if (target[idx] < 0 || target[idx] > -settings.max_travel[idx]) {  // NOTE: max_travel is stored as negative
-    
+    if ((target[idx] < 0 || target[idx] > -settings.max_travel[idx])  &&  // NOTE: max_travel is stored as negative
+        (get_step_mask(idx)&HARDSTOP_MASK)) {   //if rotary axis, don't check
+      
       // Force feed hold if cycle is active. All buffered blocks are guaranteed to be within 
       // workspace volume so just come to a controlled stop so position is not lost. When complete
       // enter alarm mode.

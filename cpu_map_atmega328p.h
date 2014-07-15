@@ -44,6 +44,7 @@
   #define Z_LIMIT_BIT    3  // Uno Digital Pin 11
 #endif
 #define LIMIT_MASK       ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<Z_LIMIT_BIT)) // All limit bits
+#define HARDSTOP_MASK    ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<Z_LIMIT_BIT)) // All true hardstops
 #define LIMIT_BIT_SHIFT  -1      //shift limit pins 1 left to align w/ step bits.
                                  // won't work with variable spindle, unless we move limits to 10,11,12 and
                                  // put spindle on pwm 9, leave dir on 13.  (then shift=0)
