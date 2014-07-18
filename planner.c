@@ -303,7 +303,10 @@ void plan_buffer_line(float *target, float feed_rate, uint8_t invert_feed_rate)
   block->millimeters = sqrt(block->millimeters); // Complete millimeters calculation with sqrt()
   
   // Bail if this is a zero-length block. Highly unlikely to occur.
-  if (block->step_event_count == 0) { return; } 
+  if (block->step_event_count == 0) { 
+    SYS_EXEC |= EXEC_STATUS_REPORT;
+    return; 
+  } 
   
   // Adjust feed_rate value to mm/min depending on type of rate input (normal, inverse time, or rapids)
   // TODO: Need to distinguish a rapids vs feed move for overrides. Some flag of some sort.
