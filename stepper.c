@@ -489,7 +489,7 @@ void st_reset()
 
 
 void keyme_init(){
-
+#ifdef KEYME_BOARD
   //PORTG0 for drive enable
   ESTOP_DDR  |= (1<<RUN_ENABLE_BIT);    //set enable as outupt
   ESTOP_DDR  &= ~(ESTOP_BIT);           //estop as input
@@ -519,6 +519,7 @@ void keyme_init(){
   //& Setup Port F0 as output
   IO_RESET_DDR |= IO_RESET_MASK;
   IO_RESET_PORT &= ~IO_RESET_MASK; //don't reset
+#endif
 }
 
 

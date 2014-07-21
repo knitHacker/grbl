@@ -118,12 +118,14 @@ uint8_t system_execute_line(char *line)
         // Don't run startup script. Prevents stored moves in startup from causing accidents.
       } // Otherwise, no effect.
       break;      
+#ifdef KEYME_BOARD
     case 'E':
       report_counters();
       break;
     case 'S':
       report_sys_info();
       break;
+#endif
          
 //  case 'J' : break;  // Jogging methods
     // TODO: Here jogging can be placed for execution as a seperate subprogram. It does not need to be 

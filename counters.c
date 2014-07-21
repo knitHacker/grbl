@@ -28,8 +28,10 @@ counters_t counters = {{0}};
 void counters_init() 
 {
   //encoders and feedback //TODO: move to new file
+#ifdef KEYME_BOARD
   FDBK_DDR &= ~(FDBK_MASK); // Configure as input pins
   FDBK_PORT |= FDBK_MASK;   // Enable internal pull-up resistors. Normal high operation. //TODO test
+#endif
   /*
   FDBK_PCMSK |= FDBK_MASK;  // Enable specific pins of the Pin Change Interrupt
   PCICR |= (1 << FDBK_INT);   // Enable Pin Change Interrupt
