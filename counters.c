@@ -52,7 +52,6 @@ uint8_t counters_get_count(uint8_t axis)
 
 // Monitors counters pin state and records the system position when detected. Called by the
 // stepper ISR per ISR tick.
-// NOTE: This function must be extremely efficient as to not bog down the stepper ISR.
 void counters_state_monitor()
 {
   //TODO: 

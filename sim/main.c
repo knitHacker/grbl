@@ -22,6 +22,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
 #include "../planner.h"
 #include "../stepper.h"
 #include "../gcode.h"
@@ -67,7 +68,7 @@ PLAT_THREAD_FUNC(avr_main_thread,exit){
 }
 
 int main(int argc, char *argv[]) {
-  uint32_t tick_rate=1;
+  float tick_rate=1.0;
   int positional_args=0;
 
   //defaults
@@ -99,14 +100,29 @@ int main(int argc, char *argv[]) {
 		 case 'b': //Block file
 			argv++;argc--;
 			args.block_out_file = fopen(*argv,"w");
+      if (!args.block_out_file) {
+        perror("fopen");
+        printf("Error opening : %s\n",*argv);
+        return(usage(0));
+      }
 			break;
 		 case 's': //Step out file.
 			argv++;argc--;
 			args.step_out_file = fopen(*argv,"w");
+      if (!args.step_out_file) {
+        perror("fopen");
+        printf("Error opening : %s\n",*argv);
+        return(usage(0));
+      }
 			break;
 		 case 'g': //Grbl output
 			argv++;argc--;
 			args.grbl_out_file = fopen(*argv,"w");
+      if (!args.grbl_out_file) {
+        perror("fopen");
+        printf("Error opening : %s\n",*argv);
+        return(usage(0));
+      }
 			break;
 		 case 'r':  //step_time for Reporting
 			argv++;argc--;
@@ -126,6 +142,11 @@ int main(int argc, char *argv[]) {
 			break;
 		 case 2:  //block out and grbl out to same file, like before.
 			args.block_out_file = fopen(*argv,"w");
+      if (!args.block_out_file) {
+        perror("fopen");
+        printf("Error opening : %s\n",*argv);
+        return(usage(0));
+      }
 			args.grbl_out_file = args.block_out_file;
 			break;
 		 default:

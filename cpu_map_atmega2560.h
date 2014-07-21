@@ -49,6 +49,7 @@
 #define Z_LIMIT_BIT     5 // MEGA2560 Digital Pin 11
 #define C_LIMIT_BIT     6 // MEGA2650 Digital Pin 12
 #define LIMIT_MASK ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<Z_LIMIT_BIT)|(1<<C_LIMIT_BIT)) // All limit bits
+#define HARDSTOP_MASK   ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<Z_LIMIT_BIT)) // All limit that are really hardstops.
 #define LIMIT_BIT_SHIFT 3  // shift right to align with step bits
 
 #define LIMIT_ICR       PCICR       //enables change interrupts

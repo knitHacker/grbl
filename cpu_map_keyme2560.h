@@ -56,6 +56,7 @@
 #define C_LIMIT_BIT     3 // Atmega2560 pin 46 / Arduino Digital Pin 18
 
 #define LIMIT_MASK ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<Z_LIMIT_BIT)|(1<<C_LIMIT_BIT)) // All limit bits
+#define HARDSTOP_MASK   ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)|(1<<Z_LIMIT_BIT)) // All limit that are really hardstops.
 #define LIMIT_BIT_SHIFT   0
 
 #define LIMIT_ICR       EICRA       //enables change interrupts
