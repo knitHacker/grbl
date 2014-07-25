@@ -163,7 +163,6 @@ ISR(SERIAL_RX)
     case CMD_RESET:         mc_reset(); break; // Call motion control reset routine.
     case CMD_STATUS_REPORT: 
       SYS_EXEC |= EXEC_STATUS_REPORT; 
-      if (sys.state!=STATE_CYCLE) { sys.last_line_number=0; }
       break; // Set as true
     default: // Write character to buffer    
       next_head = rx_buffer_head + 1;

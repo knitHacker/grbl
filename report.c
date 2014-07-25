@@ -396,9 +396,8 @@ void report_realtime_status()
     ln = pb->line_number;
   } 
 #else
-  /* if (sys.state==STATE_CYCLE) { */
-  /*   ln = sys.last_line_number; */
-  /* } */
+  do {
+    ln = st_get_tracked_line(sys.last_executed_block);
 #endif
 #endif
   float print_position[N_AXIS];
@@ -433,6 +432,11 @@ void report_realtime_status()
   // Report current line number
   printPgmString(PSTR(",Ln:")); 
   printInteger(ln);
+
+  printPgmString(PSTR(",B:")); 
+  printInteger(sys.last_executed_block);
+  printPgmString(PSTR(",")); 
+  printInteger(st_next_block());
   #endif
     
   #ifdef REPORT_REALTIME_RATE
@@ -442,6 +446,11 @@ void report_realtime_status()
   #endif  
   
   printPgmString(PSTR(">\r\n"));
+
+#if defined(USE_LINE_NUMBERS) && USE_LINE_NUMBERS == PERSIST_LINE_NUMBERS
+  } while (ln>0);
+#endif  
+
 }
 
 void report_limit_pins()

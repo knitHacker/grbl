@@ -51,8 +51,53 @@
 #define AMASS_LEVEL3 (F_CPU/2000) // Over-drives ISR (x8)
 
 
+#define STLT_SIZE BLOCK_BUFFER_SIZE+1
+typedef struct {
+  uint32_t line_number;
+  uint8_t block_idx;
+} st_linetrack_entry_t;
+
+typedef struct {
+  st_linetrack_entry_t lines[STLT_SIZE];
+  uint8_t head;
+  uint8_t tail;
+} st_linetrack_t;
+static st_linetrack_t st_lt;
+
+void st_track_line(uint8_t block_idx, uint32_t line_number)
+{
+  if (st_lt.head!=st_lt.tail){
+    printf("tracking line %d with block %d in pos %d\n",line_number,block_idx, st_lt.head);
+    st_lt.lines[st_lt.head].line_number = line_number;
+    st_lt.lines[st_lt.head].block_idx = block_idx;
+    if (++st_lt.head>=STLT_SIZE) { st_lt.head = 0;}
+    
+  }
+}
+
+uint8_t st_next_block(){
+  uint8_t read_idx = st_lt.tail;
+  if (++read_idx>=STLT_SIZE) { read_idx=0; }
+  return st_lt.lines[read_idx].block_idx;
+}
+
+uint32_t st_get_tracked_line(uint8_t block_idx){
+  uint32_t retval = 0;
+  uint8_t read_idx = st_lt.tail;
+  if (++read_idx>=STLT_SIZE) { read_idx=0; }
+  if (read_idx != st_lt.head) {
+    uint8_t match_idx = st_lt.lines[read_idx].block_idx;
+    printf("checking %d @%d vs %d\n",match_idx,read_idx,block_idx);
+    if (match_idx == block_idx) { //and match
+      retval = st_lt.lines[read_idx].line_number;
+      st_lt.tail = read_idx;
+    }
+  }
+  return retval;
+}
+
 // Stores the planner block Bresenham algorithm execution data for the segments in the segment 
-// buffer. Normally, this buffer is partially in-use, but, for the worst case scenario, it will
+// buffer. Normally, th is buffer is partially in-use, but, for the worst case scenario, it will
 // never exceed the number of accessible stepper buffer segments (SEGMENT_BUFFER_SIZE-1).
 // NOTE: This data is copied from the prepped planner blocks so that the planner blocks may be
 // discarded when entirely consumed and completed by the segment buffer. Also, AMASS alters this
@@ -61,7 +106,7 @@ typedef struct {
   uint8_t direction_bits;
   uint32_t steps[N_AXIS];
   uint32_t step_event_count;
-  //  uint32_t line_number;
+  uint8_t pl_block_idx;
 } st_block_t;
 static st_block_t st_block_buffer[SEGMENT_BUFFER_SIZE-1];
 
@@ -78,7 +123,7 @@ typedef struct {
   #else
     uint8_t prescaler;      // Without AMASS, a prescaler is required to adjust for slow timing.
   #endif
-  int32_t line_number;         //true for last segment of a block - used to force reporting
+  uint8_t do_status;         //true for last segment of a block - used to force reporting
 } segment_t;
 static segment_t segment_buffer[SEGMENT_BUFFER_SIZE];
 
@@ -334,10 +379,6 @@ ISR(TIMER1_COMPA_vect)
         st.exec_block_index = st.exec_segment->st_block_index;
         st.exec_block = &st_block_buffer[st.exec_block_index];
 
-/* #if defined(USE_LINE_NUMBERS) && USE_LINE_NUMBERS == PERSIST_LINE_NUMBERS */
-/* 		  sys.last_line_number = st.exec_block->line_number; */
-/* #endif */
-        
         // Initialize Bresenham line and distance counters
         st.counter_x = (st.exec_block->step_event_count >> 1);
         st.counter_y = st.counter_x;
@@ -431,13 +472,13 @@ ISR(TIMER1_COMPA_vect)
   st.step_count--; // Decrement step events count 
   if (st.step_count == 0) {
     // Segment is complete. Discard current segment and advance segment indexing.
-    if (st.exec_segment->line_number&0x8000000) {
-      SYS_EXEC |= EXEC_STATUS_REPORT;
-      st.exec_segment->line_number=~st.exec_segment->line_number;
+    if (st.exec_segment->do_status) {
+      printf("setting leb to %d\n",st_block_buffer[st.exec_segment->st_block_index].pl_block_idx);
+      sys.last_executed_block = st_block_buffer[st.exec_segment->st_block_index].pl_block_idx;
+      SYS_EXEC |= st.exec_segment->do_status;
     }
-    sys.last_line_number = st.exec_segment->line_number;
-    st.exec_segment = NULL;
 
+    st.exec_segment = NULL;
     if ( ++segment_buffer_tail == SEGMENT_BUFFER_SIZE) { segment_buffer_tail = 0; }
   }
 
@@ -492,6 +533,11 @@ void st_reset()
   segment_buffer_head = 0; // empty = tail
   segment_next_head = 1;
   busy = false;
+
+  st_lt.head = 1;
+  st_lt.tail = 0;
+  memset(st_lt.lines,BLOCK_BUFFER_SIZE,sizeof(st_lt.lines));
+
 }
 
 
@@ -559,7 +605,6 @@ void stepper_init()
   #endif
   //Setup KeyMe specific ports
   keyme_init();
- 
 
 }
   
@@ -610,10 +655,8 @@ void st_prep_buffer()
         // segment buffer finishes the prepped block, but the stepper ISR is still executing it. 
         st_prep_block = &st_block_buffer[prep.st_block_index];
         st_prep_block->direction_bits = pl_block->direction_bits;
+        st_prep_block->pl_block_idx = plan_next_block_index(plan_get_block_index(pl_block));
 
-/* #if defined(USE_LINE_NUMBERS) &&  USE_LINE_NUMBERS == PERSIST_LINE_NUMBERS */
-/* 		  st_prep_block->line_number = pl_block->line_number; */
-/* #endif */
         #ifndef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
           st_prep_block->steps[X_AXIS] = pl_block->steps[X_AXIS];
           st_prep_block->steps[Y_AXIS] = pl_block->steps[Y_AXIS];
@@ -709,6 +752,7 @@ void st_prep_buffer()
 
     // Initialize new segment
     segment_t *prep_segment = &segment_buffer[segment_buffer_head];
+
 
     // Set new segment to point to the current segment data block.
     prep_segment->st_block_index = prep.st_block_index;
@@ -881,10 +925,11 @@ void st_prep_buffer()
       // Normal operation. Block incomplete. Distance remaining in block to be executed.
       pl_block->millimeters = mm_remaining;      
       prep.steps_remaining = steps_remaining;  
-      prep_segment->line_number = pl_block->line_number;  
+      prep_segment->do_status = 0;
     } else { 
       // End of planner block or forced-termination. No more distance to be executed.
-      prep_segment->line_number = ~pl_block->line_number;  //force status report when done
+      //mark which line this segment belongs to
+      prep_segment->do_status = EXEC_STATUS_REPORT;
       if (mm_remaining > 0.0) { // At end of forced-termination.
         // Reset prep parameters for resuming and then bail.
         // NOTE: Currently only feed holds qualify for this scenario. May change with overrides.       

@@ -81,7 +81,7 @@ typedef struct {
   int32_t probe_position[N_AXIS]; // Last probe position in machine coordinates and steps.
 
 #if defined(USE_LINE_NUMBERS) && USE_LINE_NUMBERS == PERSIST_LINE_NUMBERS
-  int32_t last_line_number;
+  int32_t last_executed_block;
 #endif
 
 } system_t;
