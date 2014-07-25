@@ -61,7 +61,7 @@ typedef struct {
   uint8_t direction_bits;
   uint32_t steps[N_AXIS];
   uint32_t step_event_count;
-  uint32_t line_number;
+  //  uint32_t line_number;
 } st_block_t;
 static st_block_t st_block_buffer[SEGMENT_BUFFER_SIZE-1];
 
@@ -78,7 +78,7 @@ typedef struct {
   #else
     uint8_t prescaler;      // Without AMASS, a prescaler is required to adjust for slow timing.
   #endif
-  uint8_t block_end;         //true for last segment of a block - used to force reporting
+  int32_t line_number;         //true for last segment of a block - used to force reporting
 } segment_t;
 static segment_t segment_buffer[SEGMENT_BUFFER_SIZE];
 
@@ -288,8 +288,11 @@ void st_go_idle()
 // with probing and homing cycles that require true real-time positions.
 ISR(TIMER1_COMPA_vect)
 {        
-  TIMING_PORT ^= TIMING_MASK; // Debug: Used to time ISR
-  if (busy) { return; } // The busy-flag is used to avoid reentering this interrupt
+  TIMING_PORT |= TIMING_MASK; // Debug: Used to time ISR
+  if (busy) {  // The busy-flag is used to avoid reentering this interrupt
+    TIMING_PORT &= ~TIMING_MASK; 
+    return; 
+  } 
   
   // Set the direction pins a couple of nanoseconds before we step the steppers
   DIRECTION_PORT = (DIRECTION_PORT & ~DIRECTION_MASK) | (st.dir_outbits & DIRECTION_MASK);
@@ -331,9 +334,9 @@ ISR(TIMER1_COMPA_vect)
         st.exec_block_index = st.exec_segment->st_block_index;
         st.exec_block = &st_block_buffer[st.exec_block_index];
 
-#if defined(USE_LINE_NUMBERS) && USE_LINE_NUMBERS == PERSIST_LINE_NUMBERS
-		  sys.last_line_number = st.exec_block->line_number;
-#endif
+/* #if defined(USE_LINE_NUMBERS) && USE_LINE_NUMBERS == PERSIST_LINE_NUMBERS */
+/* 		  sys.last_line_number = st.exec_block->line_number; */
+/* #endif */
         
         // Initialize Bresenham line and distance counters
         st.counter_x = (st.exec_block->step_event_count >> 1);
@@ -359,6 +362,7 @@ ISR(TIMER1_COMPA_vect)
       // Segment buffer empty. Shutdown.
       st_go_idle();
       bit_true(SYS_EXEC,EXEC_CYCLE_STOP); // Flag main program for cycle end
+      TIMING_PORT &= ~TIMING_MASK; 
       return; // Nothing to do but exit.
     }  
   }
@@ -427,7 +431,11 @@ ISR(TIMER1_COMPA_vect)
   st.step_count--; // Decrement step events count 
   if (st.step_count == 0) {
     // Segment is complete. Discard current segment and advance segment indexing.
-   SYS_EXEC |= st.exec_segment->block_end; //sets EXEC_STATUS_REPORT when done with block
+    if (st.exec_segment->line_number&0x8000000) {
+      SYS_EXEC |= EXEC_STATUS_REPORT;
+      st.exec_segment->line_number=~st.exec_segment->line_number;
+    }
+    sys.last_line_number = st.exec_segment->line_number;
     st.exec_segment = NULL;
 
     if ( ++segment_buffer_tail == SEGMENT_BUFFER_SIZE) { segment_buffer_tail = 0; }
@@ -435,7 +443,7 @@ ISR(TIMER1_COMPA_vect)
 
   st.step_outbits ^= settings.step_invert_mask;  // Apply step port invert mask    
   busy = false;
-  TIMING_PORT ^= TIMING_MASK; // Debug: Used to time ISR
+  TIMING_PORT &= ~TIMING_MASK; // Debug: Used to time ISR
 }
 
 
@@ -603,9 +611,9 @@ void st_prep_buffer()
         st_prep_block = &st_block_buffer[prep.st_block_index];
         st_prep_block->direction_bits = pl_block->direction_bits;
 
-#if defined(USE_LINE_NUMBERS) &&  USE_LINE_NUMBERS == PERSIST_LINE_NUMBERS
-		  st_prep_block->line_number = pl_block->line_number;
-#endif
+/* #if defined(USE_LINE_NUMBERS) &&  USE_LINE_NUMBERS == PERSIST_LINE_NUMBERS */
+/* 		  st_prep_block->line_number = pl_block->line_number; */
+/* #endif */
         #ifndef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
           st_prep_block->steps[X_AXIS] = pl_block->steps[X_AXIS];
           st_prep_block->steps[Y_AXIS] = pl_block->steps[Y_AXIS];
@@ -873,10 +881,10 @@ void st_prep_buffer()
       // Normal operation. Block incomplete. Distance remaining in block to be executed.
       pl_block->millimeters = mm_remaining;      
       prep.steps_remaining = steps_remaining;  
-		prep_segment->block_end = 0;
+      prep_segment->line_number = pl_block->line_number;  
     } else { 
       // End of planner block or forced-termination. No more distance to be executed.
-		prep_segment->block_end = EXEC_STATUS_REPORT;  //force status report when done
+      prep_segment->line_number = ~pl_block->line_number;  //force status report when done
       if (mm_remaining > 0.0) { // At end of forced-termination.
         // Reset prep parameters for resuming and then bail.
         // NOTE: Currently only feed holds qualify for this scenario. May change with overrides.       

@@ -396,9 +396,9 @@ void report_realtime_status()
     ln = pb->line_number;
   } 
 #else
-  if (sys.state==STATE_CYCLE) {
-    ln = sys.last_line_number;
-  }
+  /* if (sys.state==STATE_CYCLE) { */
+  /*   ln = sys.last_line_number; */
+  /* } */
 #endif
 #endif
   float print_position[N_AXIS];

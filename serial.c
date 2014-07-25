@@ -157,11 +157,14 @@ ISR(SERIAL_RX)
   // Pick off runtime command characters directly from the serial stream. These characters are
   // not passed into the buffer, but these set system state flag bits for runtime execution.
   switch (data) {
-    case CMD_STATUS_REPORT: SYS_EXEC |= EXEC_STATUS_REPORT; break; // Set as true
     case CMD_LIMIT_REPORT:  SYS_EXEC |= EXEC_LIMIT_REPORT; break; // Set as true
     case CMD_CYCLE_START:   SYS_EXEC |= EXEC_CYCLE_START; break; // Set as true
     case CMD_FEED_HOLD:     SYS_EXEC |= EXEC_FEED_HOLD; break; // Set as true
     case CMD_RESET:         mc_reset(); break; // Call motion control reset routine.
+    case CMD_STATUS_REPORT: 
+      SYS_EXEC |= EXEC_STATUS_REPORT; 
+      if (sys.state!=STATE_CYCLE) { sys.last_line_number=0; }
+      break; // Set as true
     default: // Write character to buffer    
       next_head = rx_buffer_head + 1;
       if (next_head == RX_BUFFER_SIZE) { next_head = 0; }
