@@ -264,7 +264,7 @@ uint8_t plan_check_full_buffer()
    invert_feed_rate is true, or as seek/rapids rate if the feed_rate value is negative (and
    invert_feed_rate always false). */
 #ifdef USE_LINE_NUMBERS   
-void plan_buffer_line(float *target, float feed_rate, uint8_t invert_feed_rate, int32_t line_number) 
+void plan_buffer_line(float *target, float feed_rate, uint8_t invert_feed_rate, linenumber_t line_number) 
 #else
 void plan_buffer_line(float *target, float feed_rate, uint8_t invert_feed_rate) 
 #endif
@@ -308,16 +308,13 @@ void plan_buffer_line(float *target, float feed_rate, uint8_t invert_feed_rate)
   
   // Bail if this is a zero-length block. Highly unlikely to occur.
   if (block->step_event_count == 0) { 
-    if (block_buffer_head == block_buffer_tail) { //no outstanding blocks, report now
-      st_track_line(block_buffer_head, block->line_number); //we are done.
+    if (linenumber_insert(block->line_number|LINENUMBER_EMPTY_BLOCK) == 1) { //was empty, so report immediately;
+      sys.eol_flag = 1;
       SYS_EXEC |= EXEC_STATUS_REPORT;
     }
-    else {
-      st_track_line(block_buffer_head, block->line_number); //we are done when prev block is done.
-    }
-    return; 
+    return;
   } 
-  st_track_line(plan_next_block_index(block_buffer_head), block->line_number);
+  linenumber_insert(block->line_number);
   
   // Adjust feed_rate value to mm/min depending on type of rate input (normal, inverse time, or rapids)
   // TODO: Need to distinguish a rapids vs feed move for overrides. Some flag of some sort.

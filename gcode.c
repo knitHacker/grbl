@@ -29,10 +29,6 @@
 #include "probe.h"
 #include "report.h"
 
-// NOTE: Max line number is defined by the g-code standard to be 99999. It seems to be an
-// arbitrary value, and some GUIs may require more. So we increased it based on a max safe
-// value when converting a float (7.2 digit precision)s to an integer.
-#define MAX_LINE_NUMBER 9999999 
 
 #define AXIS_COMMAND_NONE 0
 #define AXIS_COMMAND_NON_MODAL 1 

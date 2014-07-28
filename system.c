@@ -25,16 +25,22 @@
 #include "report.h"
 #include "print.h"
 
+void linenumber_init();
 
 void system_init() 
 {
   TIMING_DDR |= TIMING_MASK;  //timing output
+
+  linenumber_init();
+
 
 #ifndef KEYME_BOARD
   PINOUT_DDR &= ~(PINOUT_MASK); // Configure as input pins
   PINOUT_PORT |= PINOUT_MASK;   // Enable internal pull-up resistors. Normal high operation.
   PINOUT_PCMSK |= PINOUT_MASK;  // Enable specific pins of the Pin Change Interrupt
   PCICR |= (1 << PINOUT_INT);   // Enable Pin Change Interrupt
+
+
 }
 
 
@@ -223,4 +229,59 @@ uint8_t system_execute_line(char *line)
       }    
   }
   return(STATUS_OK); // If '$' command makes it to here, then everything's ok.
+}
+
+
+// * line num stuff *
+#define STLT_SIZE BLOCK_BUFFER_SIZE+1
+
+typedef struct {
+  linenumber_t lines[STLT_SIZE];
+  uint8_t head;
+  uint8_t tail;
+} st_linetrack_t;
+static st_linetrack_t st_lt;
+
+
+void linenumber_init() {
+  //init line numbering
+  st_lt.head = 1;
+  st_lt.tail = 0;
+  memset(st_lt.lines,BLOCK_BUFFER_SIZE,sizeof(st_lt.lines));
+}
+
+
+uint8_t linenumber_insert(linenumber_t line_number)
+{
+  if (st_lt.head!=st_lt.tail){
+    st_lt.lines[st_lt.head] = line_number;
+    if (++st_lt.head>=STLT_SIZE) { st_lt.head = 0;}
+  }
+  uint8_t head = st_lt.head;
+  if (head<=st_lt.tail){ head+=STLT_SIZE;}
+  return st_lt.head-st_lt.tail-1;
+}
+
+uint8_t linenumber_next(){
+  uint8_t read_idx = st_lt.tail;
+  if (++read_idx>=STLT_SIZE) { read_idx=0; }
+  return read_idx;
+}
+
+
+linenumber_t linenumber_get(){
+  uint8_t read_idx = linenumber_next();
+  if (read_idx != st_lt.head) {
+    st_lt.tail = read_idx;
+    return st_lt.lines[read_idx];
+  }
+  return 0;
+}
+
+linenumber_t linenumber_peek(){
+  uint8_t read_idx = linenumber_next();
+  if (read_idx != st_lt.head) {
+    return st_lt.lines[read_idx];
+  }
+  return 0;
 }

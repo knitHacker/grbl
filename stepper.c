@@ -51,53 +51,9 @@
 #define AMASS_LEVEL3 (F_CPU/2000) // Over-drives ISR (x8)
 
 
-#define STLT_SIZE BLOCK_BUFFER_SIZE+1
-typedef struct {
-  uint32_t line_number;
-  uint8_t block_idx;
-} st_linetrack_entry_t;
-
-typedef struct {
-  st_linetrack_entry_t lines[STLT_SIZE];
-  uint8_t head;
-  uint8_t tail;
-} st_linetrack_t;
-static st_linetrack_t st_lt;
-
-void st_track_line(uint8_t block_idx, uint32_t line_number)
-{
-  if (st_lt.head!=st_lt.tail){
-    printf("tracking line %d with block %d in pos %d\n",line_number,block_idx, st_lt.head);
-    st_lt.lines[st_lt.head].line_number = line_number;
-    st_lt.lines[st_lt.head].block_idx = block_idx;
-    if (++st_lt.head>=STLT_SIZE) { st_lt.head = 0;}
-    
-  }
-}
-
-uint8_t st_next_block(){
-  uint8_t read_idx = st_lt.tail;
-  if (++read_idx>=STLT_SIZE) { read_idx=0; }
-  return st_lt.lines[read_idx].block_idx;
-}
-
-uint32_t st_get_tracked_line(uint8_t block_idx){
-  uint32_t retval = 0;
-  uint8_t read_idx = st_lt.tail;
-  if (++read_idx>=STLT_SIZE) { read_idx=0; }
-  if (read_idx != st_lt.head) {
-    uint8_t match_idx = st_lt.lines[read_idx].block_idx;
-    printf("checking %d @%d vs %d\n",match_idx,read_idx,block_idx);
-    if (match_idx == block_idx) { //and match
-      retval = st_lt.lines[read_idx].line_number;
-      st_lt.tail = read_idx;
-    }
-  }
-  return retval;
-}
 
 // Stores the planner block Bresenham algorithm execution data for the segments in the segment 
-// buffer. Normally, th is buffer is partially in-use, but, for the worst case scenario, it will
+// buffer. Normally, this buffer is partially in-use, but, for the worst case scenario, it will
 // never exceed the number of accessible stepper buffer segments (SEGMENT_BUFFER_SIZE-1).
 // NOTE: This data is copied from the prepped planner blocks so that the planner blocks may be
 // discarded when entirely consumed and completed by the segment buffer. Also, AMASS alters this
@@ -472,11 +428,8 @@ ISR(TIMER1_COMPA_vect)
   st.step_count--; // Decrement step events count 
   if (st.step_count == 0) {
     // Segment is complete. Discard current segment and advance segment indexing.
-    if (st.exec_segment->do_status) {
-      printf("setting leb to %d\n",st_block_buffer[st.exec_segment->st_block_index].pl_block_idx);
-      sys.last_executed_block = st_block_buffer[st.exec_segment->st_block_index].pl_block_idx;
-      SYS_EXEC |= st.exec_segment->do_status;
-    }
+    sys.eol_flag |= st.exec_segment->do_status;
+    SYS_EXEC |= st.exec_segment->do_status;
 
     st.exec_segment = NULL;
     if ( ++segment_buffer_tail == SEGMENT_BUFFER_SIZE) { segment_buffer_tail = 0; }
@@ -533,10 +486,6 @@ void st_reset()
   segment_buffer_head = 0; // empty = tail
   segment_next_head = 1;
   busy = false;
-
-  st_lt.head = 1;
-  st_lt.tail = 0;
-  memset(st_lt.lines,BLOCK_BUFFER_SIZE,sizeof(st_lt.lines));
 
 }
 

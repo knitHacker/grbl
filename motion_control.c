@@ -42,7 +42,7 @@
 // mc_line and plan_buffer_line is done primarily to place non-planner-type functions from being
 // in the planner and to let backlash compensation or canned cycle integration simple and direct.
 #ifdef USE_LINE_NUMBERS
-void mc_line(float *target, float feed_rate, uint8_t invert_feed_rate, int32_t line_number)
+void mc_line(float *target, float feed_rate, uint8_t invert_feed_rate, linenumber_t line_number)
 #else
 void mc_line(float *target, float feed_rate, uint8_t invert_feed_rate)
 #endif
@@ -98,7 +98,7 @@ void mc_line(float *target, float feed_rate, uint8_t invert_feed_rate)
 // distance from segment to the circle when the end points both lie on the circle.
 #ifdef USE_LINE_NUMBERS
 void mc_arc(float *position, float *target, float *offset, float radius, float feed_rate, 
-  uint8_t invert_feed_rate, uint8_t axis_0, uint8_t axis_1, uint8_t axis_linear, int32_t line_number)
+  uint8_t invert_feed_rate, uint8_t axis_0, uint8_t axis_1, uint8_t axis_linear, linenumber_t line_number)
 #else
 void mc_arc(float *position, float *target, float *offset, float radius, float feed_rate,
   uint8_t invert_feed_rate, uint8_t axis_0, uint8_t axis_1, uint8_t axis_linear)
@@ -274,7 +274,7 @@ void mc_homing_cycle(uint8_t axis_mask)
 // Perform tool length probe cycle. Requires probe switch.
 // NOTE: Upon probe failure, the program will be stopped and placed into ALARM state.
 #ifdef USE_LINE_NUMBERS
-void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate, int32_t line_number)
+void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate, linenumber_t line_number)
 #else
 void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate)
 #endif

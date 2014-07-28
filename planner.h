@@ -33,6 +33,8 @@
   #endif
 #endif
 
+
+
 // This struct stores a linear movement of a g-code block motion with its critical "nominal" values
 // are as specified in the source g-code. 
 typedef struct {
@@ -53,7 +55,7 @@ typedef struct {
   // uint8_t max_override;       // Maximum override value based on axis speed limits
 
   #ifdef USE_LINE_NUMBERS
-    int32_t line_number;
+    linenumber_t line_number;
   #endif
 } plan_block_t;
 
@@ -65,7 +67,7 @@ void plan_reset();
 // in millimeters. Feed rate specifies the speed of the motion. If feed rate is inverted, the feed
 // rate is taken to mean "frequency" and would complete the operation in 1/feed_rate minutes.
 #ifdef USE_LINE_NUMBERS
-void plan_buffer_line(float *target, float feed_rate, uint8_t invert_feed_rate, int32_t line_number);
+void plan_buffer_line(float *target, float feed_rate, uint8_t invert_feed_rate, linenumber_t line_number);
 #else
 void plan_buffer_line(float *target, float feed_rate, uint8_t invert_feed_rate);
 #endif

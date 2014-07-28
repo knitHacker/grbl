@@ -75,14 +75,10 @@ typedef struct {
   uint8_t abort;                 // System abort flag. Forces exit back to main loop for reset.
   uint8_t state;                 // Tracks the current state of Grbl.
   uint8_t auto_start;            // Planner auto-start flag. Toggled off during feed hold. Defaulted by settings.  
-  
+  uint8_t eol_flag;              //flag for reporting linenumber;
   int32_t position[N_AXIS];      // Real-time machine (aka home) position vector in steps. 
                                  // NOTE: This may need to be a volatile variable, if problems arise.                             
   int32_t probe_position[N_AXIS]; // Last probe position in machine coordinates and steps.
-
-#if defined(USE_LINE_NUMBERS) && USE_LINE_NUMBERS == PERSIST_LINE_NUMBERS
-  int32_t last_executed_block;
-#endif
 
 } system_t;
 extern system_t sys;
@@ -113,5 +109,22 @@ void system_execute_runtime();
 
 // Execute the startup script lines stored in EEPROM upon initialization
 void system_execute_startup(char *line);
+
+//  * Utilities for line numbeirng * 
+// NOTE: Max line number is defined by the g-code standard to be 99999. It seems to be an
+// arbitrary value, and some GUIs may require more. So grbl increased it based on a max safe
+// value when converting a float (7.2 digit precision)s to an integer.
+
+// But We don't need such a big value, and we do need the high bit free 
+//#define MAX_LINE_NUMBER 9999999 
+#define MAX_LINE_NUMBER        0x7FFF 
+#define LINENUMBER_EMPTY_BLOCK 0x8000 //the other bit, used as a flag
+typedef uint16_t linenumber_t;  //resize back to int32 for bigger numbers
+
+
+uint8_t linenumber_insert(linenumber_t line_number);
+linenumber_t linenumber_get();
+linenumber_t linenumber_peek();
+
 
 #endif

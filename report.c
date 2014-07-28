@@ -378,7 +378,7 @@ void report_counters()
  // specific needs, but the desired real-time data report must be as short as possible. This is
  // requires as it minimizes the computational overhead and allows grbl to keep running smoothly, 
  // especially during g-code programs with fast, short line segments and high frequency reports (5-20Hz).
-void report_realtime_status()
+uint8_t report_realtime_status()
 {
   // **Under construction** Bare-bones status report. Provides real-time machine position relative to 
   // the system power on location (0,0,0) and work coordinate position (G54 and G92 applied). Eventually
@@ -389,16 +389,23 @@ void report_realtime_status()
   memcpy(current_position,sys.position,sizeof(sys.position));
 
 #ifdef USE_LINE_NUMBERS
-  int32_t ln = 0;
+  linenumber_t ln = 0;
 #if USE_LINE_NUMBERS != PERSIST_LINE_NUMBERS
   plan_block_t * pb = plan_get_current_block();
   if(pb != NULL) {
     ln = pb->line_number;
   } 
+  sys.eol_flag = 0;
 #else
-  do {
-    ln = st_get_tracked_line(sys.last_executed_block);
+  if (sys.eol_flag) {
+    ln = linenumber_get()&~LINENUMBER_EMPTY_BLOCK;
+    if ((linenumber_peek()&LINENUMBER_EMPTY_BLOCK) == 0) {
+      sys.eol_flag = 0;
+    }
+  }
 #endif
+#else
+  sys.eol_flag = 0;
 #endif
   float print_position[N_AXIS];
  
@@ -433,10 +440,6 @@ void report_realtime_status()
   printPgmString(PSTR(",Ln:")); 
   printInteger(ln);
 
-  printPgmString(PSTR(",B:")); 
-  printInteger(sys.last_executed_block);
-  printPgmString(PSTR(",")); 
-  printInteger(st_next_block());
   #endif
     
   #ifdef REPORT_REALTIME_RATE
@@ -447,9 +450,7 @@ void report_realtime_status()
   
   printPgmString(PSTR(">\r\n"));
 
-#if defined(USE_LINE_NUMBERS) && USE_LINE_NUMBERS == PERSIST_LINE_NUMBERS
-  } while (ln>0);
-#endif  
+  return sys.eol_flag;
 
 }
 

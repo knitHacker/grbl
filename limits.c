@@ -28,6 +28,7 @@
 #include "limits.h"
 #include "report.h"
 
+#define HOMING_CYCLE_LINE_NUMBER MAX_LINE_NUMBER
 
 #define HOMING_AXIS_SEARCH_SCALAR  1.1  // Axis search distance multiplier. Must be > 1.
 
