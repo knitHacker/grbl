@@ -44,10 +44,6 @@ void st_prep_buffer();
 // Called by planner_recalculate() when the executing block is updated by the new plan.
 void st_update_plan_block_parameters();
 
-//used to track line numbers beign executed
-void st_track_line(uint8_t block_idx, uint32_t line_number);
-uint32_t st_get_tracked_line(uint8_t block_idx);
-
 
 // Called by runtime status reporting if realtime rate reporting is enabled in config.h.
 #ifdef REPORT_REALTIME_RATE

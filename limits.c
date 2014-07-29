@@ -127,18 +127,14 @@ void check_limit_pins()
 #ifndef ENABLE_SOFTWARE_DEBOUNCE
 ISR(LIMIT_INT_vect) // DEFAULT: Limit pin change interrupt process. 
 {
-  //  TIMING_PORT ^= TIMING_MASK; // Debug: Used to time ISR
-  //  check_limit_pins();
 }
 #else // OPTIONAL: Software debounce limit pin routine.
 // Upon limit pin change, enable watchdog timer to create a short delay. 
 ISR(LIMIT_INT_vect) { 
-  //  TIMING_PORT ^= TIMING_MASK; // Debug: Used to time ISR
   if (!(WDTCSR & (1<<WDIE))) { WDTCSR |= (1<<WDIE); } 
 }
 ISR(WDT_vect) // Watchdog timer ISR
 {
-  //  TIMING_PORT ^= TIMING_MASK; // Debug: Used to time ISR
   WDTCSR &= ~(1<<WDIE); // Disable watchdog timer. 
   check_limit_pins();
 }
@@ -205,12 +201,6 @@ void limits_go_home(uint8_t cycle_mask)
 	 // axis_lock bit is high if axis is homing, a 0 prevents it from being moved in stepper.
     sysflags.homing_axis_lock = axislock;
 	 limit_approach = approach;  //limit_approach bits is high if approaching limit switch 
-	 /* if (approach){ */
-	 /*  TIMING_PORT |= TIMING_MASK; */
-	 /* } */
-	 /* else { */
-	 /*  TIMING_PORT &= ~TIMING_MASK; */
-	 /* } */
 
   
     // Perform homing cycle. Planner buffer should be empty, as required to initiate the homing cycle.
