@@ -603,7 +603,7 @@ void st_prep_buffer()
         // segment buffer finishes the prepped block, but the stepper ISR is still executing it. 
         st_prep_block = &st_block_buffer[prep.st_block_index];
         st_prep_block->direction_bits = pl_block->direction_bits;
-s
+
         #ifndef ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING
           st_prep_block->steps[X_AXIS] = pl_block->steps[X_AXIS];
           st_prep_block->steps[Y_AXIS] = pl_block->steps[Y_AXIS];
