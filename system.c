@@ -24,6 +24,7 @@
 #include "motion_control.h"
 #include "report.h"
 #include "print.h"
+#include "counters.h"
 
 
 void system_init() 
@@ -76,7 +77,6 @@ void system_execute_startup(char *line)
   }  
 }
 
-
 // Directs and executes one line of formatted input from protocol_process. While mostly
 // incoming streaming g-code blocks, this also executes Grbl internal commands, such as 
 // settings, initiating the homing cycle, and toggling switch states. This differs from
@@ -119,10 +119,19 @@ uint8_t system_execute_line(char *line)
       } // Otherwise, no effect.
       break;      
 #ifdef KEYME_BOARD
-    case 'E':
-      report_counters();
+     case 'E': {
+				char axis = line[++char_counter];
+        if ( axis != 0 ) {
+          if ( line[++char_counter] != 0 ) { return(STATUS_INVALID_STATEMENT); }
+				  axis = get_axis_idx(axis); 
+				  if (axis == N_AXIS) { return(STATUS_INVALID_STATEMENT); }
+          counters_reset(axis);
+        }
+        report_counters();
+     }
       break;
     case 'S':
+      if ( line[++char_counter] != 0 ) { return(STATUS_INVALID_STATEMENT); }
       report_sys_info();
       break;
 #endif
@@ -159,6 +168,7 @@ uint8_t system_execute_line(char *line)
 				  axis = HOMING_CYCLE_ALL; //do all axes if none specified
 				}
 				else {
+          if ( line[++char_counter] != 0 ) { return(STATUS_INVALID_STATEMENT); }
 				  axis = get_axis_idx(axis); 
 				  if (axis == N_AXIS) { return(STATUS_INVALID_STATEMENT); }
 				  axis = (1<<axis);  //convert idx to mask

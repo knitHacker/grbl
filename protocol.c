@@ -228,10 +228,6 @@ void protocol_execute_runtime()
       report_limit_pins();
       bit_false(SYS_EXEC,EXEC_LIMIT_REPORT);
     }
-    if (rt_exec & EXEC_LIMIT_REPORT) { 
-      report_limit_pins();
-      bit_false(SYS_EXEC,EXEC_LIMIT_REPORT);
-    }
     
     // Execute a feed hold with deceleration, only during cycle.
     if (rt_exec & EXEC_FEED_HOLD) {

@@ -149,7 +149,9 @@ void report_grbl_help() {
                       "$Nx=line (save startup block)\r\n"
                       "$C (check gcode mode)\r\n"
                       "$X (kill alarm lock)\r\n"
-                      "$H (run homing cycle)\r\n"
+                      "$H (run homing cycle<axis>)\r\n"
+                      "$E (report encoders<clear axis>\r\n"
+                      "$S (run homing cycle)\r\n"
                       "~ (cycle start)\r\n"
                       "! (feed hold)\r\n"
                       "? (current status)\r\n"
@@ -364,11 +366,11 @@ void report_counters()
   printInteger(counters_get_count(Z_AXIS));
   printPgmString(PSTR(" (:"));
   print_uint8_base2((pinval>>Z_ENC_IDX_BIT)&7); //3 bits
-  printPgmString(PSTR("), c(:"));
+  printPgmString(PSTR("), c: "));
   printInteger(counters_get_count(C_AXIS));
   printPgmString(PSTR(" (:"));
   print_uint8_base2((pinval>>MAG_SENSE_BIT)&1); //1 bit
-  printPgmString(PSTR("}\n\r"));
+  printPgmString(PSTR(")}\n\r"));
 
 }
 #endif

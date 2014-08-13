@@ -128,13 +128,24 @@ void simulate_hardware(bool do_serial){
   timer_interrupts();
   watchdog_sim();
 
-  
-  if (do_serial) simulate_serial();
 
+  if (do_serial) {
+
+    simulate_serial();
+  }
   //TODO:
   //  check limit pins,  call pinchange interrupt if enabled
   //  can ignore pinout int vect - hw start/hold not supported
 
+  /* 
+     uint8_t ecount=0;
+     uint8_t mask[] = {1,2,6,4,0,2,6,4,0,2,6,4,0,2,6,4};
+
+     // code for simulating encoder turns
+     ecount++;
+     FDBK_PIN = (mask[ecount&15])<<Z_ENC_IDX_BIT;
+     interrupt_FDBK_INT_vect();
+  */
 }
 
 //runs the hardware simulator at the desired rate until sim.exit is set

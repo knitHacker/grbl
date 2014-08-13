@@ -164,6 +164,7 @@
 #define FDBK_INT_vect  PCINT2_vect
 #define FDBK_PCMSK     PCMSK2 // Pin change interrupt register
 #define FDBK_MASK ((1<<MAG_SENSE_BIT)|(1<<Z_ENC_IDX_BIT)|(1<<Z_ENC_CHA_BIT)|(1<<Z_ENC_CHB_BIT))
+#define ENCODER_SHIFT 5
 
 #define MVOLT_DDR DDRD
 #define MVOLT_PORT PORTD

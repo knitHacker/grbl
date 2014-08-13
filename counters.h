@@ -23,6 +23,14 @@
 
 typedef struct  counters {
   int16_t counts[N_AXIS];
+  int16_t idx; //encoder index counts
+  int8_t dir; //last known direction
+  uint8_t state;
+  uint8_t anew; //new a encode
+  uint8_t bold; //old b encoder
+
+  uint8_t mags; //mag sense
+
 } counters_t;
 
 extern counters_t counters;
@@ -34,9 +42,9 @@ void counters_init();
 uint8_t counters_get_state();
 
 // Returns counts for a given axis
-uint8_t counters_get_count(uint8_t axis);
+uint16_t counters_get_count(uint8_t axis);
 
-uint8_t counters_reset(uint8_t axis);
+void  counters_reset(uint8_t axis);
 
 // Monitors counters pin state and records the system position when detected. Called by the
 // stepper ISR per ISR tick.
