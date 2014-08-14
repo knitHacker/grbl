@@ -89,7 +89,10 @@ void settings_reset() {
   if (DEFAULT_HOMING_ENABLE) { settings.flags |= BITFLAG_HOMING_ENABLE; }
   settings.homing_dir_mask = DEFAULT_HOMING_DIR_MASK;
   settings.homing_feed_rate = DEFAULT_HOMING_FEED_RATE;
-  settings.homing_seek_rate = DEFAULT_HOMING_SEEK_RATE;
+  settings.homing_seek_rate[X_AXIS] = DEFAULT_HOMING_SEEK_RATE;
+  settings.homing_seek_rate[Y_AXIS] = DEFAULT_HOMING_SEEK_RATE;
+  settings.homing_seek_rate[Z_AXIS] = DEFAULT_HOMING_SEEK_RATE;
+  settings.homing_seek_rate[C_AXIS] = DEFAULT_HOMING_SEEK_RATE;
   settings.homing_debounce_delay = DEFAULT_HOMING_DEBOUNCE_DELAY;
   settings.homing_pulloff = DEFAULT_HOMING_PULLOFF;
   settings.stepper_idle_lock_time = DEFAULT_STEPPER_IDLE_LOCK_TIME;
@@ -227,12 +230,15 @@ uint8_t settings_store_global_setting(int parameter, float value) {
       break;
     case 29: settings.homing_dir_mask = trunc(value); break;
     case 30: settings.homing_feed_rate = value; break;
-    case 31: settings.homing_seek_rate = value; break;
-    case 32: settings.homing_debounce_delay = round(value); break;
-    case 33: settings.homing_pulloff = value; break;
+    case 31: settings.homing_seek_rate[X_AXIS] = value; break;
+    case 32: settings.homing_seek_rate[Y_AXIS] = value; break;
+    case 33: settings.homing_seek_rate[Z_AXIS] = value; break;
+    case 34: settings.homing_seek_rate[C_AXIS] = value; break;
+    case 35: settings.homing_debounce_delay = round(value); break;
+    case 36: settings.homing_pulloff = value; break;
 #ifdef KEYME_BOARD  
-    case 34: settings.microsteps = value; break;
-    case 35: settings.decay_mode = value; break;
+    case 37: settings.microsteps = value; break;
+    case 38: settings.decay_mode = value; break;
 #endif
     default: 
       return(STATUS_INVALID_STATEMENT);

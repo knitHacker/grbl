@@ -149,7 +149,7 @@ void report_grbl_help() {
                       "$Nx=line (save startup block)\r\n"
                       "$C (check gcode mode)\r\n"
                       "$X (kill alarm lock)\r\n"
-                      "$H (run homing cycle)\r\n"
+                      "$Hx=axis (run homing cycle)\r\n"
                       "~ (cycle start)\r\n"
                       "! (feed hold)\r\n"
                       "? (current status)\r\n"
@@ -194,14 +194,17 @@ void report_grbl_settings() {
   printPgmString(PSTR(" (homing cycle, bool)\r\n$29=")); print_uint8_base10(settings.homing_dir_mask);
   printPgmString(PSTR(" (homing dir invert mask:")); print_uint8_base2(settings.homing_dir_mask);  
   printPgmString(PSTR(")\r\n$30=")); printFloat_SettingValue(settings.homing_feed_rate);
-  printPgmString(PSTR(" (homing feed, mm/min)\r\n$31=")); printFloat_SettingValue(settings.homing_seek_rate);
-  printPgmString(PSTR(" (homing seek, mm/min)\r\n$32=")); printInteger(settings.homing_debounce_delay);
-  printPgmString(PSTR(" (homing debounce, msec)\r\n$33=")); printFloat_SettingValue(settings.homing_pulloff);
+  printPgmString(PSTR(" (homing feed, mm/min)\r\n$31=")); printFloat_SettingValue(settings.homing_seek_rate[X_AXIS]);
+  printPgmString(PSTR(" (homing seek x, mm/min)\r\n$32=")); printFloat_SettingValue(settings.homing_seek_rate[Y_AXIS]);
+  printPgmString(PSTR(" (homing seek y, mm/min)\r\n$33=")); printFloat_SettingValue(settings.homing_seek_rate[Z_AXIS]);
+  printPgmString(PSTR(" (homing seek z, mm/min)\r\n$34=")); printFloat_SettingValue(settings.homing_seek_rate[C_AXIS]);
+  printPgmString(PSTR(" (homing seek c, mm/min)\r\n$35=")); printInteger(settings.homing_debounce_delay);
+  printPgmString(PSTR(" (homing debounce, msec)\r\n$36=")); printFloat_SettingValue(settings.homing_pulloff);
   printPgmString(PSTR(" (homing pull-off, mm)"));
 #ifdef KEYME_BOARD
-  printPgmString(PSTR("\r\n$34=")); print_uint8_base10(settings.microsteps);  //TODO: unpack for display
+  printPgmString(PSTR("\r\n$37=")); print_uint8_base10(settings.microsteps);  //TODO: unpack for display
   printPgmString(PSTR(" (microsteps : ")); print_uint8_base2(settings.microsteps);
-  printPgmString(PSTR(")\r\n$35=")); print_uint8_base10(settings.decay_mode);
+  printPgmString(PSTR(")\r\n$38=")); print_uint8_base10(settings.decay_mode);
   printPgmString(PSTR(" (decay mode, (0..3))"));
 #endif
   printPgmString(PSTR("\r\n"));
