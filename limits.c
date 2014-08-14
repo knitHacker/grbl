@@ -162,18 +162,16 @@ void limits_go_home(uint8_t cycle_mask)
   float target[N_AXIS];
 
   // Determine travel distance to the furthest homing switch based on user max travel settings.
-  // NOTE: settings.max_travel[] is stored as a negative value
   float min_seek_rate = 1e9; //arbitrary maximum=1km/s, will be reduced by axis setting below
   float max_travel = 0;
   for (idx=0; idx<N_AXIS; idx++){
     if (bit_istrue(cycle_mask,bit(idx))) {
-      max_travel = min(max_travel,settings.max_travel[idx]);
+      max_travel = max(max_travel,settings.max_travel[idx]);
       homing_rate = min(homing_rate,settings.homing_seek_rate[idx]);
     }
   }
-  max_travel *= -HOMING_AXIS_SEARCH_SCALAR; // Ensure homing switches engaged by over-estimating max travel.
+  max_travel *= HOMING_AXIS_SEARCH_SCALAR; // Ensure homing switches engaged by over-estimating max travel.
   homing_rate = min_seek_rate;
-  //max travel is now positive
 
   plan_reset(); // Reset planner buffer to zero planner current position and to clear previous motions.
 
@@ -263,11 +261,10 @@ void limits_go_home(uint8_t cycle_mask)
     // Set up pull off targets and machine positions for limit switches homed in the negative
     // direction, rather than the traditional positive. Leave non-homed positions as zero and
     // do not move them.
-    // NOTE: settings.max_travel[] is stored as a negative value.
     if (cycle_mask & bit(idx)) {
       if ( settings.homing_dir_mask & get_direction_mask(idx) ) {
-        target[idx] = -settings.max_travel[idx];
-        sys.position[idx] = lround((settings.homing_pulloff-settings.max_travel[idx])*settings.steps_per_mm[idx]);
+        target[idx] = settings.max_travel[idx];
+        sys.position[idx] = lround((settings.homing_pulloff+settings.max_travel[idx])*settings.steps_per_mm[idx]);
       } else {
         sys.position[idx] = -settings.homing_pulloff*settings.steps_per_mm[idx];
         target[idx] = 0;
@@ -299,12 +296,12 @@ void limits_go_home(uint8_t cycle_mask)
 
 
 // Performs a soft limit check. Called from mc_line() only. Assumes the machine has been homed,
-// the workspace volume is in all negative space, and the system is in normal operation.
+// the workspace volume is in all positive space, and the system is in normal operation.
 void limits_soft_check(float *target)
 {
   uint8_t idx;
   for (idx=0; idx<N_AXIS; idx++) {
-    if ((target[idx] < 0 || target[idx] > -settings.max_travel[idx])  &&  // NOTE: max_travel is stored as negative
+    if ((target[idx] < 0 || target[idx] > settings.max_travel[idx])  &&  
         (get_step_mask(idx)&HARDSTOP_MASK)) {   //if rotary axis, don't check
 
       // Force feed hold if cycle is active. All buffered blocks are guaranteed to be within 

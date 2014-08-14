@@ -96,10 +96,10 @@ void settings_reset() {
   settings.homing_debounce_delay = DEFAULT_HOMING_DEBOUNCE_DELAY;
   settings.homing_pulloff = DEFAULT_HOMING_PULLOFF;
   settings.stepper_idle_lock_time = DEFAULT_STEPPER_IDLE_LOCK_TIME;
-  settings.max_travel[X_AXIS] = (-DEFAULT_X_MAX_TRAVEL);
-  settings.max_travel[Y_AXIS] = (-DEFAULT_Y_MAX_TRAVEL);
-  settings.max_travel[Z_AXIS] = (-DEFAULT_Z_MAX_TRAVEL);    
-  settings.max_travel[C_AXIS] = (-DEFAULT_Z_MAX_TRAVEL);  
+  settings.max_travel[X_AXIS] = (DEFAULT_X_MAX_TRAVEL);
+  settings.max_travel[Y_AXIS] = (DEFAULT_Y_MAX_TRAVEL);
+  settings.max_travel[Z_AXIS] = (DEFAULT_Z_MAX_TRAVEL);    
+  settings.max_travel[C_AXIS] = (DEFAULT_C_MAX_TRAVEL);  
 #ifdef KEYME_BOARD  
   settings.microsteps = 0; //full stepping
   settings.decay_mode = 0; //slow
@@ -182,10 +182,10 @@ uint8_t settings_store_global_setting(int parameter, float value) {
     case 9: settings.acceleration[Y_AXIS] = value*60*60; break; // Convert to mm/min^2 for grbl internal use.
     case 10: settings.acceleration[Z_AXIS] = value*60*60; break; // Convert to mm/min^2 for grbl internal use.
     case 11: settings.acceleration[C_AXIS] = value*60*60; break; // Convert to mm/min^2 for grbl internal use.
-    case 12: settings.max_travel[X_AXIS] = -value; break;  // Store as negative for grbl internal use.
-    case 13: settings.max_travel[Y_AXIS] = -value; break; // Store as negative for grbl internal use.
-    case 14: settings.max_travel[Z_AXIS] = -value; break; // Store as negative for grbl internal use.
-    case 15: settings.max_travel[C_AXIS] = -value; break; // Store as negative for grbl internal use.
+    case 12: settings.max_travel[X_AXIS] = value; break; 
+    case 13: settings.max_travel[Y_AXIS] = value; break; 
+    case 14: settings.max_travel[Z_AXIS] = value; break; 
+    case 15: settings.max_travel[C_AXIS] = value; break; 
     case 16: 
       if (value < 3) { return(STATUS_SETTING_STEP_PULSE_MIN); }
       settings.pulse_microseconds = round(value); break;
