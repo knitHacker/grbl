@@ -261,6 +261,11 @@ void mc_homing_cycle(uint8_t axis_mask)
 
   // Gcode parser position was circumvented by the limits_go_home() routine, so sync position now.
   gc_sync_position();
+
+  if (axis_mask&bit(Z_AXIS)) {
+    counters_set_idx_offset();
+    counters_reset(Z_AXIS);
+  }
   
   // Set idle state after homing completes and before returning to main program.  
   sys.state = STATE_IDLE;

@@ -89,10 +89,10 @@ void settings_reset() {
   if (DEFAULT_HOMING_ENABLE) { settings.flags |= BITFLAG_HOMING_ENABLE; }
   settings.homing_dir_mask = DEFAULT_HOMING_DIR_MASK;
   settings.homing_feed_rate = DEFAULT_HOMING_FEED_RATE;
-  settings.homing_seek_rate[X_AXIS] = DEFAULT_HOMING_SEEK_RATE;
-  settings.homing_seek_rate[Y_AXIS] = DEFAULT_HOMING_SEEK_RATE;
-  settings.homing_seek_rate[Z_AXIS] = DEFAULT_HOMING_SEEK_RATE;
-  settings.homing_seek_rate[C_AXIS] = DEFAULT_HOMING_SEEK_RATE;
+  settings.homing_seek_rate[X_AXIS] = DEFAULT_X_HOMING_SEEK_RATE;
+  settings.homing_seek_rate[Y_AXIS] = DEFAULT_Y_HOMING_SEEK_RATE;
+  settings.homing_seek_rate[Z_AXIS] = DEFAULT_Z_HOMING_SEEK_RATE;
+  settings.homing_seek_rate[C_AXIS] = DEFAULT_C_HOMING_SEEK_RATE;
   settings.homing_debounce_delay = DEFAULT_HOMING_DEBOUNCE_DELAY;
   settings.homing_pulloff = DEFAULT_HOMING_PULLOFF;
   settings.stepper_idle_lock_time = DEFAULT_STEPPER_IDLE_LOCK_TIME;
@@ -101,8 +101,8 @@ void settings_reset() {
   settings.max_travel[Z_AXIS] = (DEFAULT_Z_MAX_TRAVEL);    
   settings.max_travel[C_AXIS] = (DEFAULT_C_MAX_TRAVEL);  
 #ifdef KEYME_BOARD  
-  settings.microsteps = 0; //full stepping
-  settings.decay_mode = 0; //slow
+  settings.microsteps = DEFAULT_MICROSTEPPING;
+  settings.decay_mode = DEFAULT_DECAY_MODE; 
 #endif
   write_global_settings();
 }

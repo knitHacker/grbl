@@ -369,10 +369,12 @@ void report_counters()
   printInteger(counters_get_count(Z_AXIS));
   printPgmString(PSTR(" (:"));
   print_uint8_base2((pinval>>Z_ENC_IDX_BIT)&7); //3 bits
-  printPgmString(PSTR("), c: "));
+  printPgmString(PSTR(")|"));
+  printInteger(counters_get_idx());
+  printPgmString(PSTR(", c: "));
   printInteger(counters_get_count(C_AXIS));
   printPgmString(PSTR(" (:"));
-  print_uint8_base2((pinval>>MAG_SENSE_BIT)&1); //1 bit
+  print_uint8_base2(~(pinval>>MAG_SENSE_BIT)&1); //1 bit
   printPgmString(PSTR(")}\n\r"));
 
 }

@@ -56,14 +56,16 @@ uint8_t counters_get_state(){
   return counters.state;
 }
 
-
-// Monitors counters pin state and records the system position when detected. Called by the
-// stepper ISR per ISR tick.
-void counters_state_monitor()
-{
-
-  
+uint16_t counters_get_idx(){
+  return counters.idx;
 }
+
+void counters_set_idx_offset(){
+  counters.idx_offset = DEFAULT_COUNTS_PER_IDX - counters.counts[Z_AXIS]; 
+  //this should be the value whenever the index is hit
+}
+
+
 
 ISR(FDBK_INT_vect) {
   uint8_t state =  FDBK_PIN&FDBK_MASK;
@@ -75,8 +77,11 @@ ISR(FDBK_INT_vect) {
     counters.counts[Z_AXIS] += counters.dir;
   }
   if (change & (1<<Z_ENC_IDX_BIT)) { //idx changed
+      
     counters.idx += counters.dir * ((state>>Z_ENC_IDX_BIT)&1);
-    //TODO make sure counts are sane
+    //rezero counter.
+    counters.counts[Z_AXIS]=(counters.counts[Z_AXIS]/DEFAULT_COUNTS_PER_IDX)*
+      DEFAULT_COUNTS_PER_IDX + counters.idx_offset;
   }
   if (change & (1<<MAG_SENSE_BIT)) { //mag changed
     counters.mags = (state>>MAG_SENSE_BIT)&1;
