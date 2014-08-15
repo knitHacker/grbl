@@ -283,6 +283,8 @@ void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate)
   protocol_buffer_synchronize(); // Finish all queued commands
   if (sys.abort) { return; } // Return if system reset has been issued.
 
+  report_status_message(STATUS_OK); //report that we are probing
+
   // Perform probing cycle. Planner buffer should be empty at this point.
   #ifdef USE_LINE_NUMBERS
   mc_line(target, feed_rate, invert_feed_rate, line_number);
@@ -292,7 +294,7 @@ void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate)
 
   // NOTE: Parser error-checking ensures the probe isn't already closed/triggered.
   //TODO - make sure the probe isn't already closed
-  sysflags.probe_state = PROBE_ACTIVE;   //TODO: possilbe optimization by using PROBE_MASK here.
+  sysflags.probe_state = PROBE_ACTIVE;   
 
   SYS_EXEC |= EXEC_CYCLE_START;
   do {
@@ -313,7 +315,7 @@ void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate)
   protocol_execute_runtime();
 
   st_reset(); // Immediately force kill steppers and reset step segment buffer.
-  plan_reset(); // Reset planner buffer. Zero planner positions. Ensure homing motion is cleared.
+  plan_reset(); // Reset planner buffer. Zero planner positions. Ensure probe motion is cleared.
   plan_sync_position(); // Sync planner position to current machine position for pull-off move.
 
   #ifdef USE_LINE_NUMBERS

@@ -36,6 +36,7 @@
 #include "spindle_control.h"
 #include "stepper.h"
 #include "counters.h"
+#include "probe.h"
 
 
 // Handles the primary confirmation protocol response for streaming interfaces and human-feedback.
@@ -149,9 +150,8 @@ void report_grbl_help() {
                       "$Nx=line (save startup block)\r\n"
                       "$C (check gcode mode)\r\n"
                       "$X (kill alarm lock)\r\n"
-                      "$H (run homing cycle<axis>)\r\n"
-                      "$E (report encoders<clear axis>\r\n"
-                      "$S (run homing cycle)\r\n"
+                      "$H<x=single axis> (run homing cycle)\r\n"
+                      "$E<x=clear axis> (report encoders)\r\n"
                       "~ (cycle start)\r\n"
                       "! (feed hold)\r\n"
                       "? (current status)\r\n"
@@ -174,10 +174,10 @@ void report_grbl_settings() {
   printPgmString(PSTR(" (x accel, mm/sec^2)\r\n$9=")); printFloat_SettingValue(settings.acceleration[Y_AXIS]/(60*60)); // Convert from mm/min^2 for human readability
   printPgmString(PSTR(" (y accel, mm/sec^2)\r\n$10=")); printFloat_SettingValue(settings.acceleration[Z_AXIS]/(60*60)); // Convert from mm/min^2 for human readability
   printPgmString(PSTR(" (z accel, mm/sec^2)\r\n$11=")); printFloat_SettingValue(settings.acceleration[C_AXIS]/(60*60)); // Convert from mm/min^2 for human readability
-  printPgmString(PSTR(" (c accel, mm/sec^2)\r\n$12=")); printFloat_SettingValue(-settings.max_travel[X_AXIS]); // Grbl internally store this as negative.
-  printPgmString(PSTR(" (x max travel, mm)\r\n$13=")); printFloat_SettingValue(-settings.max_travel[Y_AXIS]); // Grbl internally store this as negative.
-  printPgmString(PSTR(" (y max travel, mm)\r\n$14=")); printFloat_SettingValue(-settings.max_travel[Z_AXIS]); // Grbl internally store this as negative.
-  printPgmString(PSTR(" (z max travel, mm)\r\n$15=")); printFloat_SettingValue(-settings.max_travel[C_AXIS]); // Grbl internally store this as negative.
+  printPgmString(PSTR(" (c accel, mm/sec^2)\r\n$12=")); printFloat_SettingValue(settings.max_travel[X_AXIS]); // Grbl internally store this as negative.
+  printPgmString(PSTR(" (x max travel, mm)\r\n$13=")); printFloat_SettingValue(settings.max_travel[Y_AXIS]); // Grbl internally store this as negative.
+  printPgmString(PSTR(" (y max travel, mm)\r\n$14=")); printFloat_SettingValue(settings.max_travel[Z_AXIS]); // Grbl internally store this as negative.
+  printPgmString(PSTR(" (z max travel, mm)\r\n$15=")); printFloat_SettingValue(settings.max_travel[C_AXIS]); // Grbl internally store this as negative.
   printPgmString(PSTR(" (c max travel, mm)\r\n$16=")); print_uint8_base10(settings.pulse_microseconds);
   printPgmString(PSTR(" (step pulse, usec)\r\n$17=")); print_uint8_base10(settings.step_invert_mask); 
   printPgmString(PSTR(" (step port invert mask:")); print_uint8_base2(settings.step_invert_mask);  
@@ -196,14 +196,17 @@ void report_grbl_settings() {
   printPgmString(PSTR(" (homing cycle, bool)\r\n$29=")); print_uint8_base10(settings.homing_dir_mask);
   printPgmString(PSTR(" (homing dir invert mask:")); print_uint8_base2(settings.homing_dir_mask);  
   printPgmString(PSTR(")\r\n$30=")); printFloat_SettingValue(settings.homing_feed_rate);
-  printPgmString(PSTR(" (homing feed, mm/min)\r\n$31=")); printFloat_SettingValue(settings.homing_seek_rate);
-  printPgmString(PSTR(" (homing seek, mm/min)\r\n$32=")); printInteger(settings.homing_debounce_delay);
-  printPgmString(PSTR(" (homing debounce, msec)\r\n$33=")); printFloat_SettingValue(settings.homing_pulloff);
+  printPgmString(PSTR(" (homing feed, mm/min)\r\n$31=")); printFloat_SettingValue(settings.homing_seek_rate[X_AXIS]);
+  printPgmString(PSTR(" (homing seek x, mm/min)\r\n$32=")); printFloat_SettingValue(settings.homing_seek_rate[Y_AXIS]);
+  printPgmString(PSTR(" (homing seek y, mm/min)\r\n$33=")); printFloat_SettingValue(settings.homing_seek_rate[Z_AXIS]);
+  printPgmString(PSTR(" (homing seek z, mm/min)\r\n$34=")); printFloat_SettingValue(settings.homing_seek_rate[C_AXIS]);
+  printPgmString(PSTR(" (homing seek c, mm/min)\r\n$35=")); printInteger(settings.homing_debounce_delay);
+  printPgmString(PSTR(" (homing debounce, msec)\r\n$36=")); printFloat_SettingValue(settings.homing_pulloff);
   printPgmString(PSTR(" (homing pull-off, mm)"));
 #ifdef KEYME_BOARD
-  printPgmString(PSTR("\r\n$34=")); print_uint8_base10(settings.microsteps);  //TODO: unpack for display
+  printPgmString(PSTR("\r\n$37=")); print_uint8_base10(settings.microsteps);  //TODO: unpack for display
   printPgmString(PSTR(" (microsteps : ")); print_uint8_base2(settings.microsteps);
-  printPgmString(PSTR(")\r\n$35=")); print_uint8_base10(settings.decay_mode);
+  printPgmString(PSTR(")\r\n$38=")); print_uint8_base10(settings.decay_mode);
   printPgmString(PSTR(" (decay mode, (0..3))"));
 #endif
   printPgmString(PSTR("\r\n"));
@@ -453,6 +456,7 @@ void report_limit_pins()
 	 limit_state^=LIMIT_MASK;
   }  
   printPgmString(PSTR("("));
+  printInteger(probe_get_state()?1:0);
   print_uint8_base2(limit_state);
   printPgmString(PSTR(")\n\r"));
 

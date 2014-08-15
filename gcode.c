@@ -990,6 +990,7 @@ uint8_t gc_execute_line(char *line)
           #else
           mc_probe_cycle(gc_block.values.xyz, gc_state.feed_rate, gc_state.modal.feed_rate);
           #endif
+          //block.values.xyz is updated inside probe_cycle, so the next line is correct
       }
     
       // As far as the parser is concerned, the position is now == target. In reality the

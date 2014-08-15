@@ -70,6 +70,9 @@ void init_simulator(float time_multiplier) {
   sim.next_print_time = args.step_time;
   sim.speedup = time_multiplier;
   sim.baud_ticks = (int)((double)F_CPU*8/BAUD_RATE); //ticks per byte
+
+  //Default values of IO:
+  PROBE_PIN|=PROBE_MASK;
 }
 
 
@@ -86,7 +89,7 @@ int shutdown_simulator(uint8_t exitflag) {
 
 void simulate_limits(int idx, int raw_steps) {
   int min = -settings.homing_pulloff * settings.steps_per_mm[idx];
-  int max = -settings.max_travel[idx]*settings.steps_per_mm[idx] - min;
+  int max = settings.max_travel[idx]*settings.steps_per_mm[idx] - min;
   if (raw_steps < min) {
     printf("LOWER LIMIT HIT\n");
     //TODO: set limit pins, cause pin change interrupt
@@ -128,24 +131,13 @@ void simulate_hardware(bool do_serial){
   timer_interrupts();
   watchdog_sim();
 
+  
+  if (do_serial) simulate_serial();
 
-  if (do_serial) {
-
-    simulate_serial();
-  }
   //TODO:
   //  check limit pins,  call pinchange interrupt if enabled
   //  can ignore pinout int vect - hw start/hold not supported
 
-  /* 
-     uint8_t ecount=0;
-     uint8_t mask[] = {1,2,6,4,0,2,6,4,0,2,6,4,0,2,6,4};
-
-     // code for simulating encoder turns
-     ecount++;
-     FDBK_PIN = (mask[ecount&15])<<Z_ENC_IDX_BIT;
-     interrupt_FDBK_INT_vect();
-  */
 }
 
 //runs the hardware simulator at the desired rate until sim.exit is set
