@@ -220,6 +220,7 @@ void limits_go_home(uint8_t cycle_mask)
 
     st_prep_buffer(); // Prep and fill segment buffer from newly planned block.
     st_wake_up(); // Initiate motion
+
     do {
       st_prep_buffer(); // Check and prep segment buffer. NOTE: Should take no longer than 200us.
       // Check only for user reset. No time to run protocol_execute_runtime() in this loop.

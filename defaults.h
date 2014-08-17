@@ -312,10 +312,11 @@
   #define DEFAULT_SINGLE_STEP_RATE 10  // steps/sec
   #define DEFAULT_MICROSTEPPING 0x55   //half stepping on all axes
   #define DEFAULT_DECAY_MODE 0         //slowest
+  #define DEFAULT_COUNTS_PER_IDX 4000  //counts per encoder rev
 #endif
 
 #ifdef DEFAULTS_BENCH
-  // generic default for KeyMe Machine
+  // generic default for KeyMe development benchtop
   #define DEFAULT_X_STEPS_PER_MM 200.0
   #define DEFAULT_Y_STEPS_PER_MM 200.0
   #define DEFAULT_Z_STEPS_PER_MM 200.0
