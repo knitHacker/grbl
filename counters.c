@@ -77,15 +77,18 @@ ISR(FDBK_INT_vect) {
     counters.counts[Z_AXIS] += counters.dir;
   }
   if (change & (1<<Z_ENC_IDX_BIT)) { //idx changed
-      
-    counters.idx += counters.dir * ((state>>Z_ENC_IDX_BIT)&1);
-    //rezero counter.
-    counters.counts[Z_AXIS]=(counters.counts[Z_AXIS]/DEFAULT_COUNTS_PER_IDX)*
-      DEFAULT_COUNTS_PER_IDX + counters.idx_offset;
+      uint8_t idx_on = ((state>>Z_ENC_IDX_BIT)&1);
+      if (idx_on) {
+        counters.idx += counters.dir;
+        //rezero counter.
+        counters.counts[Z_AXIS]=(counters.counts[Z_AXIS]/DEFAULT_COUNTS_PER_IDX)*
+          DEFAULT_COUNTS_PER_IDX + counters.idx_offset;
+      }
   }
-  if (change & (1<<MAG_SENSE_BIT)) { //mag changed
-    counters.mags = (state>>MAG_SENSE_BIT)&1;
-    counters.counts[C_AXIS] += counters.mags;
-  }
+      /* moved to probe for debounce TODO: NEEDS TESTING*/
+  /* if (change & (1<<MAG_SENSE_BIT)) { //mag changed */
+  /*   counters.mags = (state>>MAG_SENSE_BIT)&1; */
+  /*   counters.counts[C_AXIS] += counters.mags; */
+  /* } */
   counters.state = state;
 }
