@@ -32,6 +32,7 @@
 #include "limits.h"
 #include "probe.h"
 #include "report.h"
+#include "counters.h"
 
 
 // Execute linear motion in absolute millimeter coordinates. Feed rate given in millimeters/second
@@ -307,7 +308,7 @@ void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate)
     if (sys.abort) { return; } // Check for system abort
   } while ((sys.state != STATE_IDLE) && (sys.state != STATE_QUEUED));
 
-  if (sysflags.probe_state == PROBE_MASK) { SYS_EXEC |= EXEC_CRIT_EVENT; }
+  if (sysflags.probe_state == PROBE_ACTIVE) { SYS_EXEC |= EXEC_CRIT_EVENT; }
   protocol_execute_runtime();   // Check and execute run-time commands
   if (sys.abort) { return; } // Check for system abort
 

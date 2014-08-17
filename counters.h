@@ -50,6 +50,10 @@ uint16_t counters_get_idx();
 
 void  counters_reset(uint8_t axis);
 
+//record zero so that idx works correctly
+void counters_set_idx_offset(); 
+
+
 // Monitors counters pin state and records the system position when detected. Called by the
 // stepper ISR per ISR tick.
 void counters_state_monitor();
