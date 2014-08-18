@@ -425,6 +425,8 @@ void report_realtime_status()
   printPgmString(PSTR(",Pos:")); 
   for (i=0; i< N_AXIS; i++) {
     print_position[i] = current_position[i]/settings.steps_per_mm[i];
+    //switch to work position
+    print_position[i] -= gc_state.coord_system[i]+gc_state.coord_offset[i];
     printFloat_CoordValue(print_position[i]);
     printPgmString(PSTR(","));
   }
