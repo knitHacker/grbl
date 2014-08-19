@@ -85,7 +85,7 @@ void report_grbl_help();
 void report_grbl_settings();
 
 // Prints realtime status report
-void report_realtime_status();
+uint8_t report_realtime_status();
 
 // Prints state of limit pins
 void report_limit_pins();

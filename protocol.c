@@ -220,8 +220,9 @@ void protocol_execute_runtime()
     
     // Execute and serial print status
     if (rt_exec & EXEC_STATUS_REPORT) { 
-      report_realtime_status();
-      bit_false(SYS_EXEC,EXEC_STATUS_REPORT);
+      if (!report_realtime_status()){
+        bit_false(SYS_EXEC,EXEC_STATUS_REPORT);
+      }
     }
     // Execute and serial print status
     if (rt_exec & EXEC_LIMIT_REPORT) { 
