@@ -385,6 +385,9 @@ void report_counters()
  // specific needs, but the desired real-time data report must be as short as possible. This is
  // requires as it minimizes the computational overhead and allows grbl to keep running smoothly, 
  // especially during g-code programs with fast, short line segments and high frequency reports (5-20Hz).
+
+extern uint8_t ln_head();
+
 uint8_t report_realtime_status()
 {
   // **Under construction** Bare-bones status report. Provides real-time machine position relative to 
@@ -394,6 +397,13 @@ uint8_t report_realtime_status()
   uint8_t i;
   int32_t current_position[N_AXIS]; // Copy current state of the system position variable
   memcpy(current_position,sys.position,sizeof(sys.position));
+
+  /* For linenumber debuggering 
+  printInteger(linenumber_next());
+  printPgmString(":");
+  printInteger(ln_head());
+  */
+
 
 #ifdef USE_LINE_NUMBERS
   linenumber_t ln = 0;
@@ -459,7 +469,7 @@ uint8_t report_realtime_status()
   
   printPgmString(PSTR(">\r\n"));
 
-  return sys.eol_flag;
+  return sys.eol_flag; //returns True if more work to do
 
 }
 

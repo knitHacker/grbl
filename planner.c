@@ -308,13 +308,16 @@ void plan_buffer_line(float *target, float feed_rate, uint8_t invert_feed_rate)
   
   // Bail if this is a zero-length block. Highly unlikely to occur.
   if (block->step_event_count == 0) { 
-    if (linenumber_insert(block->line_number|LINENUMBER_EMPTY_BLOCK) == 1) { //was empty, so report immediately;
+    if (linenumber_insert(block->line_number|LINENUMBER_EMPTY_BLOCK) == 1) { 
+      //was empty, so report immediately;
       sys.eol_flag = 1;
       SYS_EXEC |= EXEC_STATUS_REPORT;
     }
     return;
-  } 
-  linenumber_insert(block->line_number);
+  }
+  if (block->line_number!=LINENUMBER_EMPTY_BLOCK){
+    linenumber_insert(block->line_number);
+  }
   
   // Adjust feed_rate value to mm/min depending on type of rate input (normal, inverse time, or rapids)
   // TODO: Need to distinguish a rapids vs feed move for overrides. Some flag of some sort.

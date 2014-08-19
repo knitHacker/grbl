@@ -277,6 +277,7 @@ uint8_t linenumber_next(){
   if (++read_idx>=STLT_SIZE) { read_idx=0; }
   return read_idx;
 }
+uint8_t ln_head() { return st_lt.head;}
 
 
 linenumber_t linenumber_get(){

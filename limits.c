@@ -201,7 +201,7 @@ void limits_go_home(uint8_t cycle_mask)
 
     // Perform homing cycle. Planner buffer should be empty, as required to initiate the homing cycle.
     #ifdef USE_LINE_NUMBERS
-      plan_buffer_line(target, homing_rate, false, HOMING_CYCLE_LINE_NUMBER); // Bypass mc_line(). Directly plan homing motion.
+      plan_buffer_line(target, homing_rate, false, LINENUMBER_EMPTY_BLOCK); // Bypass mc_line(). Directly plan homing motion.
     #else
       plan_buffer_line(target, homing_rate, false); // Bypass mc_line(). Directly plan homing motion.
     #endif
@@ -264,11 +264,11 @@ void limits_go_home(uint8_t cycle_mask)
     }
   }
   plan_sync_position(); // Sync planner position to current machine position for pull-off move.
-  #ifdef USE_LINE_NUMBERS
 
-  plan_buffer_line(target, min_seek_rate, false, HOMING_CYCLE_LINE_NUMBER); // Bypass mc_line(). Directly plan motion.
+  #ifdef USE_LINE_NUMBERS
+    plan_buffer_line(target, min_seek_rate, false, HOMING_CYCLE_LINE_NUMBER); // Bypass mc_line(). Directly plan motion.
   #else
-  plan_buffer_line(target, min_seek_rate, false); // Bypass mc_line(). Directly plan motion.
+    plan_buffer_line(target, min_seek_rate, false); // Bypass mc_line(). Directly plan motion.
   #endif
 
   // Initiate pull-off using main motion control routines.
