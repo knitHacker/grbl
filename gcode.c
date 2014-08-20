@@ -29,10 +29,6 @@
 #include "probe.h"
 #include "report.h"
 
-// NOTE: Max line number is defined by the g-code standard to be 99999. It seems to be an
-// arbitrary value, and some GUIs may require more. So we increased it based on a max safe
-// value when converting a float (7.2 digit precision)s to an integer.
-#define MAX_LINE_NUMBER 9999999 
 
 #define AXIS_COMMAND_NONE 0
 #define AXIS_COMMAND_NON_MODAL 1 
@@ -873,7 +869,12 @@ uint8_t gc_execute_line(char *line)
   // [9. Enable/disable feed rate or spindle overrides ]: NOT SUPPORTED
 
   // [10. Dwell ]:
-  if (gc_block.non_modal_command == NON_MODAL_DWELL) { mc_dwell(gc_block.values.p); }
+  if (gc_block.non_modal_command == NON_MODAL_DWELL) { 
+    linenumber_insert(gc_block.values.n); 
+    mc_dwell(gc_block.values.p); 
+    sys.eol_flag = 1; //pop the number we just put in 
+    SYS_EXEC |= EXEC_STATUS_REPORT;
+  }
   
   // [11. Set active plane ]:
   gc_state.modal.plane_select = gc_block.modal.plane_select;  
@@ -990,6 +991,7 @@ uint8_t gc_execute_line(char *line)
           #else
           mc_probe_cycle(gc_block.values.xyz, gc_state.feed_rate, gc_state.modal.feed_rate);
           #endif
+          //block.values.xyz is updated inside probe_cycle, so the next line is correct
       }
     
       // As far as the parser is concerned, the position is now == target. In reality the

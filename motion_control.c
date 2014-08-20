@@ -32,6 +32,7 @@
 #include "limits.h"
 #include "probe.h"
 #include "report.h"
+#include "counters.h"
 
 
 // Execute linear motion in absolute millimeter coordinates. Feed rate given in millimeters/second
@@ -42,7 +43,7 @@
 // mc_line and plan_buffer_line is done primarily to place non-planner-type functions from being
 // in the planner and to let backlash compensation or canned cycle integration simple and direct.
 #ifdef USE_LINE_NUMBERS
-void mc_line(float *target, float feed_rate, uint8_t invert_feed_rate, int32_t line_number)
+void mc_line(float *target, float feed_rate, uint8_t invert_feed_rate, linenumber_t line_number)
 #else
 void mc_line(float *target, float feed_rate, uint8_t invert_feed_rate)
 #endif
@@ -98,7 +99,7 @@ void mc_line(float *target, float feed_rate, uint8_t invert_feed_rate)
 // distance from segment to the circle when the end points both lie on the circle.
 #ifdef USE_LINE_NUMBERS
 void mc_arc(float *position, float *target, float *offset, float radius, float feed_rate, 
-  uint8_t invert_feed_rate, uint8_t axis_0, uint8_t axis_1, uint8_t axis_linear, int32_t line_number)
+  uint8_t invert_feed_rate, uint8_t axis_0, uint8_t axis_1, uint8_t axis_linear, linenumber_t line_number)
 #else
 void mc_arc(float *position, float *target, float *offset, float radius, float feed_rate,
   uint8_t invert_feed_rate, uint8_t axis_0, uint8_t axis_1, uint8_t axis_linear)
@@ -214,17 +215,18 @@ void mc_arc(float *position, float *target, float *offset, float radius, float f
 // Execute dwell in seconds.
 void mc_dwell(float seconds) 
 {
-   if (sys.state == STATE_CHECK_MODE) { return; }
+  report_status_message(STATUS_OK); //report that we are dwelling
+  if (sys.state == STATE_CHECK_MODE) { return; }
    
-   uint16_t i = floor(1000/DWELL_TIME_STEP*seconds);
-   protocol_buffer_synchronize();
-   delay_ms(floor(1000*seconds-i*DWELL_TIME_STEP)); // Delay millisecond remainder.
-   while (i-- > 0) {
-     // NOTE: Check and execute runtime commands during dwell every <= DWELL_TIME_STEP milliseconds.
-     protocol_execute_runtime();
-     if (sys.abort) { return; }
-     _delay_ms(DWELL_TIME_STEP); // Delay DWELL_TIME_STEP increment
-   }
+  uint16_t i = floor(1000/DWELL_TIME_STEP*seconds);
+  protocol_buffer_synchronize();
+  delay_ms(floor(1000*seconds-i*DWELL_TIME_STEP)); // Delay millisecond remainder.
+  while (i-- > 0) {
+    // NOTE: Check and execute runtime commands during dwell every <= DWELL_TIME_STEP milliseconds.
+    protocol_execute_runtime();
+    if (sys.abort) { return; }
+    _delay_ms(DWELL_TIME_STEP); // Delay DWELL_TIME_STEP increment
+  }
 }
 
 
@@ -261,6 +263,11 @@ void mc_homing_cycle(uint8_t axis_mask)
 
   // Gcode parser position was circumvented by the limits_go_home() routine, so sync position now.
   gc_sync_position();
+
+  if (axis_mask&bit(Z_AXIS)) {
+    counters_set_idx_offset();
+    counters_reset(Z_AXIS);
+  }
   
   // Set idle state after homing completes and before returning to main program.  
   sys.state = STATE_IDLE;
@@ -274,7 +281,7 @@ void mc_homing_cycle(uint8_t axis_mask)
 // Perform tool length probe cycle. Requires probe switch.
 // NOTE: Upon probe failure, the program will be stopped and placed into ALARM state.
 #ifdef USE_LINE_NUMBERS
-void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate, int32_t line_number)
+void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate, linenumber_t line_number)
 #else
 void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate)
 #endif
@@ -282,6 +289,8 @@ void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate)
   if (sys.state != STATE_CYCLE) protocol_auto_cycle_start();
   protocol_buffer_synchronize(); // Finish all queued commands
   if (sys.abort) { return; } // Return if system reset has been issued.
+
+  report_status_message(STATUS_OK); //report that we are probing
 
   // Perform probing cycle. Planner buffer should be empty at this point.
   #ifdef USE_LINE_NUMBERS
@@ -292,7 +301,7 @@ void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate)
 
   // NOTE: Parser error-checking ensures the probe isn't already closed/triggered.
   //TODO - make sure the probe isn't already closed
-  sysflags.probe_state = PROBE_ACTIVE;   //TODO: possilbe optimization by using PROBE_MASK here.
+  sysflags.probe_state = PROBE_ACTIVE;   
 
   SYS_EXEC |= EXEC_CYCLE_START;
   do {
@@ -300,7 +309,7 @@ void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate)
     if (sys.abort) { return; } // Check for system abort
   } while ((sys.state != STATE_IDLE) && (sys.state != STATE_QUEUED));
 
-  if (sysflags.probe_state == PROBE_MASK) { SYS_EXEC |= EXEC_CRIT_EVENT; }
+  if (sysflags.probe_state == PROBE_ACTIVE) { SYS_EXEC |= EXEC_CRIT_EVENT; }
   protocol_execute_runtime();   // Check and execute run-time commands
   if (sys.abort) { return; } // Check for system abort
 
@@ -313,7 +322,7 @@ void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate)
   protocol_execute_runtime();
 
   st_reset(); // Immediately force kill steppers and reset step segment buffer.
-  plan_reset(); // Reset planner buffer. Zero planner positions. Ensure homing motion is cleared.
+  plan_reset(); // Reset planner buffer. Zero planner positions. Ensure probe motion is cleared.
   plan_sync_position(); // Sync planner position to current machine position for pull-off move.
 
   #ifdef USE_LINE_NUMBERS

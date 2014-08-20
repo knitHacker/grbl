@@ -20,7 +20,9 @@
   
 #include "system.h"
 #include "probe.h"
+#include "counters.h"
 
+uint8_t probe_sense; //last known state
 
 // Probe pin initialization routine.
 void probe_init() 
@@ -41,11 +43,15 @@ uint8_t probe_get_state()
 // NOTE: This function must be extremely efficient as to not bog down the stepper ISR.
 void probe_state_monitor()
 {
-  if (sysflags.probe_state == PROBE_ACTIVE) { 
-    if (probe_get_state()) {
-      sysflags.probe_state = PROBE_OFF;
-      memcpy(sys.probe_position, sys.position, sizeof(float)*N_AXIS);
-      SYS_EXEC |= EXEC_FEED_HOLD;
-    }
+  uint8_t probe_on = probe_get_state();
+  if (sysflags.probe_state == PROBE_ACTIVE && probe_on) {
+    sysflags.probe_state = PROBE_OFF;
+    memcpy(sys.probe_position, sys.position, sizeof(float)*N_AXIS);
+    SYS_EXEC |= EXEC_FEED_HOLD;
   }
+  uint8_t change = probe_sense^probe_on;
+  if (change&probe_on){
+    counters.counts[C_AXIS]++;
+  }
+  probe_sense=probe_on;
 }

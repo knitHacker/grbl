@@ -32,35 +32,63 @@ void counters_init()
   FDBK_DDR &= ~(FDBK_MASK); // Configure as input pins
   FDBK_PORT |= FDBK_MASK;   // Enable internal pull-up resistors. Normal high operation. //TODO test
 #endif
-  /*
+  counters.state = FDBK_PIN&FDBK_MASK; //record initial state
+
   FDBK_PCMSK |= FDBK_MASK;  // Enable specific pins of the Pin Change Interrupt
   PCICR |= (1 << FDBK_INT);   // Enable Pin Change Interrupt
-  */
+
 }
 
-// Returns the counters pin state. Triggered = true. Called by gcode parser and counters state monitor.
-uint8_t counters_reset(uint8_t axis)
+// Resets the counts for an axis
+void  counters_reset(uint8_t axis)
 {
-  return counters.counts[axis]=0;
+  counters.counts[axis]=0;
 }
 
 
-// Returns the counters pin state. Triggered = true. Called by gcode parser and counters state monitor.
-uint8_t counters_get_count(uint8_t axis)
+// Returns the counters pin state. Triggered = true.  and counters state monitor.
+uint16_t counters_get_count(uint8_t axis)
 {
   return counters.counts[axis];
 }
 
-
-// Monitors counters pin state and records the system position when detected. Called by the
-// stepper ISR per ISR tick.
-void counters_state_monitor()
-{
-  //TODO: 
+uint8_t counters_get_state(){
+  return counters.state;
 }
 
-/* TODO: implement encoder counter - maybe needs debounce/
+uint16_t counters_get_idx(){
+  return counters.idx;
+}
+
+void counters_set_idx_offset(){
+  counters.idx_offset = DEFAULT_COUNTS_PER_IDX - counters.counts[Z_AXIS]; 
+  //this should be the value whenever the index is hit
+}
+
+
+
 ISR(FDBK_INT_vect) {
-  counters.state = FDBK_PIN&FDBK_MASK;
+  uint8_t state =  FDBK_PIN&FDBK_MASK;
+  uint8_t change = (state^counters.state);
+  if (change & ((1<<Z_ENC_CHA_BIT)|(1<<Z_ENC_CHB_BIT))) { //if a or b changed
+    counters.anew = (state>>Z_ENC_CHA_BIT)&1;
+    counters.dir = counters.anew^counters.bold ? 1 : -1;
+    counters.bold = (state>>Z_ENC_CHB_BIT)&1;
+    counters.counts[Z_AXIS] += counters.dir;
+  }
+  if (change & (1<<Z_ENC_IDX_BIT)) { //idx changed
+      uint8_t idx_on = ((state>>Z_ENC_IDX_BIT)&1);
+      if (idx_on) {
+        counters.idx += counters.dir;
+        //rezero counter.
+        counters.counts[Z_AXIS]=(counters.counts[Z_AXIS]/DEFAULT_COUNTS_PER_IDX)*
+          DEFAULT_COUNTS_PER_IDX + counters.idx_offset;
+      }
+  }
+      /* moved to probe for debounce TODO: NEEDS TESTING*/
+  /* if (change & (1<<MAG_SENSE_BIT)) { //mag changed */
+  /*   counters.mags = (state>>MAG_SENSE_BIT)&1; */
+  /*   counters.counts[C_AXIS] += counters.mags; */
+  /* } */
+  counters.state = state;
 }
-*/
