@@ -148,7 +148,7 @@ void limits_go_home(uint8_t cycle_mask)
   if (sys.abort || !cycle_mask) { return; } // Block if system reset has been issued.
 
   // Initialize homing in search mode to quickly engage the specified cycle_mask limit switches.
-  uint8_t approach = ~0;  //approach has all bits set or none
+  uint8_t approach = ~0;  //approach has all bits set (negative dir) or none (positive)
   float homing_rate;
   uint8_t idx;
   uint8_t n_cycle = (2*N_HOMING_LOCATE_CYCLE+1);

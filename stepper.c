@@ -897,9 +897,6 @@ void st_prep_buffer()
       }
     }
 
-// int32_t blength = segment_buffer_head - segment_buffer_tail;
-// if (blength < 0) { blength += SEGMENT_BUFFER_SIZE; } 
-// printInteger(blength);
   } 
 }      
 
