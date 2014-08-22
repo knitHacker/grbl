@@ -43,6 +43,7 @@ void counters_init()
 void  counters_reset(uint8_t axis)
 {
   counters.counts[axis]=0;
+  if (axis == Z_AXIS) { counter.idx=0; }
 }
 
 
@@ -81,8 +82,8 @@ ISR(FDBK_INT_vect) {
       if (idx_on) {
         counters.idx += counters.dir;
         //rezero counter.
-        counters.counts[Z_AXIS]=(counters.counts[Z_AXIS]/DEFAULT_COUNTS_PER_IDX)*
-          DEFAULT_COUNTS_PER_IDX + counters.idx_offset;
+	//        counters.counts[Z_AXIS]=(counters.counts[Z_AXIS]/DEFAULT_COUNTS_PER_IDX)*
+	//          DEFAULT_COUNTS_PER_IDX + counters.idx_offset;
       }
   }
       /* moved to probe for debounce TODO: NEEDS TESTING*/
