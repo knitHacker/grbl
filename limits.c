@@ -121,9 +121,9 @@ void limits_go_home(uint8_t cycle_mask)
   }
   max_travel *= HOMING_AXIS_SEARCH_SCALAR; // Ensure homing switches engaged by over-estimating max travel.
   homing_rate = min_seek_rate;
-  
+
   plan_reset(); // Reset planner buffer to zero planner current position and to clear previous motions.
-  
+
   do {
     
     // Set target location and rate for active axes.
@@ -150,8 +150,7 @@ void limits_go_home(uint8_t cycle_mask)
     homing_rate *= sqrt(n_active_axis); // [sqrt(N_AXIS)] Adjust so individual axes all move at homing rate.
                                         // homing_rate is reset each time through this loop, so it doesn't keep increasing
 
-	 // axis_lock bit is high if axis is homing, a 0 prevents it from being moved in stepper.
-    sysflags.homing_axis_lock = axislock;   //TODO: check unused?
+
 	 limit_approach = approach;  //limit_approach bits is high if approaching limit switch 
 
     // Perform homing cycle. Planner buffer should be empty, as required to initiate the homing cycle.
@@ -161,6 +160,7 @@ void limits_go_home(uint8_t cycle_mask)
       plan_buffer_line(target, homing_rate, false); // Bypass mc_line(). Directly plan homing motion.
     #endif
 
+	 // axislock bit is high if axis is homing, so we only enable checking on moving axes.
     limits_enable(axislock,~approach);  //expect 0 on approach (stop when 1). vice versa for pulloff
     limits.homenext =0;
 
@@ -179,7 +179,6 @@ void limits_go_home(uint8_t cycle_mask)
         protocol_execute_runtime();
         return;
       }
-
     } while (!limits.homenext);  //stepper isr sets this when limit is hit
 
     limits_disable();

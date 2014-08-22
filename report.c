@@ -152,6 +152,7 @@ void report_grbl_help() {
                       "$X (kill alarm lock)\r\n"
                       "$H<x=single axis> (run homing cycle)\r\n"
                       "$E<x=clear axis> (report encoders)\r\n"
+                      "$Hx=axis (run homing cycle)\r\n"
                       "~ (cycle start)\r\n"
                       "! (feed hold)\r\n"
                       "? (current status)\r\n"
