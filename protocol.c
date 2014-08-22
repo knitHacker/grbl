@@ -220,14 +220,11 @@ void protocol_execute_runtime()
     
     // Execute and serial print status
     if (rt_exec & EXEC_STATUS_REPORT) { 
-      report_realtime_status();
-      bit_false(SYS_EXEC,EXEC_STATUS_REPORT);
+      if (!report_realtime_status()){
+        bit_false(SYS_EXEC,EXEC_STATUS_REPORT);
+      }
     }
     // Execute and serial print status
-    if (rt_exec & EXEC_LIMIT_REPORT) { 
-      report_limit_pins();
-      bit_false(SYS_EXEC,EXEC_LIMIT_REPORT);
-    }
     if (rt_exec & EXEC_LIMIT_REPORT) { 
       report_limit_pins();
       bit_false(SYS_EXEC,EXEC_LIMIT_REPORT);
@@ -247,7 +244,7 @@ void protocol_execute_runtime()
     }
         
     // Execute a cycle start by starting the stepper interrupt begin executing the blocks in queue.
-	 //ADS blcok while homing.
+	 //ADS block while homing.
     if ((rt_exec & EXEC_CYCLE_START) && !(sys.state & STATE_HOMING)) { 
       if (sys.state == STATE_QUEUED) {
         sys.state = STATE_CYCLE;

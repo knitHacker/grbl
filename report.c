@@ -36,6 +36,7 @@
 #include "spindle_control.h"
 #include "stepper.h"
 #include "counters.h"
+#include "probe.h"
 
 
 // Handles the primary confirmation protocol response for streaming interfaces and human-feedback.
@@ -149,7 +150,8 @@ void report_grbl_help() {
                       "$Nx=line (save startup block)\r\n"
                       "$C (check gcode mode)\r\n"
                       "$X (kill alarm lock)\r\n"
-                      "$H (run homing cycle)\r\n"
+                      "$H<x=single axis> (run homing cycle)\r\n"
+                      "$E<x=clear axis> (report encoders)\r\n"
                       "~ (cycle start)\r\n"
                       "! (feed hold)\r\n"
                       "? (current status)\r\n"
@@ -172,10 +174,10 @@ void report_grbl_settings() {
   printPgmString(PSTR(" (x accel, mm/sec^2)\r\n$9=")); printFloat_SettingValue(settings.acceleration[Y_AXIS]/(60*60)); // Convert from mm/min^2 for human readability
   printPgmString(PSTR(" (y accel, mm/sec^2)\r\n$10=")); printFloat_SettingValue(settings.acceleration[Z_AXIS]/(60*60)); // Convert from mm/min^2 for human readability
   printPgmString(PSTR(" (z accel, mm/sec^2)\r\n$11=")); printFloat_SettingValue(settings.acceleration[C_AXIS]/(60*60)); // Convert from mm/min^2 for human readability
-  printPgmString(PSTR(" (c accel, mm/sec^2)\r\n$12=")); printFloat_SettingValue(-settings.max_travel[X_AXIS]); // Grbl internally store this as negative.
-  printPgmString(PSTR(" (x max travel, mm)\r\n$13=")); printFloat_SettingValue(-settings.max_travel[Y_AXIS]); // Grbl internally store this as negative.
-  printPgmString(PSTR(" (y max travel, mm)\r\n$14=")); printFloat_SettingValue(-settings.max_travel[Z_AXIS]); // Grbl internally store this as negative.
-  printPgmString(PSTR(" (z max travel, mm)\r\n$15=")); printFloat_SettingValue(-settings.max_travel[C_AXIS]); // Grbl internally store this as negative.
+  printPgmString(PSTR(" (c accel, mm/sec^2)\r\n$12=")); printFloat_SettingValue(settings.max_travel[X_AXIS]); // Grbl internally store this as negative.
+  printPgmString(PSTR(" (x max travel, mm)\r\n$13=")); printFloat_SettingValue(settings.max_travel[Y_AXIS]); // Grbl internally store this as negative.
+  printPgmString(PSTR(" (y max travel, mm)\r\n$14=")); printFloat_SettingValue(settings.max_travel[Z_AXIS]); // Grbl internally store this as negative.
+  printPgmString(PSTR(" (z max travel, mm)\r\n$15=")); printFloat_SettingValue(settings.max_travel[C_AXIS]); // Grbl internally store this as negative.
   printPgmString(PSTR(" (c max travel, mm)\r\n$16=")); print_uint8_base10(settings.pulse_microseconds);
   printPgmString(PSTR(" (step pulse, usec)\r\n$17=")); print_uint8_base10(settings.step_invert_mask); 
   printPgmString(PSTR(" (step port invert mask:")); print_uint8_base2(settings.step_invert_mask);  
@@ -194,14 +196,17 @@ void report_grbl_settings() {
   printPgmString(PSTR(" (homing cycle, bool)\r\n$29=")); print_uint8_base10(settings.homing_dir_mask);
   printPgmString(PSTR(" (homing dir invert mask:")); print_uint8_base2(settings.homing_dir_mask);  
   printPgmString(PSTR(")\r\n$30=")); printFloat_SettingValue(settings.homing_feed_rate);
-  printPgmString(PSTR(" (homing feed, mm/min)\r\n$31=")); printFloat_SettingValue(settings.homing_seek_rate);
-  printPgmString(PSTR(" (homing seek, mm/min)\r\n$32=")); printInteger(settings.homing_debounce_delay);
-  printPgmString(PSTR(" (homing debounce, msec)\r\n$33=")); printFloat_SettingValue(settings.homing_pulloff);
+  printPgmString(PSTR(" (homing feed, mm/min)\r\n$31=")); printFloat_SettingValue(settings.homing_seek_rate[X_AXIS]);
+  printPgmString(PSTR(" (homing seek x, mm/min)\r\n$32=")); printFloat_SettingValue(settings.homing_seek_rate[Y_AXIS]);
+  printPgmString(PSTR(" (homing seek y, mm/min)\r\n$33=")); printFloat_SettingValue(settings.homing_seek_rate[Z_AXIS]);
+  printPgmString(PSTR(" (homing seek z, mm/min)\r\n$34=")); printFloat_SettingValue(settings.homing_seek_rate[C_AXIS]);
+  printPgmString(PSTR(" (homing seek c, mm/min)\r\n$35=")); printInteger(settings.homing_debounce_delay);
+  printPgmString(PSTR(" (homing debounce, msec)\r\n$36=")); printFloat_SettingValue(settings.homing_pulloff);
   printPgmString(PSTR(" (homing pull-off, mm)"));
 #ifdef KEYME_BOARD
-  printPgmString(PSTR("\r\n$34=")); print_uint8_base10(settings.microsteps);  //TODO: unpack for display
+  printPgmString(PSTR("\r\n$37=")); print_uint8_base10(settings.microsteps);  //TODO: unpack for display
   printPgmString(PSTR(" (microsteps : ")); print_uint8_base2(settings.microsteps);
-  printPgmString(PSTR(")\r\n$35=")); print_uint8_base10(settings.decay_mode);
+  printPgmString(PSTR(")\r\n$38=")); print_uint8_base10(settings.decay_mode);
   printPgmString(PSTR(" (decay mode, (0..3))"));
 #endif
   printPgmString(PSTR("\r\n"));
@@ -364,11 +369,13 @@ void report_counters()
   printInteger(counters_get_count(Z_AXIS));
   printPgmString(PSTR(" (:"));
   print_uint8_base2((pinval>>Z_ENC_IDX_BIT)&7); //3 bits
-  printPgmString(PSTR("), c(:"));
+  printPgmString(PSTR(")|"));
+  printInteger(counters_get_idx());
+  printPgmString(PSTR(", c: "));
   printInteger(counters_get_count(C_AXIS));
   printPgmString(PSTR(" (:"));
-  print_uint8_base2((pinval>>MAG_SENSE_BIT)&1); //1 bit
-  printPgmString(PSTR("}\n\r"));
+  print_uint8_base2(~(pinval>>MAG_SENSE_BIT)&1); //1 bit
+  printPgmString(PSTR(")}\n\r"));
 
 }
 #endif
@@ -378,7 +385,10 @@ void report_counters()
  // specific needs, but the desired real-time data report must be as short as possible. This is
  // requires as it minimizes the computational overhead and allows grbl to keep running smoothly, 
  // especially during g-code programs with fast, short line segments and high frequency reports (5-20Hz).
-void report_realtime_status()
+
+extern uint8_t ln_head();
+
+uint8_t report_realtime_status()
 {
   // **Under construction** Bare-bones status report. Provides real-time machine position relative to 
   // the system power on location (0,0,0) and work coordinate position (G54 and G92 applied). Eventually
@@ -388,18 +398,31 @@ void report_realtime_status()
   int32_t current_position[N_AXIS]; // Copy current state of the system position variable
   memcpy(current_position,sys.position,sizeof(sys.position));
 
+  /* For linenumber debuggering 
+  printInteger(linenumber_next());
+  printPgmString(":");
+  printInteger(ln_head());
+  */
+
+
 #ifdef USE_LINE_NUMBERS
-  int32_t ln = 0;
+  linenumber_t ln = 0;
 #if USE_LINE_NUMBERS != PERSIST_LINE_NUMBERS
   plan_block_t * pb = plan_get_current_block();
   if(pb != NULL) {
     ln = pb->line_number;
   } 
+  sys.eol_flag = 0;
 #else
-  if (sys.state==STATE_CYCLE) {
-    ln = sys.last_line_number;
+  if (sys.eol_flag) {
+    ln = linenumber_get()&~LINENUMBER_EMPTY_BLOCK;
+    if ((linenumber_peek()&LINENUMBER_EMPTY_BLOCK) == 0) {
+      sys.eol_flag = 0;
+    }
   }
 #endif
+#else
+  sys.eol_flag = 0;
 #endif
   float print_position[N_AXIS];
  
@@ -418,6 +441,8 @@ void report_realtime_status()
   printPgmString(PSTR(",Pos:")); 
   for (i=0; i< N_AXIS; i++) {
     print_position[i] = current_position[i]/settings.steps_per_mm[i];
+    //switch to work position
+    print_position[i] -= gc_state.coord_system[i]+gc_state.coord_offset[i];
     printFloat_CoordValue(print_position[i]);
     printPgmString(PSTR(","));
   }
@@ -433,6 +458,7 @@ void report_realtime_status()
   // Report current line number
   printPgmString(PSTR(",Ln:")); 
   printInteger(ln);
+
   #endif
     
   #ifdef REPORT_REALTIME_RATE
@@ -442,6 +468,9 @@ void report_realtime_status()
   #endif  
   
   printPgmString(PSTR(">\r\n"));
+
+  return sys.eol_flag; //returns True if more work to do
+
 }
 
 void report_limit_pins()
@@ -451,6 +480,7 @@ void report_limit_pins()
 	 limit_state^=LIMIT_MASK;
   }  
   printPgmString(PSTR("("));
+  printInteger(probe_get_state()?1:0);
   print_uint8_base2(limit_state);
   printPgmString(PSTR(")\n\r"));
 
