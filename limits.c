@@ -125,6 +125,7 @@ void limits_go_home(uint8_t cycle_mask)
     }
   }
   max_travel *= HOMING_AXIS_SEARCH_SCALAR; // Ensure homing switches engaged by over-estimating max travel.
+  max_travel += settings.homing_pulloff;
   homing_rate = min_seek_rate;
 
   plan_reset(); // Reset planner buffer to zero planner current position and to clear previous motions.
@@ -138,10 +139,10 @@ void limits_go_home(uint8_t cycle_mask)
       if (bit_istrue(cycle_mask,bit(idx))) {
         n_active_axis++;
         axislock |= (1<<(X_STEP_BIT+idx)); //assumes axes are in bit order.
-        if ((flipped&(1<<idx))^approach) { target[idx] = plan_get_position(idx) - max_travel; }
-        else {                             target[idx] = plan_get_position(idx) + max_travel; }
+        if ((flipped&(1<<idx))^approach) { target[idx] = -max_travel; }
+        else {                             target[idx] = max_travel; }
       } 
-      else {                               target[idx] = plan_get_position(idx);  //TODO: this needs test
+      else {                               target[idx] = 0; 
       } 
     }
 
@@ -194,6 +195,7 @@ void limits_go_home(uint8_t cycle_mask)
   //force report of known position for compare to zero.
   linenumber_insert(HOMING_CYCLE_LINE_NUMBER);
   request_report_status(1);
+  protocol_execute_runtime();
 
   // The active cycle axes should now be homed and machine limits have been located. By 
   // default, grbl defines machine space as all negative, as do most CNCs. Since limit switches
