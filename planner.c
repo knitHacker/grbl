@@ -408,6 +408,9 @@ void plan_sync_position()
   }
 }
 
+float plan_get_position(uint8_t axis){ //in mm
+  return (float)pl.position[axis]/settings.steps_per_mm[idx];
+}
 
 // Re-initialize buffer plan with a partially completed block, assumed to exist at the buffer tail.
 // Called after a steppers have come to a complete stop for a feed hold and the cycle is stopped.

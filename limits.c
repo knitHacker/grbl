@@ -48,11 +48,6 @@ void limits_init()
     LIMIT_PORT |= (LIMIT_MASK);  // Enable internal pull-up resistors. Normal high operation.
   }
 
-
-  /*  LIMIT_PCMSK &= ~LIMIT_MASK;  // prevent spurious interrupts while configuring
-  PCICR |= LIMIT_INT; // Enable Pin Change Interrupt on correct port.
-  */
-
   if (bit_istrue(settings.flags,BITFLAG_HARD_LIMIT_ENABLE)) {
 	 limits_enable(LIMIT_MASK & HARDSTOP_MASK,0);
   } else {
@@ -82,67 +77,23 @@ void limits_disable()
 
 }
 
-// This is the Limit Pin Change Interrupt, which handles the hard limit feature. A bouncing 
-// limit switch can cause a lot of problems, like false readings and multiple interrupt calls.
-// If a switch is triggered at all, something bad has happened and treat it as such, regardless
-// if a limit switch is being disengaged. It's impossible to reliably tell the state of a 
-// bouncing pin without a debouncing method. A simple software debouncing feature may be enabled 
-// through the config.h file, where an extra timer delays the limit pin read by several milli-
-// seconds to help with, not fix, bouncing switches.
-// NOTE: Do not attach an e-stop to the limit pins, because this interrupt is disabled during
-// homing cycles and will not respond correctly. Upon user request or need, there may be a
-// special pinout for an e-stop, but it is generally recommended to just directly connect
-// your e-stop switch to the Arduino reset pin, since it is the most correct way to do this.
-  // Ignore limit switches if already in an alarm state or in-process of executing an alarm.
-  // When in the alarm state, Grbl should have been reset or will force a reset, so any pending 
+
+// Limit checking moved to stepper ISR. 
+// limits_enable() sets limits.active and limits.expected flags.
+// stepper stops an axis whenever LIMIT_PIN&limits.active != limits.expected,
+//   in this case, it also sets limits.homenext to signal homing routine to continue.
+//   If not homing, it does a hard reset and sets the alarm.state
+//   (See `must_stop` section of ISR TIMER1_COMPA_vect)
+
+//  TODO: do we need special handling if already in an alarm state or in-process of executing an alarm.
+// Old comments said:
+  // Ignore limit switches When in the alarm state:
+  // Grbl should have been reset or will force a reset, so any pending 
   // moves in the planner and serial buffers are all cleared and newly sent blocks will be 
   // locked out until a homing cycle or a kill lock command. Allows the user to disable the hard
   // limit setting if their limits are constantly triggering after a reset and move their axes.
 
  
-
-void check_limit_pins()
-{
-  uint8_t invert_mask = (bit_istrue(settings.flags,BITFLAG_INVERT_LIMIT_PINS)) ? LIMIT_MASK : 0;
-  //sysflags.limit bits are set when limit is triggered
-  SYS_EXEC |= EXEC_LIMIT_REPORT;
-  sysflags.limits = (LIMIT_PIN ^ invert_mask );
-
-
-  if (sys.state & STATE_HOMING) {
-	 //clear axislock bits when limit toggled.
-	 sysflags.homing_axis_lock &=  (LIMIT_PIN>>LIMIT_BIT_SHIFT)^limit_approach;
-  }
-  else if (sysflags.limits & LIMIT_MASK) {
-	 if (!(sys.state & STATE_ALARM)) { 
-		if (bit_isfalse(SYS_EXEC,EXEC_ALARM)) {
-		  mc_reset(); // Initiate system kill.
-		  SYS_EXEC |= (EXEC_ALARM | EXEC_CRIT_EVENT); // Indicate hard limit critical event
-		}
-	 }
-  }
-}
-  
-#ifndef ENABLE_SOFTWARE_DEBOUNCE
-ISR(LIMIT_INT_vect) // DEFAULT: Limit pin change interrupt process. 
-{
-  TIMING_PORT ^= TIMING_MASK; // Debug: Used to time ISR
-  //  check_limit_pins();
-}
-#else // OPTIONAL: Software debounce limit pin routine.
-// Upon limit pin change, enable watchdog timer to create a short delay. 
-ISR(LIMIT_INT_vect) { 
-  TIMING_PORT ^= TIMING_MASK; // Debug: Used to time ISR
-  if (!(WDTCSR & (1<<WDIE))) { WDTCSR |= (1<<WDIE); } 
-}
-ISR(WDT_vect) // Watchdog timer ISR
-{
-  TIMING_PORT ^= TIMING_MASK; // Debug: Used to time ISR
-  WDTCSR &= ~(1<<WDIE); // Disable watchdog timer. 
-  check_limit_pins();
-}
-#endif
-
 
 // Homes the specified cycle axes, sets the machine position, and performs a pull-off motion after
 // completing. Homing is a special motion case, which involves rapid uncontrolled stops to locate
@@ -160,7 +111,7 @@ void limits_go_home(uint8_t cycle_mask)
   uint8_t idx;
   uint8_t n_cycle = (2*N_HOMING_LOCATE_CYCLE+1);
   float target[N_AXIS];
-  
+
   // Determine travel distance to the furthest homing switch based on user max travel settings.
   // NOTE: settings.max_travel[] is stored as a negative value
   float max_travel = settings.max_travel[0];
@@ -177,32 +128,30 @@ void limits_go_home(uint8_t cycle_mask)
   do {
 
     // Set target location and rate for active axes.
+
+    uint8_t flipped = settings.homing_dir_mask>>X_DIRECTION_BIT;  //assumes keyme configuration.
+    //replace with an instance of `if (bitistrue(h_d_m,X_DIRECTION_BIT)) { flipped|=1<<X_AXIS;}` 
+    //for each axis if the bits line up differently
+
+    // Set target location and rate for active axes.
+    // and reset homing axis locks based on cycle mask.  
+    uint8_t axislock = 0; 
     uint8_t n_active_axis = 0;
     for (idx=0; idx<N_AXIS; idx++) {
-      if (bit_istrue(cycle_mask,bit(idx))) { 
+      if (bit_istrue(cycle_mask,bit(idx))) {
         n_active_axis++;
-        if (!approach) { target[idx] = max_travel; } 
-        else { target[idx] = -max_travel; }         
-      } else {
-        target[idx] = 0.0;
-      }
-    }      
-    if (bit_istrue(settings.homing_dir_mask,(1<<X_DIRECTION_BIT))) { target[X_AXIS] = -target[X_AXIS]; }
-    if (bit_istrue(settings.homing_dir_mask,(1<<Y_DIRECTION_BIT))) { target[Y_AXIS] = -target[Y_AXIS]; }
-    if (bit_istrue(settings.homing_dir_mask,(1<<Z_DIRECTION_BIT))) { target[Z_AXIS] = -target[Z_AXIS]; }
-    if (bit_istrue(settings.homing_dir_mask,(1<<C_DIRECTION_BIT))) { target[C_AXIS] = -target[Z_AXIS]; }
-  
+        axislock |= (1<<(bit+X_STEP_BIT)) //assumes axes are in bit order.
+        if (flipped&(1<<idx)^approach) { target[idx] = plan_get_position(idx) - max_travel; }
+        else {                           target[idx] = plan_get_position(idx) + max_travel; }
+      } 
+      else {                             target[idx] = plan_get_position(idx);  //TODO: this needs test
+      } 
+    }
+
     homing_rate *= sqrt(n_active_axis); // [sqrt(N_AXIS)] Adjust so individual axes all move at homing rate.
 
-      // Reset homing axis locks based on cycle mask.  
-    uint8_t axislock = 0; 
-    if (bit_istrue(cycle_mask,bit(X_AXIS))) { axislock |= (1<<X_STEP_BIT); }
-    if (bit_istrue(cycle_mask,bit(Y_AXIS))) { axislock |= (1<<Y_STEP_BIT); }
-    if (bit_istrue(cycle_mask,bit(Z_AXIS))) { axislock |= (1<<Z_STEP_BIT); }
-    if (bit_istrue(cycle_mask,bit(C_AXIS))) { axislock |= (1<<C_STEP_BIT); }
-
 	 // axis_lock bit is high if axis is homing, a 0 prevents it from being moved in stepper.
-    sysflags.homing_axis_lock = axislock;
+    sysflags.homing_axis_lock = axislock;   //TODO: check unused?
 	 limit_approach = approach;  //limit_approach bits is high if approaching limit switch 
 	 if (approach){
 		TIMING_PORT |= TIMING_MASK;
