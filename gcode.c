@@ -872,8 +872,7 @@ uint8_t gc_execute_line(char *line)
   if (gc_block.non_modal_command == NON_MODAL_DWELL) { 
     linenumber_insert(gc_block.values.n); 
     mc_dwell(gc_block.values.p); 
-    sys.eol_flag = 1; //pop the number we just put in 
-    SYS_EXEC |= EXEC_STATUS_REPORT;
+    request_report_status(1); //pop the number we just put in 
   }
   
   // [11. Set active plane ]:

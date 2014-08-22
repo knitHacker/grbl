@@ -98,4 +98,8 @@ void plan_cycle_reinitialize();
 // Returns the status of the block ring buffer. True, if buffer is full.
 uint8_t plan_check_full_buffer();
 
+//returns last planned pos for `axis` in mm
+float plan_get_position(uint8_t axis);
+
+
 #endif

@@ -110,9 +110,14 @@ void limits_go_home(uint8_t cycle_mask)
   uint8_t n_cycle = (2*N_HOMING_LOCATE_CYCLE+1);
   float target[N_AXIS];
 
+  uint8_t flipped = settings.homing_dir_mask>>X_DIRECTION_BIT;  //assumes keyme configuration.
+  //replace with an instance of `if (bitistrue(h_d_m,X_DIRECTION_BIT)) { flipped|=1<<X_AXIS;}` 
+  //for each axis if the bits line up differently
+
   // Determine travel distance to the furthest homing switch based on user max travel settings.
   float min_seek_rate = 1e9; //arbitrary maximum=1km/s, will be reduced by axis setting below
   float max_travel = 0;
+
   for (idx=0; idx<N_AXIS; idx++){
     if (bit_istrue(cycle_mask,bit(idx))) {
       max_travel = max(max_travel,settings.max_travel[idx]);
@@ -125,13 +130,6 @@ void limits_go_home(uint8_t cycle_mask)
   plan_reset(); // Reset planner buffer to zero planner current position and to clear previous motions.
 
   do {
-    
-    // Set target location and rate for active axes.
-
-    uint8_t flipped = settings.homing_dir_mask>>X_DIRECTION_BIT;  //assumes keyme configuration.
-    //replace with an instance of `if (bitistrue(h_d_m,X_DIRECTION_BIT)) { flipped|=1<<X_AXIS;}` 
-    //for each axis if the bits line up differently
-
     // Set target location and rate for active axes.
     // and reset homing axis locks based on cycle mask.  
     uint8_t axislock = 0; 
@@ -139,19 +137,18 @@ void limits_go_home(uint8_t cycle_mask)
     for (idx=0; idx<N_AXIS; idx++) {
       if (bit_istrue(cycle_mask,bit(idx))) {
         n_active_axis++;
-        axislock |= (1<<(bit+X_STEP_BIT)) //assumes axes are in bit order.
-        if (flipped&(1<<idx)^approach) { target[idx] = plan_get_position(idx) - max_travel; }
-        else {                           target[idx] = plan_get_position(idx) + max_travel; }
+        axislock |= (1<<(X_STEP_BIT+idx)); //assumes axes are in bit order.
+        if ((flipped&(1<<idx))^approach) { target[idx] = plan_get_position(idx) - max_travel; }
+        else {                             target[idx] = plan_get_position(idx) + max_travel; }
       } 
-      else {                             target[idx] = plan_get_position(idx);  //TODO: this needs test
+      else {                               target[idx] = plan_get_position(idx);  //TODO: this needs test
       } 
     }
 
     homing_rate *= sqrt(n_active_axis); // [sqrt(N_AXIS)] Adjust so individual axes all move at homing rate.
                                         // homing_rate is reset each time through this loop, so it doesn't keep increasing
 
-
-	 limit_approach = approach;  //limit_approach bits is high if approaching limit switch 
+    limit_approach = approach;  //limit_approach bits is high if approaching limit switch 
 
     // Perform homing cycle. Planner buffer should be empty, as required to initiate the homing cycle.
     #ifdef USE_LINE_NUMBERS
@@ -194,6 +191,10 @@ void limits_go_home(uint8_t cycle_mask)
 
   } while (n_cycle-- > 0);
 
+  //force report of known position for compare to zero.
+  linenumber_insert(HOMING_CYCLE_LINE_NUMBER);
+  request_report_status(1);
+
   // The active cycle axes should now be homed and machine limits have been located. By 
   // default, grbl defines machine space as all negative, as do most CNCs. Since limit switches
   // can be on either side of an axes, check and set axes machine zero appropriately. Also,
@@ -212,7 +213,7 @@ void limits_go_home(uint8_t cycle_mask)
         sys.position[idx] = -settings.homing_pulloff*settings.steps_per_mm[idx];
         target[idx] = 0;
       }
-      if (settings.homing_pulloff == 0.0) { SYS_EXEC|=EXEC_STATUS_REPORT; } //force report if we are not going to move
+      if (settings.homing_pulloff == 0.0) {SYS_EXEC|=EXEC_STATUS_REPORT; } //force report if we are not going to move  TODO TEST
     } else { // Non-active cycle axis. Set target to not move during pull-off.
       target[idx] = (float)sys.position[idx]/settings.steps_per_mm[idx];
     }
