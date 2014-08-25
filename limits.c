@@ -28,7 +28,8 @@
 #include "limits.h"
 #include "report.h"
 
-#define HOMING_CYCLE_LINE_NUMBER MAX_LINE_NUMBER
+#define HOMING_ZERO_LINE_NUMBER (LINENUMBER_SPECIAL|0)
+#define HOMING_FINISHED_LINE_NUMBER (LINENUMBER_SPECIAL|1)
 
 #define HOMING_AXIS_SEARCH_SCALAR  1.1  // Axis search distance multiplier. Must be > 1.
 
@@ -193,7 +194,7 @@ void limits_go_home(uint8_t cycle_mask)
   } while (n_cycle-- > 0);
 
   //force report of known position for compare to zero.
-  linenumber_insert(HOMING_CYCLE_LINE_NUMBER);
+  linenumber_insert(HOMING_ZERO_LINE_NUMBER);
   request_report_status(1);
   protocol_execute_runtime();
 
@@ -223,7 +224,7 @@ void limits_go_home(uint8_t cycle_mask)
   plan_sync_position(); // Sync planner position to current machine position for pull-off move.
 
   #ifdef USE_LINE_NUMBERS
-    plan_buffer_line(target, min_seek_rate, false, HOMING_CYCLE_LINE_NUMBER); // Bypass mc_line(). Directly plan motion.
+    plan_buffer_line(target, min_seek_rate, false, HOMING_FINISHED_LINE_NUMBER); // Bypass mc_line(). Directly plan motion.
   #else
     plan_buffer_line(target, min_seek_rate, false); // Bypass mc_line(). Directly plan motion.
   #endif

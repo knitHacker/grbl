@@ -401,7 +401,7 @@ uint8_t gc_execute_line(char *line)
   // Check for valid line number N value.
   if (bit_istrue(value_words,bit(WORD_N))) {
     // Line number value cannot be less than zero (done) or greater than max line number.
-    if (gc_block.values.n > MAX_LINE_NUMBER) { FAIL(STATUS_GCODE_INVALID_LINE_NUMBER); } // [Exceeds max line number]
+    if (gc_block.values.n > LINENUMBER_MAX) { FAIL(STATUS_GCODE_INVALID_LINE_NUMBER); } // [Exceeds max line number]
   }
   // bit_false(value_words,bit(WORD_N)); // NOTE: Single-meaning value word. Set at end of error-checking.
   

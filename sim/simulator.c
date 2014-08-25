@@ -71,7 +71,7 @@ void init_simulator(float time_multiplier) {
 #ifdef ENABLE_SOFTWARE_DEBOUNCE
   wdt_vect = interrupt_WDT_vect;
 #endif
-  pc_vect = interrupt_LIMIT_INT_vect;
+  //  pc_vect = interrupt_LIMIT_INT_vect;
 
 
   io_sim_init(port_monitors);

@@ -116,8 +116,9 @@ void system_execute_startup(char *line);
 
 // But We don't need such a big value, and we do need the high bit free 
 //#define MAX_LINE_NUMBER 9999999 
-#define MAX_LINE_NUMBER        0x7FFF 
 #define LINENUMBER_EMPTY_BLOCK 0x8000 //the other bit, used as a flag
+#define LINENUMBER_SPECIAL      0x4000
+#define LINENUMBER_MAX         (LINENUMBER_SPECIAL-1)
 typedef uint16_t linenumber_t;  //resize back to int32 for bigger numbers
 
 
