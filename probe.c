@@ -29,6 +29,22 @@ void probe_init()
 {
   PROBE_DDR &= ~(PROBE_MASK); // Configure as input pins
   PROBE_PORT |= PROBE_MASK;   // Enable internal pull-up resistors. Normal high operation.
+
+  // Configure Timer 2: Probe debounce timer
+  //  When probe signal goes high, start timer. by writing rate to TCCR2B
+  //  don't count another leading edge until time has elapsed - TIFR2.ocf2a will be set.
+  //  clear counts and reset when triggered.
+  // Get maximum dwell out of 8 bit timer by using phase correct pwm mode, 
+  //  which counts up and down; and longest prescaler.
+  
+  TIMSK2 &= ~((1<<OCIE2B) | (1<<OCIE2A) | (1<<TOIE2)); // Disconnect OC0 outputs and OVF interrupt.
+  TCCR2A = 1; // Phase Correct PWM
+  TCCR2B = (1<<CS22)|7; // 1024 prescale, use OCRA2 as top 
+  OCR2A = 200;  //200*2 (for up/down) * 1024 prescale / 16Mhz = 25.6 ms
+  OCR2B = 0;
+  //check tifr2.
+
+
 }
 
 
@@ -51,7 +67,13 @@ void probe_state_monitor()
   }
   uint8_t change = probe_sense^probe_on;
   if (change&probe_on){
-    counters.counts[C_AXIS]++;
+    if (TIFR2&(1<<TOV2)){ //timer has elapsed, ok to use.
+      counters.counts[C_AXIS]++;
+      TIFR2=(1<<TOV2); //clear ovf 
+      TCNT2=0;         //restart period
+    }
   }
   probe_sense=probe_on;
 }
+
+
