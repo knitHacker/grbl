@@ -37,7 +37,7 @@ void probe_init()
   // Get maximum dwell out of 8 bit timer by using phase correct pwm mode, 
   //  which counts up and down; and longest prescaler.
   
-  TIMSK0 &= ~((1<<OCIE2B) | (1<<OCIE2A) | (1<<TOIE2)); // Disconnect OC0 outputs and OVF interrupt.
+  TIMSK2 &= ~((1<<OCIE2B) | (1<<OCIE2A) | (1<<TOIE2)); // Disconnect OC0 outputs and OVF interrupt.
   TCCR2A = 1; // Phase Correct PWM
   TCCR2B = (1<<CS22)|7; // 1024 prescale, use OCRA2 as top 
   OCR2A = 200;  //200*2 (for up/down) * 1024 prescale / 16Mhz = 25.6 ms
@@ -77,4 +77,3 @@ void probe_state_monitor()
 }
 
 
-1/8th prescale
