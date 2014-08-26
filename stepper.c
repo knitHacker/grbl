@@ -288,9 +288,9 @@ void st_go_idle()
 // with probing and homing cycles that require true real-time positions.
 ISR(TIMER1_COMPA_vect)
 {        
-  TIMING_PORT |= TIMING_MASK; // Debug: Used to time ISR
+  TIME_ON(time_STEP_ISR); // Debug: Used to time ISR
   if (busy) {  // The busy-flag is used to avoid reentering this interrupt
-    TIMING_PORT &= ~TIMING_MASK; 
+    TIME_OFF(time_STEP_ISR);
     return; 
   } 
   
@@ -358,7 +358,7 @@ ISR(TIMER1_COMPA_vect)
       // Segment buffer empty. Shutdown.
       st_go_idle();
       bit_true(SYS_EXEC,EXEC_CYCLE_STOP); // Flag main program for cycle end
-      TIMING_PORT &= ~TIMING_MASK; 
+      TIME_OFF(time_STEP_ISR);
       return; // Nothing to do but exit.
     }  
   }
@@ -436,7 +436,7 @@ ISR(TIMER1_COMPA_vect)
 
   st.step_outbits ^= settings.step_invert_mask;  // Apply step port invert mask    
   busy = false;
-  TIMING_PORT &= ~TIMING_MASK; // Debug: Used to time ISR
+  TIME_OFF(time_STEP_ISR);
 }
 
 

@@ -22,7 +22,7 @@
 #include "probe.h"
 #include "counters.h"
 
-uint8_t probe_sense; //last known state
+
 
 // Probe pin initialization routine.
 void probe_init() 
@@ -49,9 +49,8 @@ void probe_state_monitor()
     memcpy(sys.probe_position, sys.position, sizeof(float)*N_AXIS);
     SYS_EXEC |= EXEC_FEED_HOLD;
   }
-  uint8_t change = probe_sense^probe_on;
-  if (change&probe_on){
-    counters.counts[C_AXIS]++;
-  }
-  probe_sense=probe_on;
 }
+
+
+
+
