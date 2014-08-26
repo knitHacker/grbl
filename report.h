@@ -113,4 +113,7 @@ void report_build_info(char *line);
 
 // Prints current limit word
 void report_limit_pins();
+
+//called to trigger status report, with line number if eol set.
+#define request_report_status(eol) sys.eol_flag = (eol);SYS_EXEC|=EXEC_STATUS_REPORT
 #endif

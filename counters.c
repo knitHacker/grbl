@@ -43,11 +43,12 @@ void counters_init()
 void  counters_reset(uint8_t axis)
 {
   counters.counts[axis]=0;
+  if (axis == Z_AXIS) { counters.idx=0; }
 }
 
 
 // Returns the counters pin state. Triggered = true.  and counters state monitor.
-uint16_t counters_get_count(uint8_t axis)
+count_t counters_get_count(uint8_t axis)
 {
   return counters.counts[axis];
 }
@@ -56,7 +57,7 @@ uint8_t counters_get_state(){
   return counters.state;
 }
 
-uint16_t counters_get_idx(){
+int16_t counters_get_idx(){
   return counters.idx;
 }
 
@@ -81,8 +82,8 @@ ISR(FDBK_INT_vect) {
       if (idx_on) {
         counters.idx += counters.dir;
         //rezero counter.
-        counters.counts[Z_AXIS]=(counters.counts[Z_AXIS]/DEFAULT_COUNTS_PER_IDX)*
-          DEFAULT_COUNTS_PER_IDX + counters.idx_offset;
+	//        counters.counts[Z_AXIS]=(counters.counts[Z_AXIS]/DEFAULT_COUNTS_PER_IDX)*
+	//          DEFAULT_COUNTS_PER_IDX + counters.idx_offset;
       }
   }
       /* moved to probe for debounce TODO: NEEDS TESTING*/

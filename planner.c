@@ -27,7 +27,7 @@
 #include "protocol.h"
 #include "stepper.h"
 #include "settings.h"
-
+#include "report.h"
 
 #define SOME_LARGE_VALUE 1.0E+38 // Used by rapids and acceleration maximization calculations. Just needs
                                  // to be larger than any feasible (mm/min)^2 or mm/sec^2 value.
@@ -310,8 +310,7 @@ void plan_buffer_line(float *target, float feed_rate, uint8_t invert_feed_rate)
   if (block->step_event_count == 0) { 
     if (linenumber_insert(block->line_number|LINENUMBER_EMPTY_BLOCK) == 1) { 
       //was empty, so report immediately;
-      sys.eol_flag = 1;
-      SYS_EXEC |= EXEC_STATUS_REPORT;
+      request_report_status(1);
     }
     return;
   }
@@ -419,6 +418,9 @@ void plan_sync_position()
   }
 }
 
+float plan_get_position(uint8_t axis){ //in mm
+  return (float)pl.position[axis]/settings.steps_per_mm[axis];
+}
 
 // Re-initialize buffer plan with a partially completed block, assumed to exist at the buffer tail.
 // Called after a steppers have come to a complete stop for a feed hold and the cycle is stopped.
