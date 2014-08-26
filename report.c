@@ -387,7 +387,7 @@ void report_counters()
  // requires as it minimizes the computational overhead and allows grbl to keep running smoothly, 
  // especially during g-code programs with fast, short line segments and high frequency reports (5-20Hz).
 
-extern uint8_t ln_head();
+
 
 uint8_t report_realtime_status()
 {
@@ -400,6 +400,7 @@ uint8_t report_realtime_status()
   memcpy(current_position,sys.position,sizeof(sys.position));
 
   /* For linenumber debuggering 
+extern uint8_t ln_head();
   printInteger(linenumber_next());
   printPgmString(":");
   printInteger(ln_head());

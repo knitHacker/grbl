@@ -67,7 +67,8 @@
 #define LIMIT_INT2_vect INT1_vect
 
 #define TIMING_DDR DDRA
-#define TIMING_PORT PORTA  ///TODO: move later
+#define TIMING_PORT PORTA  
+#define TIMING_PIN PINA
 #define TIMING_BIT  7
 #define TIMING_MASK       (1<<TIMING_BIT) // LED
 
@@ -163,7 +164,7 @@
 #define FDBK_INT       PCIE2  // Pin change interrupt enable pin
 #define FDBK_INT_vect  PCINT2_vect
 #define FDBK_PCMSK     PCMSK2 // Pin change interrupt register
-#define FDBK_MASK ((1<<Z_ENC_IDX_BIT)|(1<<Z_ENC_CHA_BIT)|(1<<Z_ENC_CHB_BIT))
+#define FDBK_MASK ((1<<Z_ENC_IDX_BIT)|(1<<Z_ENC_CHA_BIT)|(1<<Z_ENC_CHB_BIT) |(1<<MAG_SENSE_BIT)  )
 
 #define MVOLT_DDR DDRD
 #define MVOLT_PORT PORTD

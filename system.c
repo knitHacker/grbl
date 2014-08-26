@@ -26,45 +26,35 @@
 #include "print.h"
 #include "counters.h"
 
+
+uint32_t masterclock=0; 
+
+
 void linenumber_init();
 
 void system_init() 
 {
-  TIMING_DDR |= TIMING_MASK;  //timing output
+  TIMING_DDR |= TIMING_MASK;
+  TIME_ON(ACTIVE_TIMER);
 
   linenumber_init();
 
-
-#ifndef KEYME_BOARD
-  PINOUT_DDR &= ~(PINOUT_MASK); // Configure as input pins
-  PINOUT_PORT |= PINOUT_MASK;   // Enable internal pull-up resistors. Normal high operation.
-  PINOUT_PCMSK |= PINOUT_MASK;  // Enable specific pins of the Pin Change Interrupt
-  PCICR |= (1 << PINOUT_INT);   // Enable Pin Change Interrupt
-
-
+  //setup masterclock
+  
+  TIMSK2 &= (~(1<<OCIE2B));  
+  TIMSK2 |= ((1<<TOIE2)|(1<<OCIE2A)); // ovf INTERRUPT //TODO: test without TOIE2
+  TCCR2A = (1<<WGM21);  // CTC Mode, use OCRA2 as top 
+  TCCR2B = 4;           // 64 prescale
+  OCR2A = 249;          //(249+1) * 64 prescale / 16Mhz = 1 ms
+  OCR2B = 0;
 }
 
-
-// Pin change interrupt for pin-out commands, i.e. cycle start, feed hold, and reset. Sets
-// only the runtime command execute variable to have the main program execute these when 
-// its ready. This works exactly like the character-based runtime commands when picked off
-// directly from the incoming serial data stream.
-ISR(PINOUT_INT_vect) 
+ISR(TIMER2_COMPA_vect)
 {
-  // Enter only if any pinout pin is actively low.
-  if ((PINOUT_PIN & PINOUT_MASK) ^ PINOUT_MASK) { 
-    if (bit_isfalse(PINOUT_PIN,bit(PIN_RESET))) {
-      mc_reset();
-    } else if (bit_isfalse(PINOUT_PIN,bit(PIN_FEED_HOLD))) {
-      SYS_EXEC |= EXEC_FEED_HOLD; 
-    } else if (bit_isfalse(PINOUT_PIN,bit(PIN_CYCLE_START))) {
-      SYS_EXEC |= EXEC_CYCLE_START;
-    } 
-  }
+  TIME_TOGGLE(time_CLOCK);
+  masterclock++;
 }
-#else
-}
-#endif
+
 
 
 // Executes user startup script, if stored.

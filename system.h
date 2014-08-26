@@ -97,6 +97,8 @@ extern volatile sys_flags_t sysflags;
   #define SYS_EXEC sysflags.execute
 #endif
 
+extern uint32_t masterclock;   //long running clock w/ 1ms resolution. rolls over every 49.7 days
+
 // Initialize the serial protocol
 void system_init();
 
@@ -125,6 +127,19 @@ typedef uint16_t linenumber_t;  //resize back to int32 for bigger numbers
 uint8_t linenumber_insert(linenumber_t line_number);
 linenumber_t linenumber_get();
 linenumber_t linenumber_peek();
+
+
+enum {
+  time_STEP_ISR,
+  time_HOMING,
+  time_PROBE,
+  time_CLOCK
+};
+
+#define ACTIVE_TIMER time_STEP_ISR
+#define TIME_OFF(tid)  (((tid)==ACTIVE_TIMER)?(TIMING_PORT|=TIMING_MASK):0)
+#define TIME_ON(tid)  (((tid)==ACTIVE_TIMER)?(TIMING_PORT&=~TIMING_MASK):0)
+#define TIME_TOGGLE(tid)  (((tid)==ACTIVE_TIMER)?(TIMING_PIN|=TIMING_MASK):0)
 
 
 #endif
