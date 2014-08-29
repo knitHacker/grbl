@@ -395,8 +395,9 @@ uint8_t report_realtime_status()
   // the system power on location (0,0,0) and work coordinate position (G54 and G92 applied). Eventually
   // to be added are distance to go on block, processed block id, and feed rate. Also a settings bitmask
   // for a user to select the desired real-time data.
-  uint8_t i;
   int32_t current_position[N_AXIS]; // Copy current state of the system position variable
+  linenumber_t ln;
+  uint8_t i;
   memcpy(current_position,sys.position,sizeof(sys.position));
 
   /* For linenumber debuggering 
