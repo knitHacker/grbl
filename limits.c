@@ -56,6 +56,7 @@ void limits_init()
     limits_disable();
   }
 
+  //TODO: test this method  inplace of master clock for probe debounce
   #ifdef ENABLE_SOFTWARE_DEBOUNCE
   MCUSR &= ~(1<<WDRF);
   WDTCSR |= (1<<WDCE) | (1<<WDE);
@@ -153,11 +154,7 @@ void limits_go_home(uint8_t cycle_mask)
     limit_approach = approach;  //limit_approach bits is high if approaching limit switch 
 
     // Perform homing cycle. Planner buffer should be empty, as required to initiate the homing cycle.
-    #ifdef USE_LINE_NUMBERS
-      plan_buffer_line(target, homing_rate, false, LINENUMBER_EMPTY_BLOCK); // Bypass mc_line(). Directly plan homing motion.
-    #else
-      plan_buffer_line(target, homing_rate, false); // Bypass mc_line(). Directly plan homing motion.
-    #endif
+    plan_buffer_line(target, homing_rate, false, LINENUMBER_EMPTY_BLOCK); // Bypass mc_line(). Directly plan homing motion.
 
 	 // axislock bit is high if axis is homing, so we only enable checking on moving axes.
     limits_enable(axislock,~approach);  //expect 0 on approach (stop when 1). vice versa for pulloff
@@ -222,11 +219,7 @@ void limits_go_home(uint8_t cycle_mask)
   }
   plan_sync_position(); // Sync planner position to current machine position for pull-off move.
 
-  #ifdef USE_LINE_NUMBERS
-    plan_buffer_line(target, min_seek_rate, false, HOMING_FINISHED_LINE_NUMBER); // Bypass mc_line(). Directly plan motion.
-  #else
-    plan_buffer_line(target, min_seek_rate, false); // Bypass mc_line(). Directly plan motion.
-  #endif
+  plan_buffer_line(target, min_seek_rate, false, HOMING_FINISHED_LINE_NUMBER); // Bypass mc_line(). Directly plan motion.
 
   // Initiate pull-off using main motion control routines.
   // TODO : Clean up state routines so that this motion still shows homing state.

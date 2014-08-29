@@ -400,32 +400,17 @@ uint8_t report_realtime_status()
   memcpy(current_position,sys.position,sizeof(sys.position));
 
   /* For linenumber debuggering 
-extern uint8_t ln_head();
-  printInteger(linenumber_next());
-  printPgmString(":");
-  printInteger(ln_head());
+    extern uint8_t ln_head();
+    printInteger(linenumber_next());
+    printPgmString(":");
+    printInteger(ln_head());
   */
-
-
-#ifdef USE_LINE_NUMBERS
-  linenumber_t ln = 0;
-#if USE_LINE_NUMBERS != PERSIST_LINE_NUMBERS
-  plan_block_t * pb = plan_get_current_block();
-  if(pb != NULL) {
-    ln = pb->line_number;
-  } 
-  sys.eol_flag = 0;
-#else
   if (sys.eol_flag) {
     ln = linenumber_get()&~LINENUMBER_EMPTY_BLOCK;
     if ((linenumber_peek()&LINENUMBER_EMPTY_BLOCK) == 0) {
       sys.eol_flag = 0;
     }
   }
-#endif
-#else
-  sys.eol_flag = 0;
-#endif
   float print_position[N_AXIS];
  
   // Report current machine state
@@ -456,12 +441,9 @@ extern uint8_t ln_head();
     if (i < (N_AXIS-1)) { printPgmString(PSTR(",")); }
   }
     
-  #ifdef USE_LINE_NUMBERS
   // Report current line number
   printPgmString(PSTR(",Ln:")); 
   printInteger(ln);
-
-  #endif
     
   #ifdef REPORT_REALTIME_RATE
   // Report realtime rate 

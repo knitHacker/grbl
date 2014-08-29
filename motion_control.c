@@ -44,11 +44,7 @@
 // segments, must pass through this routine before being passed to the planner. The seperation of
 // mc_line and plan_buffer_line is done primarily to place non-planner-type functions from being
 // in the planner and to let backlash compensation or canned cycle integration simple and direct.
-#ifdef USE_LINE_NUMBERS
 void mc_line(float *target, float feed_rate, uint8_t invert_feed_rate, linenumber_t line_number)
-#else
-void mc_line(float *target, float feed_rate, uint8_t invert_feed_rate)
-#endif
 {
   // If enabled, check for soft limit violations. Placed here all line motions are picked up
   // from everywhere in Grbl.
@@ -80,11 +76,7 @@ void mc_line(float *target, float feed_rate, uint8_t invert_feed_rate)
     else { break; }
   } while (1);
 
-  #ifdef USE_LINE_NUMBERS
   plan_buffer_line(target, feed_rate, invert_feed_rate, line_number);
-  #else
-  plan_buffer_line(target, feed_rate, invert_feed_rate);
-  #endif
   
   // If idle, indicate to the system there is now a planned block in the buffer ready to cycle 
   // start. Otherwise ignore and continue on.
@@ -99,13 +91,8 @@ void mc_line(float *target, float feed_rate, uint8_t invert_feed_rate)
 // The arc is approximated by generating a huge number of tiny, linear segments. The chordal tolerance
 // of each segment is configured in settings.arc_tolerance, which is defined to be the maximum normal
 // distance from segment to the circle when the end points both lie on the circle.
-#ifdef USE_LINE_NUMBERS
 void mc_arc(float *position, float *target, float *offset, float radius, float feed_rate, 
   uint8_t invert_feed_rate, uint8_t axis_0, uint8_t axis_1, uint8_t axis_linear, linenumber_t line_number)
-#else
-void mc_arc(float *position, float *target, float *offset, float radius, float feed_rate,
-  uint8_t invert_feed_rate, uint8_t axis_0, uint8_t axis_1, uint8_t axis_linear)
-#endif
 {
   float center_axis0 = position[axis_0] + offset[axis_0];
   float center_axis1 = position[axis_1] + offset[axis_1];
@@ -195,22 +182,14 @@ void mc_arc(float *position, float *target, float *offset, float radius, float f
       position[axis_1] = center_axis1 + r_axis1;
       position[axis_linear] += linear_per_segment;
       
-      #ifdef USE_LINE_NUMBERS
       mc_line(position, feed_rate, invert_feed_rate, line_number);
-      #else
-      mc_line(position, feed_rate, invert_feed_rate);
-      #endif
       
       // Bail mid-circle on system abort. Runtime command check already performed by mc_line.
       if (sys.abort) { return; }
     }
   }
   // Ensure last segment arrives at target location.
-  #ifdef USE_LINE_NUMBERS
   mc_line(target, feed_rate, invert_feed_rate, line_number);
-  #else
-  mc_line(target, feed_rate, invert_feed_rate);
-  #endif
 }
 
 
@@ -282,11 +261,7 @@ void mc_homing_cycle(uint8_t axis_mask)
 
 // Perform tool length probe cycle. Requires probe switch.
 // NOTE: Upon probe failure, the program will be stopped and placed into ALARM state.
-#ifdef USE_LINE_NUMBERS
 void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate, linenumber_t line_number)
-#else
-void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate)
-#endif
 {
   if (sys.state != STATE_CYCLE) protocol_auto_cycle_start();
   protocol_buffer_synchronize(); // Finish all queued commands
@@ -295,11 +270,7 @@ void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate)
   report_status_message(STATUS_OK); //report that we are probing
 
   // Perform probing cycle. Planner buffer should be empty at this point.
-  #ifdef USE_LINE_NUMBERS
   mc_line(target, feed_rate, invert_feed_rate, line_number);
-  #else
-  mc_line(target, feed_rate, invert_feed_rate);
-  #endif
 
   // NOTE: Parser error-checking ensures the probe isn't already closed/triggered.
   //TODO - make sure the probe isn't already closed
@@ -327,11 +298,7 @@ void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate)
   plan_reset(); // Reset planner buffer. Zero planner positions. Ensure probe motion is cleared.
   plan_sync_position(); // Sync planner position to current machine position for pull-off move.
 
-  #ifdef USE_LINE_NUMBERS
   mc_line(target, feed_rate, invert_feed_rate, PROBE_LINE_NUMBER); // Bypass mc_line(). Directly plan homing motion.
-  #else
-  mc_line(target, feed_rate, invert_feed_rate); // Bypass mc_line(). Directly plan homing motion.
-  #endif
 
   SYS_EXEC |= EXEC_CYCLE_START;
   protocol_buffer_synchronize(); // Complete pull-off motion.
