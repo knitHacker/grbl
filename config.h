@@ -49,6 +49,7 @@
 // NOTE: If changed, manually update help message in report.c.
 #define CMD_STATUS_REPORT '?'
 #define CMD_LIMIT_REPORT '^'
+#define CMD_COUNTER_REPORT '*'
 #define CMD_FEED_HOLD '!'
 #define CMD_CYCLE_START '~'
 #define CMD_RESET 0x18 // ctrl-x.

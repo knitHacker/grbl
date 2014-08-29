@@ -219,17 +219,29 @@ void protocol_execute_runtime()
     }
     
     // Execute and serial print status
-    if (rt_exec & EXEC_STATUS_REPORT) { 
-      if (!report_realtime_status()){
-        bit_false(SYS_EXEC,EXEC_STATUS_REPORT);
+    if (rt_exec & EXEC_RUNTIME_REPORT) { 
+      uint8_t reports=sysflags.report_rqsts;
+      sysflags.report_rqsts=0;   //TODO: potential race here if isr requests another right after we read it.
+
+      if (reports&REQUEST_STATUS_REPORT) {
+        if (!report_realtime_status()){ //ensure no more lines to report
+          reports&=~REQUEST_STATUS_REPORT; 
+        }
+      }
+      //elsif forces 1 report per loop max
+      else if (reports& REQUEST_LIMIT_REPORT) {  
+        report_limit_pins();
+        reports&=~REQUEST_LIMIT_REPORT; 
+      }
+      else if (reports& REQUEST_COUNTER_REPORT) {
+        report_counters();
+        reports&=~REQUEST_COUNTER_REPORT;
+      }
+      if (0==(sysflags.report_rqsts|=reports)) { //if all reports done and no new requests, clear report flag
+        bit_false(SYS_EXEC,EXEC_RUNTIME_REPORT);
       }
     }
-    // Execute and serial print status
-    if (rt_exec & EXEC_LIMIT_REPORT) { 
-      report_limit_pins();
-      bit_false(SYS_EXEC,EXEC_LIMIT_REPORT);
-    }
-    
+
     // Execute a feed hold with deceleration, only during cycle.
     if (rt_exec & EXEC_FEED_HOLD) {
       // !!! During a cycle, the segment buffer has just been reloaded and full. So the math involved

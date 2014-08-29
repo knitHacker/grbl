@@ -184,7 +184,6 @@ void limits_go_home(uint8_t cycle_mask)
     st_reset(); // Immediately force kill steppers and reset step segment buffer.
     plan_reset(); // Reset planner buffer. Zero planner positions. Ensure homing motion is cleared.
 
-    //    SYS_EXEC |= EXEC_STATUS_REPORT;  //debug reporting of intermediate stages
     delay_ms(settings.homing_debounce_delay); // Delay to allow transient dynamics to dissipate.
 
     // Reverse direction and reset homing rate for locate cycle(s).
@@ -195,7 +194,7 @@ void limits_go_home(uint8_t cycle_mask)
 
   //force report of known position for compare to zero.
   linenumber_insert(HOMING_ZERO_LINE_NUMBER);
-  request_report_status(1);
+  request_eol_report();
   protocol_execute_runtime();
 
   // The active cycle axes should now be homed and machine limits have been located. By 
@@ -216,7 +215,7 @@ void limits_go_home(uint8_t cycle_mask)
         sys.position[idx] = -settings.homing_pulloff*settings.steps_per_mm[idx];
         target[idx] = 0;
       }
-      if (settings.homing_pulloff == 0.0) {SYS_EXEC|=EXEC_STATUS_REPORT; } //force report if we are not going to move  TODO TEST
+      if (settings.homing_pulloff == 0.0) {request_eol_report(); } //force report if we are not going to move  TODO TEST
     } else { // Non-active cycle axis. Set target to not move during pull-off.
       target[idx] = (float)sys.position[idx]/settings.steps_per_mm[idx];
     }
@@ -233,7 +232,6 @@ void limits_go_home(uint8_t cycle_mask)
   // TODO : Clean up state routines so that this motion still shows homing state.
   sys.state = STATE_QUEUED;
   SYS_EXEC |= EXEC_CYCLE_START;
-  //  SYS_EXEC |= EXEC_STATUS_REPORT; //enable for intermediate reporting
   protocol_execute_runtime();
   protocol_buffer_synchronize(); // Complete pull-off motion.
 

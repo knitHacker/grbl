@@ -47,15 +47,18 @@
 // NOTE: The system executor uses an unsigned 8-bit volatile variable (8 flag limit.) The default
 // flags are always false, so the runtime protocol only needs to check for a non-zero value to 
 // know when there is a runtime command to execute.
-#define EXEC_STATUS_REPORT  bit(0) // bitmask 00000001
+#define EXEC_RUNTIME_REPORT bit(0) // bitmask 00000001
 #define EXEC_CYCLE_START    bit(1) // bitmask 00000010
 #define EXEC_CYCLE_STOP     bit(2) // bitmask 00000100
 #define EXEC_FEED_HOLD      bit(3) // bitmask 00001000
 #define EXEC_RESET          bit(4) // bitmask 00010000
 #define EXEC_ALARM          bit(5) // bitmask 00100000
 #define EXEC_CRIT_EVENT     bit(6) // bitmask 01000000
-#define EXEC_LIMIT_REPORT   bit(7) // bitmask 10000000
+//
 
+#define REQUEST_STATUS_REPORT  bit(0)
+#define REQUEST_LIMIT_REPORT   bit(1)
+#define REQUEST_COUNTER_REPORT bit(2)
 
 // Define system state bit map. The state variable primarily tracks the individual functions
 // of Grbl to manage each without overlapping. It is also used as a messaging flag for
@@ -87,6 +90,7 @@ typedef struct {
   volatile uint8_t execute;      // Global system runtime executor bitflag variable. See EXEC bitmasks.
   volatile uint8_t probe_state;   // Probing state value.  Used to coordinate the probing cycle with stepper ISR.
   volatile uint8_t limits;                 //limit
+  volatile uint8_t report_rqsts;   //requestsd reports
 } sys_flags_t;
 extern volatile sys_flags_t sysflags;
 

@@ -34,6 +34,8 @@
 #include "report.h"
 #include "counters.h"
 
+#define PROBE_LINE_NUMBER (LINENUMBER_SPECIAL|2)
+
 
 // Execute linear motion in absolute millimeter coordinates. Feed rate given in millimeters/second
 // unless invert_feed_rate is true. Then the feed_rate means that the motion should be completed in
@@ -326,7 +328,7 @@ void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate)
   plan_sync_position(); // Sync planner position to current machine position for pull-off move.
 
   #ifdef USE_LINE_NUMBERS
-  mc_line(target, feed_rate, invert_feed_rate, line_number); // Bypass mc_line(). Directly plan homing motion.
+  mc_line(target, feed_rate, invert_feed_rate, PROBE_LINE_NUMBER); // Bypass mc_line(). Directly plan homing motion.
   #else
   mc_line(target, feed_rate, invert_feed_rate); // Bypass mc_line(). Directly plan homing motion.
   #endif
@@ -340,7 +342,7 @@ void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate)
 
   // Output the probe position as message.
   report_probe_parameters();
-  request_report_status(1); //make sure linenumber is printed
+  request_eol_report(); //make sure linenumber is printed
 }
 
 
