@@ -27,6 +27,7 @@
 #include "probe.h"
 #include "limits.h"
 #include "motion_control.h"
+#include "report.h"
 
 // Some useful constants.
 #define DT_SEGMENT (1.0/(ACCELERATION_TICKS_PER_SECOND*60.0)) // min/segment 
@@ -418,8 +419,8 @@ ISR(TIMER1_COMPA_vect)
     if ( !(sys.state & (STATE_ALARM|STATE_HOMING)) && 
          bit_isfalse(SYS_EXEC,EXEC_ALARM)) {
       mc_reset(); // Initiate system kill.
-      // Indicate hard limit critical event
-      SYS_EXEC |= (EXEC_LIMIT_REPORT |EXEC_ALARM | EXEC_CRIT_EVENT); 
+      // Indicate hard limit critical event, print limits
+      request_report(REQUEST_LIMIT_REPORT,(EXEC_ALARM | EXEC_CRIT_EVENT));
     }
   }
 
@@ -427,8 +428,7 @@ ISR(TIMER1_COMPA_vect)
   st.step_count--; // Decrement step events count 
   if (st.step_count == 0) {
     // Segment is complete. Discard current segment and advance segment indexing.
-    sys.eol_flag |= st.exec_segment->do_status;
-    SYS_EXEC |= st.exec_segment->do_status;
+    if (st.exec_segment->do_status) { request_eol_report();  }
 
     st.exec_segment = NULL;
     if ( ++segment_buffer_tail == SEGMENT_BUFFER_SIZE) { segment_buffer_tail = 0; }
@@ -876,7 +876,7 @@ void st_prep_buffer()
     } else { 
       // End of planner block or forced-termination. No more distance to be executed.
       //mark which line this segment belongs to
-      prep_segment->do_status = EXEC_STATUS_REPORT;
+      prep_segment->do_status = REQUEST_STATUS_REPORT;
       if (mm_remaining > 0.0) { // At end of forced-termination.
         // Reset prep parameters for resuming and then bail.
         // NOTE: Currently only feed holds qualify for this scenario. May change with overrides.       

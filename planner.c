@@ -310,7 +310,7 @@ void plan_buffer_line(float *target, float feed_rate, uint8_t invert_feed_rate)
   if (block->step_event_count == 0) { 
     if (linenumber_insert(block->line_number|LINENUMBER_EMPTY_BLOCK) == 1) { 
       //was empty, so report immediately;
-      request_report_status(1);
+      request_eol_report();
     }
     return;
   }
