@@ -106,7 +106,7 @@ void simulate_limits(int idx, int raw_steps) {
   int min = -settings.homing_pulloff * settings.steps_per_mm[idx];
   int max = settings.max_travel[idx]*settings.steps_per_mm[idx] - min;
   if (raw_steps == min-1) {
-    printf("LOWER LIMIT HIT\n");
+    //    printf("LOWER LIMIT HIT\n");
     limits_on(idx+LIMIT_BIT_SHIFT);
   }
   else {
@@ -126,11 +126,13 @@ void simulate_limits(int idx, int raw_steps) {
   }
   else if (idx==3) { 
     if ((raw_steps&0xFF)==0){
-      PROBE_PIN|=PROBE_MASK;
+      //    printf("p?%d(%x) ",raw_steps,PROBE_PIN);
+      PROBE_PIN&=~PROBE_MASK;
       interrupt_FDBK_INT_vect();
     } else {
-      if (PROBE_PIN&PROBE_MASK){
-        PROBE_PIN&=~PROBE_MASK;
+      if (!(PROBE_PIN&PROBE_MASK)){
+        //        printf("p?%d(%x) ",raw_steps,PROBE_PIN);
+        PROBE_PIN|=PROBE_MASK;
         interrupt_FDBK_INT_vect();
       }
     }

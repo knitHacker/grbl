@@ -340,6 +340,7 @@ void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate)
 
   // Output the probe position as message.
   report_probe_parameters();
+  request_report_status(1); //make sure linenumber is printed
 }
 
 
