@@ -99,6 +99,11 @@ void report_sys_info();
 // Prints recorded probe position
 void report_probe_parameters();
 
+
+// Prints a message indicating probe failure
+void report_probe_fail();
+
+
 // Prints Grbl NGC parameters (coordinate offsets, probe)
 void report_ngc_parameters();
 

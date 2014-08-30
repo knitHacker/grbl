@@ -280,9 +280,17 @@ void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate, li
   do {
     protocol_execute_runtime(); 
     if (sys.abort) { return; } // Check for system abort
+    //stepper isr calls probe_state_monitor, which will set FeedHold, which 
+    //  will change state to QUEUED when stopped.
   } while ((sys.state != STATE_IDLE) && (sys.state != STATE_QUEUED));
 
-  if (sysflags.probe_state == PROBE_ACTIVE) { SYS_EXEC |= EXEC_CRIT_EVENT; }
+  if (sysflags.probe_state == PROBE_ACTIVE) { 
+    //Was setting alarm: SYS_EXEC |= EXEC_CRIT_EVENT; 
+    //Now just reports failure.
+    report_probe_fail();
+    //set 'probe position' to current position so that it doesn't move anymore
+    memcpy(sys.probe_position, sys.position, sizeof(float)*N_AXIS);
+  }
   protocol_execute_runtime();   // Check and execute run-time commands
   if (sys.abort) { return; } // Check for system abort
 
