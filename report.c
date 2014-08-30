@@ -109,6 +109,10 @@ void report_alarm_message(int8_t alarm_code)
   delay_ms(500); // Force delay to ensure message clears serial write buffer.
 }
 
+void report_probe_fail(){
+   printPgmString(PSTR("WARNING: Probe fail\r\n")); 
+}
+
 // Prints feedback messages. This serves as a centralized method to provide additional
 // user feedback for things that are not of the status/alarm message protocol. These are
 // messages such as setup warnings, switch toggling, and how to exit alarms.
@@ -396,7 +400,7 @@ uint8_t report_realtime_status()
   // to be added are distance to go on block, processed block id, and feed rate. Also a settings bitmask
   // for a user to select the desired real-time data.
   int32_t current_position[N_AXIS]; // Copy current state of the system position variable
-  linenumber_t ln;
+  linenumber_t ln=0;
   uint8_t i;
   memcpy(current_position,sys.position,sizeof(sys.position));
 
