@@ -122,7 +122,7 @@ void limits_go_home(uint8_t cycle_mask)
   for (idx=0; idx<N_AXIS; idx++){
     if (bit_istrue(cycle_mask,bit(idx))) {
       max_travel = max(max_travel,settings.max_travel[idx]);
-      homing_rate = min(homing_rate,settings.homing_seek_rate[idx]);
+      min_seek_rate = min(min_seek_rate,settings.homing_seek_rate[idx]);
     }
   }
   max_travel *= HOMING_AXIS_SEARCH_SCALAR; // Ensure homing switches engaged by over-estimating max travel.
