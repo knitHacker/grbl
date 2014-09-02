@@ -109,6 +109,10 @@ void report_alarm_message(int8_t alarm_code)
   delay_ms(500); // Force delay to ensure message clears serial write buffer.
 }
 
+void report_probe_fail(){
+   printPgmString(PSTR("WARNING: Probe fail\r\n")); 
+}
+
 // Prints feedback messages. This serves as a centralized method to provide additional
 // user feedback for things that are not of the status/alarm message protocol. These are
 // messages such as setup warnings, switch toggling, and how to exit alarms.
@@ -395,37 +399,23 @@ uint8_t report_realtime_status()
   // the system power on location (0,0,0) and work coordinate position (G54 and G92 applied). Eventually
   // to be added are distance to go on block, processed block id, and feed rate. Also a settings bitmask
   // for a user to select the desired real-time data.
-  uint8_t i;
   int32_t current_position[N_AXIS]; // Copy current state of the system position variable
+  linenumber_t ln=0;
+  uint8_t i;
   memcpy(current_position,sys.position,sizeof(sys.position));
 
   /* For linenumber debuggering 
-extern uint8_t ln_head();
-  printInteger(linenumber_next());
-  printPgmString(":");
-  printInteger(ln_head());
+    extern uint8_t ln_head();
+    printInteger(linenumber_next());
+    printPgmString(":");
+    printInteger(ln_head());
   */
-
-
-#ifdef USE_LINE_NUMBERS
-  linenumber_t ln = 0;
-#if USE_LINE_NUMBERS != PERSIST_LINE_NUMBERS
-  plan_block_t * pb = plan_get_current_block();
-  if(pb != NULL) {
-    ln = pb->line_number;
-  } 
-  sys.eol_flag = 0;
-#else
   if (sys.eol_flag) {
     ln = linenumber_get()&~LINENUMBER_EMPTY_BLOCK;
     if ((linenumber_peek()&LINENUMBER_EMPTY_BLOCK) == 0) {
       sys.eol_flag = 0;
     }
   }
-#endif
-#else
-  sys.eol_flag = 0;
-#endif
   float print_position[N_AXIS];
  
   // Report current machine state
@@ -456,12 +446,9 @@ extern uint8_t ln_head();
     if (i < (N_AXIS-1)) { printPgmString(PSTR(",")); }
   }
     
-  #ifdef USE_LINE_NUMBERS
   // Report current line number
   printPgmString(PSTR(",Ln:")); 
   printInteger(ln);
-
-  #endif
     
   #ifdef REPORT_REALTIME_RATE
   // Report realtime rate 

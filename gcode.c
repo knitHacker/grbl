@@ -872,7 +872,7 @@ uint8_t gc_execute_line(char *line)
   if (gc_block.non_modal_command == NON_MODAL_DWELL) { 
     linenumber_insert(gc_block.values.n); 
     mc_dwell(gc_block.values.p); 
-    request_report_status(1); //pop the number we just put in 
+    request_eol_report(); //pop the number we just put in 
   }
   
   // [11. Set active plane ]:
@@ -926,17 +926,9 @@ uint8_t gc_execute_line(char *line)
       // Move to intermediate position before going home. Obeys current coordinate system and offsets 
       // and absolute and incremental modes.
       if (axis_command) {
-        #ifdef USE_LINE_NUMBERS
         mc_line(gc_block.values.xyz, -1.0, false, gc_block.values.n);
-        #else
-        mc_line(gc_block.values.xyz, -1.0, false);
-        #endif
       }
-      #ifdef USE_LINE_NUMBERS
       mc_line(parameter_data, -1.0, false, gc_block.values.n); 
-      #else
-      mc_line(parameter_data, -1.0, false); 
-      #endif
       memcpy(gc_state.position, parameter_data, sizeof(parameter_data));
       break;
     case NON_MODAL_SET_HOME_0: 
@@ -962,34 +954,17 @@ uint8_t gc_execute_line(char *line)
     if (axis_command == AXIS_COMMAND_MOTION_MODE) {
       switch (gc_state.modal.motion) {
         case MOTION_MODE_SEEK:
-          #ifdef USE_LINE_NUMBERS
           mc_line(gc_block.values.xyz, -1.0, false, gc_block.values.n);
-          #else
-          mc_line(gc_block.values.xyz, -1.0, false);
-          #endif
           break;
         case MOTION_MODE_LINEAR:
-          #ifdef USE_LINE_NUMBERS
           mc_line(gc_block.values.xyz, gc_state.feed_rate, gc_state.modal.feed_rate, gc_block.values.n);
-          #else
-          mc_line(gc_block.values.xyz, gc_state.feed_rate, gc_state.modal.feed_rate);
-          #endif
           break;
         case MOTION_MODE_CW_ARC: case MOTION_MODE_CCW_ARC:
-          #ifdef USE_LINE_NUMBERS
           mc_arc(gc_state.position, gc_block.values.xyz, gc_block.values.ijk, gc_block.values.r, 
             gc_state.feed_rate, gc_state.modal.feed_rate, axis_0, axis_1, axis_linear, gc_block.values.n);  
-          #else
-          mc_arc(gc_state.position, gc_block.values.xyz, gc_block.values.ijk, gc_block.values.r, 
-            gc_state.feed_rate, gc_state.modal.feed_rate, axis_0, axis_1, axis_linear); 
-          #endif
           break;
         case MOTION_MODE_PROBE:
-          #ifdef USE_LINE_NUMBERS
           mc_probe_cycle(gc_block.values.xyz, gc_state.feed_rate, gc_state.modal.feed_rate, gc_block.values.n);
-          #else
-          mc_probe_cycle(gc_block.values.xyz, gc_state.feed_rate, gc_state.modal.feed_rate);
-          #endif
           //block.values.xyz is updated inside probe_cycle, so the next line is correct
       }
     

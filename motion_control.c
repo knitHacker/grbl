@@ -34,6 +34,8 @@
 #include "report.h"
 #include "counters.h"
 
+#define PROBE_LINE_NUMBER (LINENUMBER_SPECIAL|2)
+
 
 // Execute linear motion in absolute millimeter coordinates. Feed rate given in millimeters/second
 // unless invert_feed_rate is true. Then the feed_rate means that the motion should be completed in
@@ -42,11 +44,7 @@
 // segments, must pass through this routine before being passed to the planner. The seperation of
 // mc_line and plan_buffer_line is done primarily to place non-planner-type functions from being
 // in the planner and to let backlash compensation or canned cycle integration simple and direct.
-#ifdef USE_LINE_NUMBERS
 void mc_line(float *target, float feed_rate, uint8_t invert_feed_rate, linenumber_t line_number)
-#else
-void mc_line(float *target, float feed_rate, uint8_t invert_feed_rate)
-#endif
 {
   // If enabled, check for soft limit violations. Placed here all line motions are picked up
   // from everywhere in Grbl.
@@ -78,11 +76,7 @@ void mc_line(float *target, float feed_rate, uint8_t invert_feed_rate)
     else { break; }
   } while (1);
 
-  #ifdef USE_LINE_NUMBERS
   plan_buffer_line(target, feed_rate, invert_feed_rate, line_number);
-  #else
-  plan_buffer_line(target, feed_rate, invert_feed_rate);
-  #endif
   
   // If idle, indicate to the system there is now a planned block in the buffer ready to cycle 
   // start. Otherwise ignore and continue on.
@@ -97,13 +91,8 @@ void mc_line(float *target, float feed_rate, uint8_t invert_feed_rate)
 // The arc is approximated by generating a huge number of tiny, linear segments. The chordal tolerance
 // of each segment is configured in settings.arc_tolerance, which is defined to be the maximum normal
 // distance from segment to the circle when the end points both lie on the circle.
-#ifdef USE_LINE_NUMBERS
 void mc_arc(float *position, float *target, float *offset, float radius, float feed_rate, 
   uint8_t invert_feed_rate, uint8_t axis_0, uint8_t axis_1, uint8_t axis_linear, linenumber_t line_number)
-#else
-void mc_arc(float *position, float *target, float *offset, float radius, float feed_rate,
-  uint8_t invert_feed_rate, uint8_t axis_0, uint8_t axis_1, uint8_t axis_linear)
-#endif
 {
   float center_axis0 = position[axis_0] + offset[axis_0];
   float center_axis1 = position[axis_1] + offset[axis_1];
@@ -193,22 +182,14 @@ void mc_arc(float *position, float *target, float *offset, float radius, float f
       position[axis_1] = center_axis1 + r_axis1;
       position[axis_linear] += linear_per_segment;
       
-      #ifdef USE_LINE_NUMBERS
       mc_line(position, feed_rate, invert_feed_rate, line_number);
-      #else
-      mc_line(position, feed_rate, invert_feed_rate);
-      #endif
       
       // Bail mid-circle on system abort. Runtime command check already performed by mc_line.
       if (sys.abort) { return; }
     }
   }
   // Ensure last segment arrives at target location.
-  #ifdef USE_LINE_NUMBERS
   mc_line(target, feed_rate, invert_feed_rate, line_number);
-  #else
-  mc_line(target, feed_rate, invert_feed_rate);
-  #endif
 }
 
 
@@ -280,11 +261,7 @@ void mc_homing_cycle(uint8_t axis_mask)
 
 // Perform tool length probe cycle. Requires probe switch.
 // NOTE: Upon probe failure, the program will be stopped and placed into ALARM state.
-#ifdef USE_LINE_NUMBERS
 void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate, linenumber_t line_number)
-#else
-void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate)
-#endif
 {
   if (sys.state != STATE_CYCLE) protocol_auto_cycle_start();
   protocol_buffer_synchronize(); // Finish all queued commands
@@ -293,11 +270,7 @@ void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate)
   report_status_message(STATUS_OK); //report that we are probing
 
   // Perform probing cycle. Planner buffer should be empty at this point.
-  #ifdef USE_LINE_NUMBERS
   mc_line(target, feed_rate, invert_feed_rate, line_number);
-  #else
-  mc_line(target, feed_rate, invert_feed_rate);
-  #endif
 
   // NOTE: Parser error-checking ensures the probe isn't already closed/triggered.
   //TODO - make sure the probe isn't already closed
@@ -307,9 +280,17 @@ void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate)
   do {
     protocol_execute_runtime(); 
     if (sys.abort) { return; } // Check for system abort
+    //stepper isr calls probe_state_monitor, which will set FeedHold, which 
+    //  will change state to QUEUED when stopped.
   } while ((sys.state != STATE_IDLE) && (sys.state != STATE_QUEUED));
 
-  if (sysflags.probe_state == PROBE_ACTIVE) { SYS_EXEC |= EXEC_CRIT_EVENT; }
+  if (sysflags.probe_state == PROBE_ACTIVE) { 
+    //Was setting alarm: SYS_EXEC |= EXEC_CRIT_EVENT; 
+    //Now just reports failure.
+    report_probe_fail();
+    //set 'probe position' to current position so that it doesn't move anymore
+    memcpy(sys.probe_position, sys.position, sizeof(float)*N_AXIS);
+  }
   protocol_execute_runtime();   // Check and execute run-time commands
   if (sys.abort) { return; } // Check for system abort
 
@@ -325,11 +306,7 @@ void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate)
   plan_reset(); // Reset planner buffer. Zero planner positions. Ensure probe motion is cleared.
   plan_sync_position(); // Sync planner position to current machine position for pull-off move.
 
-  #ifdef USE_LINE_NUMBERS
-  mc_line(target, feed_rate, invert_feed_rate, line_number); // Bypass mc_line(). Directly plan homing motion.
-  #else
-  mc_line(target, feed_rate, invert_feed_rate); // Bypass mc_line(). Directly plan homing motion.
-  #endif
+  mc_line(target, feed_rate, invert_feed_rate, PROBE_LINE_NUMBER); // Bypass mc_line(). Directly plan homing motion.
 
   SYS_EXEC |= EXEC_CYCLE_START;
   protocol_buffer_synchronize(); // Complete pull-off motion.
@@ -340,7 +317,7 @@ void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate)
 
   // Output the probe position as message.
   report_probe_parameters();
-  request_report_status(1); //make sure linenumber is printed
+  request_eol_report(); //make sure linenumber is printed
 }
 
 

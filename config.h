@@ -49,6 +49,7 @@
 // NOTE: If changed, manually update help message in report.c.
 #define CMD_STATUS_REPORT '?'
 #define CMD_LIMIT_REPORT '^'
+#define CMD_COUNTER_REPORT '*'
 #define CMD_FEED_HOLD '!'
 #define CMD_CYCLE_START '~'
 #define CMD_RESET 0x18 // ctrl-x.
@@ -105,12 +106,7 @@
 
 // Allows GRBL to track and report gcode line numbers.  Enabling this means that the planning buffer
 // goes from 18 or 16 to make room for the additional line number data in the plan_block_t struct
-//#define USE_LINE_NUMBERS // Disabled by default. Uncomment to enable.
-#define PERSIST_LINE_NUMBERS 1
-#define USE_LINE_NUMBERS PERSIST_LINE_NUMBERS
-//- could get rid of somany inline defines with something like this
-//#define plan_buffer_line(t,f,i,l) plan_buffer_line_number((t),(f),(i),(l))
-//#define plan_buffer_line(t,f,i,l) plan_buffer_line_x((t),(f),(i))
+#define USE_LINE_NUMBERS // Always enabled for Our build.
 
 
 // Allows GRBL to report the real-time feed rate.  Enabling this means that GRBL will be reporting more 
