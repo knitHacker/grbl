@@ -123,6 +123,7 @@ uint8_t gc_execute_line(char *line)
   float value;
   uint8_t int_value = 0;
   uint8_t mantissa = 0; // NOTE: For mantissa values > 255, variable type must be changed to uint16_t.
+  uint8_t retval = STATUS_OK;
 
 
   while (line[char_counter] != 0) { // Loop until no more g-code words in line.
@@ -965,6 +966,7 @@ uint8_t gc_execute_line(char *line)
           break;
         case MOTION_MODE_PROBE:
           mc_probe_cycle(gc_block.values.xyz, gc_state.feed_rate, gc_state.modal.feed_rate, gc_block.values.n);
+          retval = STATUS_QUIET_OK;
           //block.values.xyz is updated inside probe_cycle, so the next line is correct
       }
     
@@ -990,7 +992,7 @@ uint8_t gc_execute_line(char *line)
   }
     
   // TBD: % to denote start of program. Sets auto cycle start?
-  return(STATUS_OK);
+  return(STATUS_OK|retval);
 }
         
 

@@ -33,6 +33,8 @@
 #define STATUS_ALARM_LOCK 9
 #define STATUS_SOFT_LIMIT_ERROR 10
 #define STATUS_OVERFLOW 11
+#define STATUS_QUIET_OK (1<<7)
+#define STATUS_ALT_REPORT(rpt) (STATUS_QUIET_OK|rpt)
 
 #define STATUS_GCODE_UNSUPPORTED_COMMAND 20
 #define STATUS_GCODE_MODAL_GROUP_VIOLATION 21
@@ -87,14 +89,14 @@ void report_grbl_settings();
 // Prints realtime status report
 uint8_t report_realtime_status();
 
-// Prints state of limit pins
+// Prints state of limit pins and estop
 void report_limit_pins();
 
 // Prinst state of counters
 void report_counters();
 
-// Prints system info (estop & power)
-void report_sys_info();
+// Prinst voltage of motors
+void report_voltage();
 
 // Prints recorded probe position
 void report_probe_parameters();

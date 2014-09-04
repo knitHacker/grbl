@@ -90,7 +90,7 @@ uint8_t system_execute_line(char *line)
     case 0 : report_grbl_help(); break;
     case 'G' : // Prints gcode parser state
       if ( line[++char_counter] != 0 ) { return(STATUS_INVALID_STATEMENT); }
-      else { report_gcode_modes(); }
+      else { report_gcode_modes();  return(STATUS_QUIET_OK);}
       break;   
     case 'C' : // Set check g-code mode [IDLE/CHECK]
       if ( line[++char_counter] != 0 ) { return(STATUS_INVALID_STATEMENT); }
@@ -116,19 +116,19 @@ uint8_t system_execute_line(char *line)
       break;      
 #ifdef KEYME_BOARD
      case 'E': {
-				char axis = line[++char_counter];
+       char axis = line[++char_counter];
         if ( axis != 0 ) {
           if ( line[++char_counter] != 0 ) { return(STATUS_INVALID_STATEMENT); }
-				  axis = get_axis_idx(axis); 
-				  if (axis == N_AXIS) { return(STATUS_INVALID_STATEMENT); }
+          axis = get_axis_idx(axis); 
+          if (axis == N_AXIS) { return(STATUS_INVALID_STATEMENT); }
           counters_reset(axis);
         }
-        report_counters();
+        return STATUS_ALT_REPORT(REQUEST_COUNTER_REPORT);
      }
       break;
     case 'S':
       if ( line[++char_counter] != 0 ) { return(STATUS_INVALID_STATEMENT); }
-      report_sys_info();
+      return STATUS_ALT_REPORT(REQUEST_VOLTAGE_REPORT);
       break;
 #endif
          
@@ -155,31 +155,33 @@ uint8_t system_execute_line(char *line)
         case '#' : // Print Grbl NGC parameters
           if ( line[++char_counter] != 0 ) { return(STATUS_INVALID_STATEMENT); }
           else { report_ngc_parameters(); }
-          break;          
+          break;
 
         case 'H' : // Perform homing cycle [IDLE/ALARM], only if idle or lost
-          if (bit_istrue(settings.flags,BITFLAG_HOMING_ENABLE)) { 
-				char axis = line[++char_counter];
-				if (axis == '\0' ) {  
-				  axis = HOMING_CYCLE_ALL; //do all axes if none specified
-				}
-				else {
-          if ( line[++char_counter] != 0 ) { return(STATUS_INVALID_STATEMENT); }
-				  axis = get_axis_idx(axis); 
-				  if (axis == N_AXIS) { return(STATUS_INVALID_STATEMENT); }
-				  axis = (1<<axis);  //convert idx to mask
-				}
-				report_status_message(STATUS_OK); //report that we are homing
-            mc_homing_cycle(axis); 
+          if (bit_istrue(settings.flags,BITFLAG_HOMING_ENABLE)) {
+            char axis = line[++char_counter];
+            if (axis == '\0' ) {
+              axis = HOMING_CYCLE_ALL; //do all axes if none specified
+            }
+            else {
+              if ( line[++char_counter] != 0 ) { return(STATUS_INVALID_STATEMENT); }
+              axis = get_axis_idx(axis);
+              if (axis == N_AXIS) { return(STATUS_INVALID_STATEMENT); }
+              axis = (1<<axis);  //convert idx to mask
+            }
+            report_status_message(STATUS_OK); //report that we are homing
+            mc_homing_cycle(axis);
             if (!sys.abort) { system_execute_startup(line); } // Execute startup scripts after successful homing.
+            return STATUS_QUIET_OK; //already said ok
           } else { return(STATUS_SETTING_DISABLED); }
           break;
         case 'I' : // Print or store build info. [IDLE/ALARM]
-          if ( line[++char_counter] == 0 ) { 
+          if ( line[++char_counter] == 0 ) {
             if (!(settings_read_build_info(line))) {
               report_status_message(STATUS_SETTING_READ_FAIL);
             } else {
               report_build_info(line);
+              return STATUS_QUIET_OK;
             }
           } else { // Store startup line [IDLE/ALARM]
             if(line[char_counter++] != '=') { return(STATUS_INVALID_STATEMENT); }
@@ -189,7 +191,7 @@ uint8_t system_execute_line(char *line)
             } while (line[char_counter++] != 0);
             settings_store_build_info(line);
           }
-          break;                 
+          break;
         case 'N' : // Startup lines. [IDLE/ALARM]
           if ( line[++char_counter] == 0 ) { // Print startup lines
             for (helper_var=0; helper_var < N_STARTUP_LINE; helper_var++) {
@@ -202,7 +204,7 @@ uint8_t system_execute_line(char *line)
             break;
           } else { // Store startup line [IDLE Only] Prevents motion during ALARM.
             if (sys.state != STATE_IDLE) { return(STATUS_IDLE_ERROR); } // Store only when idle.
-            helper_var = true;  // Set helper_var to flag storing method. 
+            helper_var = true;  // Set helper_var to flag storing method.
             // No break. Continues into default: to read remaining command characters.
           }
         default :  // Storing setting methods [IDLE/ALARM]
@@ -217,7 +219,7 @@ uint8_t system_execute_line(char *line)
             // Execute gcode block to ensure block is valid.
             helper_var = gc_execute_line(line); // Set helper_var to returned status code.
             if (helper_var) { return(helper_var); }
-            else { 
+            else {
               helper_var = trunc(parameter); // Set helper_var to int value of parameter
               settings_store_startup_line(helper_var,line);
             }
@@ -226,7 +228,7 @@ uint8_t system_execute_line(char *line)
             if(line[char_counter] != 0) { return(STATUS_INVALID_STATEMENT); }
             return(settings_store_global_setting(parameter, value));
           }
-      }    
+      }
   }
   return(STATUS_OK); // If '$' command makes it to here, then everything's ok.
 }
