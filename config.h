@@ -54,6 +54,7 @@
 #define CMD_CYCLE_START '~'
 #define CMD_RESET 0x18 // ctrl-x.
 #define CMD_LIMIT_REPORT '^'
+#define CMD_VOLTAGE_REPORT '|'
 
 // If homing is enabled, homing init lock sets Grbl into an alarm state upon power up. This forces
 // the user to perform the homing cycle (or override the locks) before doing anything else. This is
@@ -109,10 +110,6 @@
 #define USE_LINE_NUMBERS // Always enabled for Our build.
 
 
-// Allows GRBL to report the real-time feed rate.  Enabling this means that GRBL will be reporting more 
-// data with each status update.
-// NOTE: This is experimental and doesn't quite work 100%. Maybe fixed or refactored later.
-// #define REPORT_REALTIME_RATE // Disabled by default. Uncomment to enable.
  
 // Enables a second coolant control pin via the mist coolant g-code command M7 on the Arduino Uno
 // analog pin 5. Only use this option if you require a second coolant control pin.

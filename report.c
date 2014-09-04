@@ -51,7 +51,13 @@ void report_status_message(uint8_t status_code)
 {
   if (status_code == 0) { // STATUS_OK
     printPgmString(PSTR("ok\r\n"));
-  } else {
+  } else if (status_code & STATUS_QUIET_OK) {
+    // protocol can return a 'QUIET_OK' status meaning don't print OK, print something else instead
+    if (0!= (status_code&=~STATUS_QUIET_OK)) {
+      request_report(status_code,0);
+    }
+  }
+  else {
     printPgmString(PSTR("error: "));
     switch(status_code) {          
       case STATUS_EXPECTED_COMMAND_LETTER:
@@ -352,36 +358,39 @@ void report_build_info(char *line)
 }
 
 #ifdef KEYME_BOARD
-//Prints sys info line: Estop and voltage
-void report_sys_info()
-{
-  uint8_t volts = MVOLT_PIN&MVOLT_MASK;
-  //prints system info: 
-  //estop, & motor voltage indicators  
-  printPgmString(PSTR("{e:"));
-  print_uint8_base10((ESTOP_PIN>>ESTOP_BIT)&1);
-  printPgmString(PSTR(", v:"));
-  volts = (volts>>1|volts<<3); //shuffle bits to get xyzc order
-  print_uint8_base2(volts&MVOLT_MASK);
-  printPgmString(PSTR("}\n\r"));
-}
-
 //Prints encoder line: Counts and encoder pins
 void report_counters()
 {
+  uint8_t idx;
   uint8_t pinval = FDBK_PIN&FDBK_MASK;
-  printPgmString(PSTR("{z: "));
-  printInteger(counters_get_count(Z_AXIS));
-  printPgmString(PSTR(" (:"));
-  print_uint8_base2((pinval>>Z_ENC_IDX_BIT)&7); //3 bits
-  printPgmString(PSTR(")|"));
-  printInteger(counters_get_idx());
-  printPgmString(PSTR(", c: "));
-  printInteger(counters_get_count(C_AXIS));
-  printPgmString(PSTR(" (:"));
-  print_uint8_base2(~(pinval>>MAG_SENSE_BIT)&1); //1 bit
-  printPgmString(PSTR(")}\n\r"));
+  printPgmString(PSTR("{"));
+  for (idx=0 ;idx<N_AXIS-1;idx++) {
+    printInteger(counters_get_count(idx));
+    printPgmString(PSTR(","));
+  }
+  printInteger(counters_get_count(idx));
+  printPgmString(PSTR(":0,0,")); //todo replace with xy encoder state if installed
+  print_uint8_base2((pinval>>Z_ENC_IDX_BIT)&7); //3 bits    
+  printPgmString(PSTR(","));
+  printInteger(~(pinval>>MAG_SENSE_BIT)&1); //1 bit sensor
+  printPgmString(PSTR("}\r\n"));
+}
+                 
 
+//Prints voltage data: motor volts.
+void report_voltage()
+{
+  uint8_t volts = MVOLT_PIN&MVOLT_MASK;
+  printPgmString(PSTR("|"));
+  printInteger((volts>>X_MVOLT_BIT)&1);
+  printPgmString(PSTR(","));
+  printInteger((volts>>Y_MVOLT_BIT)&1);
+  printPgmString(PSTR(","));
+  printInteger((volts>>Z_MVOLT_BIT)&1);
+  printPgmString(PSTR(","));
+  printInteger((volts>>C_MVOLT_BIT)&1);
+  printPgmString(PSTR("|"));
+  printPgmString(PSTR("\r\n"));
 }
 #endif
 
@@ -430,32 +439,30 @@ uint8_t report_realtime_status()
   }
  
   // Report machine position
-  printPgmString(PSTR(",Pos:")); 
-  for (i=0; i< N_AXIS; i++) {
-    print_position[i] = current_position[i]/settings.steps_per_mm[i];
+  printPgmString(PSTR(":"));
+  for (i=0; i< N_AXIS-1; i++) {
     //switch to work position
+    print_position[i] = current_position[i]/settings.steps_per_mm[i];
     print_position[i] -= gc_state.coord_system[i]+gc_state.coord_offset[i];
     printFloat_CoordValue(print_position[i]);
     printPgmString(PSTR(","));
   }
-  
+  print_position[i] = current_position[i]/settings.steps_per_mm[i];
+  print_position[i] -= gc_state.coord_system[i]+gc_state.coord_offset[i];
+  printFloat_CoordValue(print_position[i]);
+
   // Report work position
-  printPgmString(PSTR("Cts:")); 
-  for (i=0; i< N_AXIS; i++) {
+  printPgmString(PSTR(":")); 
+  for (i=0;i< N_AXIS-1; i++) {
     printInteger(current_position[i]);
-    if (i < (N_AXIS-1)) { printPgmString(PSTR(",")); }
+    printPgmString(PSTR(",")); 
   }
+  printInteger(current_position[i]);
     
   // Report current line number
-  printPgmString(PSTR(",Ln:")); 
+  printPgmString(PSTR(":")); 
   printInteger(ln);
     
-  #ifdef REPORT_REALTIME_RATE
-  // Report realtime rate 
-  printPgmString(PSTR(",F:")); 
-  printFloat_RateValue(st_get_realtime_rate());
-  #endif  
-  
   printPgmString(PSTR(">\r\n"));
 
   return sys.eol_flag; //returns True if more work to do
@@ -468,9 +475,10 @@ void report_limit_pins()
   if (bit_istrue(settings.flags,BITFLAG_INVERT_LIMIT_PINS)) {
 	 limit_state^=LIMIT_MASK;
   }  
-  printPgmString(PSTR("("));
+  printPgmString(PSTR("/"));
+  printInteger((ESTOP_PIN>>ESTOP_BIT)&1);
   printInteger(probe_get_state()?1:0);
   print_uint8_base2(limit_state);
-  printPgmString(PSTR(")\n\r"));
+  printPgmString(PSTR("/\r\n"));
 
 }
