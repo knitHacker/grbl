@@ -105,13 +105,13 @@ int shutdown_simulator(uint8_t exitflag) {
 void simulate_limits(int idx, int raw_steps) {
   int min = -settings.homing_pulloff * settings.steps_per_mm[idx];
   int max = settings.max_travel[idx]*settings.steps_per_mm[idx] - min;
-  if (raw_steps == min-1) {
-    //    printf("LOWER LIMIT HIT\n");
+  if (raw_steps <= min-1) {
+    //printf("LOWER LIMIT HIT %d\n",raw_steps);
     limits_on(idx+LIMIT_BIT_SHIFT);
   }
   else {
     limits_off(idx+LIMIT_BIT_SHIFT);
-    if (raw_steps==max+1) {
+    if (raw_steps>=max+1) {
       printf("UPPER LIMIT HIT\n");
     }
   }
