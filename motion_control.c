@@ -272,8 +272,8 @@ void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate, li
   // Perform probing cycle. Planner buffer should be empty at this point.
   mc_line(target, feed_rate, invert_feed_rate, line_number);
 
-  // NOTE: Parser error-checking ensures the probe isn't already closed/triggered.
-  //TODO - make sure the probe isn't already closed
+  // NOTE: It's ok if probe is already triggered, we return current pos.
+  //TODO - maybe we should back off first to ensure edge finding
   sysflags.probe_state = PROBE_ACTIVE;   
 
   SYS_EXEC |= EXEC_CYCLE_START;
@@ -284,10 +284,8 @@ void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate, li
     //  will change state to QUEUED when stopped.
   } while ((sys.state != STATE_IDLE) && (sys.state != STATE_QUEUED));
 
-  if (sysflags.probe_state == PROBE_ACTIVE) { 
-    //Was setting alarm: SYS_EXEC |= EXEC_CRIT_EVENT; 
-    //Now just reports failure.
-    report_probe_fail();
+  uint8_t probe_fail = (sysflags.probe_state == PROBE_ACTIVE);
+  if (probe_fail) {
     //set 'probe position' to current position so that it doesn't move anymore
     memcpy(sys.probe_position, sys.position, sizeof(float)*N_AXIS);
   }
@@ -316,7 +314,7 @@ void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate, li
   gc_sync_position();
 
   // Output the probe position as message.
-  report_probe_parameters();
+  report_probe_parameters(probe_fail);
   request_eol_report(); //make sure linenumber is printed
 }
 
