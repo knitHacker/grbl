@@ -227,18 +227,23 @@ void report_grbl_settings() {
 // Prints current probe parameters. Upon a probe command, these parameters are updated upon a
 // successful probe or upon a failed probe with the G38.3 without errors command (if supported). 
 // These values are retained until Grbl is power-cycled, whereby they will be re-zeroed.
-void report_probe_parameters()
+void report_probe_parameters(uint8_t error)
 {
   uint8_t i;
   float print_position[N_AXIS];
  
   // Report in terms of machine position.
-  printPgmString(PSTR("[PRB:")); 
-  for (i=0; i< N_AXIS; i++) {
-    print_position[i] = sys.probe_position[i]/settings.steps_per_mm[i];
-    printFloat_CoordValue(print_position[i]);
-    if (i < (N_AXIS-1)) { printPgmString(PSTR(",")); }
-  }  
+  printPgmString(PSTR("[PRB:"));
+  if (!error) {
+    for (i=0; i< N_AXIS; i++) {
+      print_position[i] = sys.probe_position[i]/settings.steps_per_mm[i];
+      printFloat_CoordValue(print_position[i]);
+      if (i < (N_AXIS-1)) { printPgmString(PSTR(",")); }
+    }  
+  }
+  else {
+    printPgmString(PSTR("NOT FOUND"));
+  }
   printPgmString(PSTR("]\r\n"));
 }
 
@@ -275,7 +280,7 @@ void report_ngc_parameters()
   printPgmString(PSTR("[TLO:")); // Print tool length offset value
   printFloat_CoordValue(gc_state.tool_length_offset);
   printPgmString(PSTR("]\r\n"));
-  report_probe_parameters(); // Print probe parameters. Not persistent in memory.
+  report_probe_parameters(0); // Print probe parameters. Not persistent in memory.
 }
 
 

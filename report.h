@@ -99,7 +99,7 @@ void report_counters();
 void report_voltage();
 
 // Prints recorded probe position
-void report_probe_parameters();
+void report_probe_parameters(uint8_t error);
 
 
 // Prints a message indicating probe failure
