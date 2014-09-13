@@ -49,6 +49,9 @@ void probe_state_monitor()
     memcpy(sys.probe_position, sys.position, sizeof(float)*N_AXIS);
     SYS_EXEC |= EXEC_FEED_HOLD;
   }
+  if (ESTOP_PIN & ESTOP_MASK) {
+    SYS_EXEC |= (EXEC_FEED_HOLD|EXEC_ALARM|EXEC_CRIT_EVENT);
+  }
 }
 
 
