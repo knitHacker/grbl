@@ -38,18 +38,18 @@ void cli() {io.sreg&=~SEI;}
 
 int16_t sim_scaling[8]={0,1,8,64,256,1024,1,1}; //clock scalars
 //Timer/Counter modes:  these are incomplete, but enough for this application
-enum sim_wgm_mode {
+typedef enum sim_wgm_mode {
   wgm_NORMAL,
   wgm_CTC,
   wgm_FAST_PWM,
   wgm_PHASE_PWM,
   wgm_PH_F_PWM,
   wgm_RESERVED
-};
+} sim_wgm_mode_t;
 
 //3-bit wgm table for 8-bit timers
 enum sim_wgm_mode sim_wgm_3[] = {wgm_NORMAL,wgm_PHASE_PWM,wgm_CTC,wgm_FAST_PWM,
-                                  wgm_RESERVED,wgm_PHASE_PWM, wgm_RESERVED, wgm_FAST_PWM};
+                                 wgm_RESERVED,wgm_PHASE_PWM, wgm_RESERVED, wgm_FAST_PWM};
 
 //4-bit wgm modes for 16-bit timers
 enum sim_wgm_mode sim_wgm_4[16] = {wgm_NORMAL,wgm_PHASE_PWM,wgm_PHASE_PWM,wgm_PHASE_PWM,

@@ -68,7 +68,6 @@ typedef struct io_sim {
   uint16_t prescaler; //continuously running
   uint8_t sreg;
 
-				  
 } io_sim_t;
 volatile extern io_sim_t io;
 

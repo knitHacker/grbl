@@ -161,7 +161,6 @@ void sim_monitor_step_port(uint8_t portval) {
 }
 
 
-
 void simulate_hardware(bool do_serial){
 
   //do one tick
