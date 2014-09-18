@@ -139,8 +139,10 @@
   #define ESTOP_DDR DDRG
   #define ESTOP_PORT PORTG 
   #define ESTOP_PIN PING
-#define ESTOP_BIT  2
+
 #define RUN_ENABLE_BIT  0
+#define ESTOP_BIT  2
+#define ESTOP_MASK (1<<ESTOP_BIT)
 
 #define MS_DDR DDRC
 #define MS_PORT PORTC
