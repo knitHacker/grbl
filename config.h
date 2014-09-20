@@ -55,6 +55,7 @@
 #define CMD_RESET 0x18 // ctrl-x.
 #define CMD_LIMIT_REPORT '^'
 #define CMD_VOLTAGE_REPORT '|'
+#define CMD_LINE_START '@'    //special start, not picked off, to ensure proper sequencing.
 
 // If homing is enabled, homing init lock sets Grbl into an alarm state upon power up. This forces
 // the user to perform the homing cycle (or override the locks) before doing anything else. This is
