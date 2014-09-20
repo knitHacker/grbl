@@ -53,6 +53,12 @@ static void protocol_execute_line(char *line)
     // Everything else is gcode. Block if in alarm mode.
     report_status_message(STATUS_ALARM_LOCK);
 
+  } else if (line[0] == CMD_LINE_START) {
+    // This is a special start command which is guaranteed to be sequenced after
+    // the previous line - it won't be picked out of the serial stream while 
+    // gc_execute_line is still parsing the previous line.
+    SYS_EXEC |= EXEC_CYCLE_START;
+    report_status_message(STATUS_OK);
   } else {
     // Parse and execute g-code block!
     report_status_message(gc_execute_line(line));
