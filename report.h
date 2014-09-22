@@ -99,6 +99,11 @@ void report_sys_info();
 // Prints recorded probe position
 void report_probe_parameters();
 
+
+// Prints a message indicating probe failure
+void report_probe_fail();
+
+
 // Prints Grbl NGC parameters (coordinate offsets, probe)
 void report_ngc_parameters();
 
@@ -114,6 +119,7 @@ void report_build_info(char *line);
 // Prints current limit word
 void report_limit_pins();
 
-//called to trigger status report, with line number if eol set.
-#define request_report_status(eol) sys.eol_flag = (eol);SYS_EXEC|=EXEC_STATUS_REPORT
+#define request_report(report,exec) (sysflags.report_rqsts|=(report))&&(SYS_EXEC|=(EXEC_RUNTIME_REPORT|(exec)))
+#define request_eol_report()  (sys.eol_flag|=1);request_report(REQUEST_STATUS_REPORT,0)
+
 #endif

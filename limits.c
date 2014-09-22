@@ -56,6 +56,7 @@ void limits_init()
     limits_disable();
   }
 
+  //TODO: test this method  inplace of master clock for probe debounce
   #ifdef ENABLE_SOFTWARE_DEBOUNCE
   MCUSR &= ~(1<<WDRF);
   WDTCSR |= (1<<WDCE) | (1<<WDE);
@@ -122,7 +123,7 @@ void limits_go_home(uint8_t cycle_mask)
   for (idx=0; idx<N_AXIS; idx++){
     if (bit_istrue(cycle_mask,bit(idx))) {
       max_travel = max(max_travel,settings.max_travel[idx]);
-      homing_rate = min(homing_rate,settings.homing_seek_rate[idx]);
+      min_seek_rate = min(min_seek_rate,settings.homing_seek_rate[idx]);
     }
   }
   max_travel *= HOMING_AXIS_SEARCH_SCALAR; // Ensure homing switches engaged by over-estimating max travel.
@@ -153,11 +154,7 @@ void limits_go_home(uint8_t cycle_mask)
     limit_approach = approach;  //limit_approach bits is high if approaching limit switch 
 
     // Perform homing cycle. Planner buffer should be empty, as required to initiate the homing cycle.
-    #ifdef USE_LINE_NUMBERS
-      plan_buffer_line(target, homing_rate, false, LINENUMBER_EMPTY_BLOCK); // Bypass mc_line(). Directly plan homing motion.
-    #else
-      plan_buffer_line(target, homing_rate, false); // Bypass mc_line(). Directly plan homing motion.
-    #endif
+    plan_buffer_line(target, homing_rate, false, LINENUMBER_EMPTY_BLOCK); // Bypass mc_line(). Directly plan homing motion.
 
 	 // axislock bit is high if axis is homing, so we only enable checking on moving axes.
     limits_enable(axislock,~approach);  //expect 0 on approach (stop when 1). vice versa for pulloff
@@ -184,7 +181,6 @@ void limits_go_home(uint8_t cycle_mask)
     st_reset(); // Immediately force kill steppers and reset step segment buffer.
     plan_reset(); // Reset planner buffer. Zero planner positions. Ensure homing motion is cleared.
 
-    //    SYS_EXEC |= EXEC_STATUS_REPORT;  //debug reporting of intermediate stages
     delay_ms(settings.homing_debounce_delay); // Delay to allow transient dynamics to dissipate.
 
     // Reverse direction and reset homing rate for locate cycle(s).
@@ -195,7 +191,7 @@ void limits_go_home(uint8_t cycle_mask)
 
   //force report of known position for compare to zero.
   linenumber_insert(HOMING_ZERO_LINE_NUMBER);
-  request_report_status(1);
+  request_eol_report();
   protocol_execute_runtime();
 
   // The active cycle axes should now be homed and machine limits have been located. By 
@@ -216,24 +212,19 @@ void limits_go_home(uint8_t cycle_mask)
         sys.position[idx] = -settings.homing_pulloff*settings.steps_per_mm[idx];
         target[idx] = 0;
       }
-      if (settings.homing_pulloff == 0.0) {SYS_EXEC|=EXEC_STATUS_REPORT; } //force report if we are not going to move  TODO TEST
+      if (settings.homing_pulloff == 0.0) {request_eol_report(); } //force report if we are not going to move  TODO TEST
     } else { // Non-active cycle axis. Set target to not move during pull-off.
       target[idx] = (float)sys.position[idx]/settings.steps_per_mm[idx];
     }
   }
   plan_sync_position(); // Sync planner position to current machine position for pull-off move.
 
-  #ifdef USE_LINE_NUMBERS
-    plan_buffer_line(target, min_seek_rate, false, HOMING_FINISHED_LINE_NUMBER); // Bypass mc_line(). Directly plan motion.
-  #else
-    plan_buffer_line(target, min_seek_rate, false); // Bypass mc_line(). Directly plan motion.
-  #endif
+  plan_buffer_line(target, min_seek_rate, false, HOMING_FINISHED_LINE_NUMBER); // Bypass mc_line(). Directly plan motion.
 
   // Initiate pull-off using main motion control routines.
   // TODO : Clean up state routines so that this motion still shows homing state.
   sys.state = STATE_QUEUED;
   SYS_EXEC |= EXEC_CYCLE_START;
-  //  SYS_EXEC |= EXEC_STATUS_REPORT; //enable for intermediate reporting
   protocol_execute_runtime();
   protocol_buffer_synchronize(); // Complete pull-off motion.
 
