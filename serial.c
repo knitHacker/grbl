@@ -38,7 +38,7 @@ uint8_t tx_buffer[TX_BUFFER_SIZE];
 uint8_t tx_buffer_head = 0;
 volatile uint8_t tx_buffer_tail = 0;
 
-uint8_t checksum;  //sum all bytes between newlines.
+uint8_t checksum = 0;  //sum all bytes between newlines.
 
 
 #ifdef ENABLE_XONXOFF
