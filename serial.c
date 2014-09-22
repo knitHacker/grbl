@@ -37,6 +37,8 @@ uint8_t tx_buffer[TX_BUFFER_SIZE];
 uint8_t tx_buffer_head = 0;
 volatile uint8_t tx_buffer_tail = 0;
 
+uint8_t checksum;  //sum all bytes between newlines.
+
 
 #ifdef ENABLE_XONXOFF
   volatile uint8_t flow_ctrl = XON_SENT; // Flow control state variable
@@ -76,7 +78,8 @@ void serial_init()
 }
 
 
-void serial_write(uint8_t data) {
+
+void serial_sendchar(uint8_t data) {
   // Calculate next head
   uint8_t next_head = tx_buffer_head + 1;
   if (next_head == TX_BUFFER_SIZE) { next_head = 0; }
@@ -85,7 +88,6 @@ void serial_write(uint8_t data) {
   while (next_head == tx_buffer_tail) { 
     if (SYS_EXEC & EXEC_RESET) { return; } // Only check for abort to avoid an endless loop.
   }
-
   // Store data and advance head
   tx_buffer[tx_buffer_head] = data;
   tx_buffer_head = next_head;
@@ -93,6 +95,19 @@ void serial_write(uint8_t data) {
   // Enable Data Register Empty Interrupt to make sure tx-streaming is running
   UCSR0B |=  (1 << UDRIE0); 
 }
+
+void serial_write(uint8_t data) {
+  if (data == '\n') {
+    serial_sendchar(checksum);
+    checksum = 0;
+  }
+  else { 
+    checksum+=data;
+  }
+  serial_sendchar(data);
+
+}
+
 
 
 // Data Register Empty Interrupt handler
