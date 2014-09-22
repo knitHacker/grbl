@@ -380,7 +380,7 @@ void report_counters()
   printInteger(~(pinval>>MAG_SENSE_BIT)&1); //1 bit sensor
   printPgmString(PSTR("}\r\n"));
 }
-                 
+
 
 //Prints voltage data: motor volts.
 void report_voltage()
@@ -485,5 +485,4 @@ void report_limit_pins()
   printInteger(probe_get_state()?1:0);
   print_uint8_base2(limit_state);
   printPgmString(PSTR("/\r\n"));
-
 }
