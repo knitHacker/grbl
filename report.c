@@ -423,12 +423,6 @@ uint8_t report_realtime_status()
     printPgmString(":");
     printInteger(ln_head());
   */
-  if (sys.eol_flag) {
-    ln = linenumber_get()&~LINENUMBER_EMPTY_BLOCK;
-    if ((linenumber_peek()&LINENUMBER_EMPTY_BLOCK) == 0) {
-      sys.eol_flag = 0;
-    }
-  }
   float print_position[N_AXIS];
  
   // Report current machine state
@@ -464,6 +458,14 @@ uint8_t report_realtime_status()
   printInteger(current_position[i]);
     
   // Report current line number
+  if (sys.eol_flag) {
+    ln = linenumber_get()&~LINENUMBER_EMPTY_BLOCK;
+    if ((linenumber_peek()&LINENUMBER_EMPTY_BLOCK) == 0) {
+      sys.eol_flag = 0;
+    }
+  }
+
+
   printPgmString(PSTR(":")); 
   printInteger(ln);
     
