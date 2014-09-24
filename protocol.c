@@ -299,6 +299,9 @@ void protocol_execute_runtime()
 
   // Reload step segment buffer
   if (sys.state & (STATE_CYCLE | STATE_HOLD | STATE_HOMING)) { st_prep_buffer(); }  
+
+  // Clear IO Reset bit.
+  IO_RESET_PORT &= (~IO_RESET_MASK);
   
 }  
 

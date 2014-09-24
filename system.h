@@ -129,6 +129,7 @@ void system_execute_startup(char *line);
 typedef uint16_t linenumber_t;  //resize back to int32 for bigger numbers
 
 
+void linenumber_init();
 uint8_t linenumber_insert(linenumber_t line_number);
 linenumber_t linenumber_get();
 linenumber_t linenumber_peek();

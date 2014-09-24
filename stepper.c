@@ -517,8 +517,7 @@ void keyme_init(){
   MVOLT_DDR &= ~(MVOLT_MASK);
   MVOLT_PORT |= MVOLT_MASK; //internal pull-up, normal high  //TODO: should have been analog?
 
-  //TODO Add command for IO reset.
-  //& Setup Port F0 as output
+  //Setup IO Reset Port
   IO_RESET_DDR |= IO_RESET_MASK;
   IO_RESET_PORT &= ~IO_RESET_MASK; //don't reset
 #endif
