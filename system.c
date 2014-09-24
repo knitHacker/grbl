@@ -30,8 +30,6 @@
 uint32_t masterclock=0; 
 
 
-void linenumber_init();
-
 void system_init() 
 {
   TIMING_DDR |= TIMING_MASK;
@@ -259,9 +257,10 @@ uint8_t linenumber_insert(linenumber_t line_number)
     st_lt.lines[st_lt.head] = line_number;
     if (++st_lt.head>=STLT_SIZE) { st_lt.head = 0;}
   }
+  //calculate and return number of items in queue.
   uint8_t head = st_lt.head;
   if (head<=st_lt.tail){ head+=STLT_SIZE;}
-  return st_lt.head-st_lt.tail-1;
+  return head-st_lt.tail-1;
 }
 
 uint8_t linenumber_next(){
