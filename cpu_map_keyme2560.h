@@ -168,6 +168,21 @@
 #define FDBK_PCMSK     PCMSK2 // Pin change interrupt register
 #define FDBK_MASK ((1<<Z_ENC_IDX_BIT)|(1<<Z_ENC_CHA_BIT)|(1<<Z_ENC_CHB_BIT) |(1<<MAG_SENSE_BIT)  )
 
+#ifdef NEW_BOARD
+#define MVOLT_DDR DDRF
+#define MVOLT_PORT PORTF
+#define MVOLT_PIN PINF
+#define X_MVOLT_BIT 1
+#define Y_MVOLT_BIT 2
+#define Z_MVOLT_BIT 3
+#define C_MVOLT_BIT 0
+#define MVOLT_MASK ((1<<X_MVOLT_BIT)|(1<<Y_MVOLT_BIT)|(1<<Z_MVOLT_BIT)|(1<<C_MVOLT_BIT))
+
+#define IO_RESET_DDR DDRA           
+#define IO_RESET_PORT PORTA         
+#define IO_RESET_BIT 0
+#define IO_RESET_MASK (1<<IO_RESET_BIT)
+#else
 #define MVOLT_DDR DDRD
 #define MVOLT_PORT PORTD
 #define MVOLT_PIN PIND
@@ -177,11 +192,11 @@
 #define C_MVOLT_BIT 0
 #define MVOLT_MASK ((1<<X_MVOLT_BIT)|(1<<Y_MVOLT_BIT)|(1<<Z_MVOLT_BIT)|(1<<C_MVOLT_BIT))
 
-#define IO_RESET_DDR DDRF
-#define IO_RESET_PORT PORTF
+#define IO_RESET_DDR DDRF           
+#define IO_RESET_PORT PORTF         
 #define IO_RESET_BIT 0
 #define IO_RESET_MASK (1<<IO_RESET_BIT)
-
+#endif
 
 #endif
 
