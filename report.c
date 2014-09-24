@@ -363,7 +363,7 @@ void report_sys_info()
   printPgmString(PSTR(", v:"));
   volts = (volts>>1|volts<<3); //shuffle bits to get xyzc order
   print_uint8_base2(volts&MVOLT_MASK);
-  printPgmString(PSTR("}\n\r"));
+  printPgmString(PSTR("}\r\n"));
 }
 
 //Prints encoder line: Counts and encoder pins
@@ -380,7 +380,7 @@ void report_counters()
   printInteger(counters_get_count(C_AXIS));
   printPgmString(PSTR(" (:"));
   print_uint8_base2(~(pinval>>MAG_SENSE_BIT)&1); //1 bit
-  printPgmString(PSTR(")}\n\r"));
+  printPgmString(PSTR(")}\r\n"));
 
 }
 #endif
@@ -471,6 +471,6 @@ void report_limit_pins()
   printPgmString(PSTR("("));
   printInteger(probe_get_state()?1:0);
   print_uint8_base2(limit_state);
-  printPgmString(PSTR(")\n\r"));
+  printPgmString(PSTR(")\r\n"));
 
 }
