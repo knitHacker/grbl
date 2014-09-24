@@ -128,6 +128,13 @@ uint8_t system_execute_line(char *line)
       if ( line[++char_counter] != 0 ) { return(STATUS_INVALID_STATEMENT); }
       return STATUS_ALT_REPORT(REQUEST_VOLTAGE_REPORT);
       break;
+    case 'R':
+      if ( line[++char_counter] != 0 ) { return(STATUS_INVALID_STATEMENT); }
+      IO_RESET_PORT |= IO_RESET_MASK;  //reset IO.  Will re-enable in loop
+      break;
+      
+      
+
 #endif
          
 //  case 'J' : break;  // Jogging methods
