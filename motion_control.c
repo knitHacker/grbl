@@ -34,7 +34,7 @@
 #include "report.h"
 #include "counters.h"
 
-#define PROBE_LINE_NUMBER (LINENUMBER_SPECIAL|2)
+#define PROBE_LINE_NUMBER (LINENUMBER_SPECIAL)
 
 
 // Execute linear motion in absolute millimeter coordinates. Feed rate given in millimeters/second
@@ -255,7 +255,7 @@ void mc_homing_cycle(uint8_t axis_mask)
   st_go_idle(); // Set idle state after homing completes
 
   // If hard limits feature enabled, re-enable hard limits pin change register after homing cycle.
-  limits_init();
+  limits_configure();
 }
 
 

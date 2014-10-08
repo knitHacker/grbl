@@ -219,7 +219,7 @@ uint8_t settings_store_global_setting(int parameter, float value) {
     case 27:
       if (value) { settings.flags |= BITFLAG_HARD_LIMIT_ENABLE; }
       else { settings.flags &= ~BITFLAG_HARD_LIMIT_ENABLE; }
-      limits_init(); // Re-init to immediately change. NOTE: Nice to have but could be problematic later.
+      limits_configure(); // Re-init to immediately change. NOTE: Nice to have but could be problematic later.
       break;
     case 28:
       if (value) { settings.flags |= BITFLAG_HOMING_ENABLE; }

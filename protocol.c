@@ -29,9 +29,13 @@
 #include "motion_control.h"
 #include "report.h"
 
+#define STATUS_REPORT_RATE_MS 333
 
 static char line[LINE_BUFFER_SIZE]; // Line to be executed. Zero-terminated.
 
+static uint32_t report_clock=0; //time until next automatic report
+static uint8_t next_report=REQUEST_STATUS_REPORT;
+//static uint8_t is_init=0;
 
 // Directs and executes one line of formatted input from protocol_process. While mostly
 // incoming streaming g-code blocks, this also directs and executes Grbl internal commands,
@@ -86,6 +90,7 @@ void protocol_main_loop()
     sys.state = STATE_IDLE; // Set system to ready. Clear all state flags.
     system_execute_startup(line); // Execute startup script.
   }
+  //  is_init = 1;
     
   // ---------------------------------------------------------------------------------  
   // Primary loop! Upon a system abort, this exits back to main() to reset the system. 
@@ -184,6 +189,15 @@ void protocol_main_loop()
 void protocol_execute_runtime()
 {
   uint8_t rt_exec = SYS_EXEC; // Copy to avoid calling volatile multiple times
+
+  uint32_t clock = masterclock;
+  if (clock >= (report_clock +  STATUS_REPORT_RATE_MS) || clock < report_clock) {
+    rt_exec|= EXEC_RUNTIME_REPORT;
+    sysflags.report_rqsts|=next_report;
+    next_report^=(REQUEST_STATUS_REPORT|REQUEST_LIMIT_REPORT); //toggle between these two
+    report_clock = clock;
+  }
+    
 
   if (rt_exec) { // Enter only if any bit flag is true
     
