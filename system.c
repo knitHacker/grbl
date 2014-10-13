@@ -117,9 +117,14 @@ uint8_t system_execute_line(char *line)
        char axis = line[++char_counter];
         if ( axis != 0 ) {
           if ( line[++char_counter] != 0 ) { return(STATUS_INVALID_STATEMENT); }
-          axis = get_axis_idx(axis); 
-          if (axis == N_AXIS) { return(STATUS_INVALID_STATEMENT); }
-          counters_reset(axis);
+          if ( axis == '1' || axis == '0') {
+            counters_enable(axis-'0');
+          }
+          else {
+            axis = get_axis_idx(axis); 
+            if (axis == N_AXIS) { return(STATUS_INVALID_STATEMENT); }
+            counters_reset(axis);
+          }
         }
         return STATUS_ALT_REPORT(REQUEST_COUNTER_REPORT);
      }

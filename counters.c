@@ -37,10 +37,23 @@ void counters_init()
 #endif
   counters.state = FDBK_PIN&FDBK_MASK; //record initial state
 
-  FDBK_PCMSK |= FDBK_MASK;  // Enable specific pins of the Pin Change Interrupt
-  PCICR |= (1 << FDBK_INT);   // Enable Pin Change Interrupt
+  counters_enable(0); //default to no encoder
+}
+
+
+void counters_enable(int enable) 
+{
+  if (enable) {
+    FDBK_PCMSK |= FDBK_MASK;    // Enable specific pins of the Pin Change Interrupt
+    PCICR |= (1 << FDBK_INT);   // Enable Pin Change Interrupt
+  }
+  else {
+    FDBK_PCMSK &= ~FDBK_MASK;    // Disable specific pins of the Pin Change Interrupt
+    PCICR &= ~(1 << FDBK_INT);   // Disable Pin Change Interrupt
+  }
 
 }
+
 
 // Resets the counts for an axis
 void  counters_reset(uint8_t axis)
@@ -101,9 +114,6 @@ ISR(FDBK_INT_vect) {
       uint8_t idx_on = ((state>>Z_ENC_IDX_BIT)&1);
       if (idx_on) {
         counters.idx += counters.dir;
-        //maybe rezero counter.
-        //  counters.counts[Z_AXIS]=(counters.counts[Z_AXIS]/DEFAULT_COUNTS_PER_IDX)*
-        //  DEFAULT_COUNTS_PER_IDX + counters.idx_offset;
       }
   }
 
