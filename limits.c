@@ -28,17 +28,17 @@
 #include "limits.h"
 #include "report.h"
 
-#define HOMING_ZERO_LINE_NUMBER (LINENUMBER_SPECIAL|0)
-#define HOMING_FINISHED_LINE_NUMBER (LINENUMBER_SPECIAL|1)
-
 #define HOMING_AXIS_SEARCH_SCALAR  1.1  // Axis search distance multiplier. Must be > 1.
 
 uint8_t limit_approach = 0; //bits are 1 when homing toward limit.
 
 limit_t limits={0};
 
+static linenumber_t homing_line_number;  //autoincremented every homing cycle, sent w/ high bit set.
+                                  //odd numbers are the switch position, 
+                                  //even numbers are pulloff complete
 
-
+// Initializes hardware.
 void limits_init() 
 {
 
@@ -49,20 +49,26 @@ void limits_init()
   } else {
     LIMIT_PORT |= (LIMIT_MASK);  // Enable internal pull-up resistors. Normal high operation.
   }
-
-  if (bit_istrue(settings.flags,BITFLAG_HARD_LIMIT_ENABLE)) {
-    limits_enable(LIMIT_MASK & HARDSTOP_MASK,0);
-  } else {
-    limits_disable();
-  }
-
   //TODO: test this method  inplace of master clock for probe debounce
   #ifdef ENABLE_SOFTWARE_DEBOUNCE
   MCUSR &= ~(1<<WDRF);
   WDTCSR |= (1<<WDCE) | (1<<WDE);
   WDTCSR = (1<<WDP0); // Set time-out at ~32msec.
   #endif
+  homing_line_number = 1;
+  limits_configure(); 
 }
+
+
+//Resets enable state
+void limits_configure(){
+  if (bit_istrue(settings.flags,BITFLAG_HARD_LIMIT_ENABLE)) {
+    limits_enable(LIMIT_MASK & HARDSTOP_MASK,0);
+  } else {
+    limits_disable();
+  }
+}
+
 
 void limits_enable(uint8_t axes, uint8_t expected) {
   //    LIMIT_PCMSK |= LIMIT_MASK; // Enable specific pins of the Pin Change Interrupt
@@ -190,7 +196,7 @@ void limits_go_home(uint8_t cycle_mask)
   } while (n_cycle-- > 0);
 
   //force report of known position for compare to zero.
-  linenumber_insert(HOMING_ZERO_LINE_NUMBER);
+  linenumber_insert(LINENUMBER_SPECIAL|homing_line_number++);
   request_eol_report();
   protocol_execute_runtime();
 
@@ -219,7 +225,7 @@ void limits_go_home(uint8_t cycle_mask)
   }
   plan_sync_position(); // Sync planner position to current machine position for pull-off move.
 
-  plan_buffer_line(target, min_seek_rate, false, HOMING_FINISHED_LINE_NUMBER); // Bypass mc_line(). Directly plan motion.
+  plan_buffer_line(target, min_seek_rate, false, LINENUMBER_SPECIAL|homing_line_number++); // Bypass mc_line(). Directly plan motion.
 
   // Initiate pull-off using main motion control routines.
   // TODO : Clean up state routines so that this motion still shows homing state.

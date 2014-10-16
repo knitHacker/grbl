@@ -65,6 +65,7 @@ void init_simulator(float time_multiplier) {
   //register the interrupt handlers we actually use.
   compa_vect[1] = interrupt_TIMER1_COMPA_vect;
   ovf_vect[0] = interrupt_TIMER0_OVF_vect;
+  compa_vect[2] = interrupt_TIMER2_COMPA_vect;
 #ifdef STEP_PULSE_DELAY
   compa_vect[0] = interrupt_TIMER0_COMPA_vect;
 #endif

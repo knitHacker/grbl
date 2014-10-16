@@ -413,7 +413,7 @@ uint8_t report_realtime_status()
   // to be added are distance to go on block, processed block id, and feed rate. Also a settings bitmask
   // for a user to select the desired real-time data.
   int32_t current_position[N_AXIS]; // Copy current state of the system position variable
-  linenumber_t ln=0;
+  static linenumber_t ln=0;
   uint8_t i;
   memcpy(current_position,sys.position,sizeof(sys.position));
 
