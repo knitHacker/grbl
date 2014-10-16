@@ -243,11 +243,11 @@ void st_go_idle()
     if (bit_istrue(SYS_EXEC, EXEC_ALARM)) {
       do_disable = true;  //disable all on alarm.
     }
-    else if (settings.stepper_idle_lock_time != 0xff) { //else not always on
+    else if (st.stepper_idle_lock_time != 0xff) { //else not always on
       st_shutdown_delay = settings.stepper_idle_lock_time*STEPPERS_LOCK_TIME_MULTIPLE;
       st_shutdown_start = masterclock|1; //use nearest odd number to handle rare case of mc==0
 
-      delay_ms(settings.stepper_idle_lock_time);
+      delay_ms(st.stepper_idle_lock_time);
       do_disable = true;  //disable most axes now.
       mask = ~STEPPERS_LONG_LOCK_MASK;
     }
@@ -580,9 +580,7 @@ void stepper_init()
   st_force_idle_lock(0); //No braking by default
   //Setup KeyMe specific ports
   keyme_init();
-
-  
-
+  st_force_idle_lock(0);  //use EEPROM settings by default
 }
   
 
