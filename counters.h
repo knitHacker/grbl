@@ -38,6 +38,10 @@ extern counters_t counters;
 // Counters pin initialization routine.
 void counters_init();
 
+//enable/disable encoder reading
+void counters_enable(int enable);
+
+
 // Returns counters pin state.
 uint8_t counters_get_state();
 
