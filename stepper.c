@@ -103,12 +103,12 @@ typedef struct {
 
   uint16_t step_count;       // Steps remaining in line segment motion  
   uint8_t exec_block_index; // Tracks the current st_block index. Change indicates new block.
-
   #ifdef STEP_PULSE_DELAY
     uint8_t step_bits;  // Stores out_bits output to complete the step pulse delay
   #endif
   st_block_t *exec_block;   // Pointer to the block data for the segment being executed
   segment_t *exec_segment;  // Pointer to the segment being executed
+  uint8_t idle_lock_time;
 } stepper_t;
 static stepper_t st;
 
@@ -225,7 +225,6 @@ void st_wake_up()
     TIMSK1 |= (1<<OCIE1A);
   }
 }
-
 
 // Stepper shutdown
 void st_go_idle() 
@@ -577,8 +576,12 @@ void stepper_init()
   #ifdef STEP_PULSE_DELAY
     TIMSK0 |= (1<<OCIE0A); // Enable Timer0 Compare Match A interrupt
   #endif
+
+  st_force_idle_lock(0); //No braking by default
   //Setup KeyMe specific ports
   keyme_init();
+
+  
 
 }
   
@@ -927,6 +930,9 @@ void st_prep_buffer()
 }      
 
 
+void st_force_idle_lock(uint8_t lock) {
+  st.idle_lock_time = lock? 0xFF : settings.stepper_idle_lock_time;
+}
  
 /* 
    TODO: With feedrate overrides, increases to the override value will not significantly
