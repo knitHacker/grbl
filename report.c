@@ -377,7 +377,7 @@ void report_counters()
   printPgmString(PSTR(":0,0,")); //todo replace with xy encoder state if installed
   print_uint8_base2((pinval>>Z_ENC_IDX_BIT)&7); //3 bits    
   printPgmString(PSTR(","));
-  printInteger(~(pinval>>MAG_SENSE_BIT)&1); //1 bit sensor
+  printInteger(~(pinval>>ALIGN_SENSE_BIT)&1); //1 bit sensor
   printPgmString(PSTR("}\r\n"));
 }
 

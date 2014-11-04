@@ -21,7 +21,7 @@
 #include "system.h"
 #include "counters.h"
 
-uint32_t magprobe_debounce_timer=0; 
+uint32_t alignment_debounce_timer=0; 
 #define PROBE_DEBOUNCE_DELAY_MS 25
 
 
@@ -77,12 +77,6 @@ int16_t counters_get_idx(){
   return counters.idx;
 }
 
-void counters_set_idx_offset(){
-  counters.idx_offset = DEFAULT_COUNTS_PER_IDX - counters.counts[Z_AXIS]; 
-  //this should be the value whenever the index is hit
-}
-
-
 
 int debounce(uint32_t* bounce_clock, int16_t lockout_ms) {
   uint32_t clock = masterclock;
@@ -100,26 +94,27 @@ int debounce(uint32_t* bounce_clock, int16_t lockout_ms) {
 ISR(FDBK_INT_vect) {
   uint8_t state =  FDBK_PIN&FDBK_MASK;
   uint8_t change = (state^counters.state);
+  int8_t dir=0;
 
   //look for encoder change
   if (change & ((1<<Z_ENC_CHA_BIT)|(1<<Z_ENC_CHB_BIT))) { //if a or b changed
     counters.anew = (state>>Z_ENC_CHA_BIT)&1;
-    counters.dir = counters.anew^counters.bold ? 1 : -1;
+    dir = counters.anew^counters.bold ? 1 : -1;
     counters.bold = (state>>Z_ENC_CHB_BIT)&1;
-    counters.counts[Z_AXIS] += counters.dir;
+    counters.counts[Z_AXIS] += dir;
   }
 
   //count encoder indexes
   if (change & (1<<Z_ENC_IDX_BIT)) { //idx changed
       uint8_t idx_on = ((state>>Z_ENC_IDX_BIT)&1);
       if (idx_on) {
-        counters.idx += counters.dir;
+        counters.idx += dir;
       }
   }
 
-  //count magazine alignment pulses.
-  if (change & (1<<MAG_SENSE_BIT)) { //sensor changed
-    if (debounce(&magprobe_debounce_timer, PROBE_DEBOUNCE_DELAY_MS)){
+  //count rotary axis alignment pulses.
+  if (change & (1<<ALIGN_SENSE_BIT)) { //sensor changed
+    if (debounce(&alignment_debounce_timer, PROBE_DEBOUNCE_DELAY_MS)){
       if (!(state&PROBE_MASK)) { //low is on.
         counters.counts[C_AXIS]++;
       }

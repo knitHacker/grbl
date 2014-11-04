@@ -26,8 +26,6 @@ typedef int32_t count_t;
 typedef struct  counters {
   count_t counts[N_AXIS];
   int16_t idx; //encoder index counts
-  count_t idx_offset; //encoder index counts
-  int8_t dir; //last known direction
   uint8_t state;
   uint8_t anew; //new a encode
   uint8_t bold; //old b encoder
@@ -52,9 +50,6 @@ int16_t counters_get_idx();
 
 
 void  counters_reset(uint8_t axis);
-
-//record zero so that idx works correctly
-void counters_set_idx_offset(); 
 
 
 // Monitors counters pin state and records the system position when detected. Called by the

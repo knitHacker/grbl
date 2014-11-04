@@ -109,7 +109,7 @@
 #define PINOUT_PCMSK     PCMSK2 // Pin change interrupt register
 #define PINOUT_MASK ((1<<PIN_RESET)|(1<<PIN_FEED_HOLD)|(1<<PIN_CYCLE_START))
 
-// Define probe switch input pin.  //MAG HOME
+// Define probe switch input pin.  
 #define PROBE_DDR       DDRK
 #define PROBE_PIN       PINK
 #define PROBE_PORT      PORTK
@@ -158,7 +158,7 @@
 #define FDBK_PORT PORTK
 #define FDBK_PIN  PINK
 
-#define MAG_SENSE_BIT 3  //This is also PROBE_BIT
+#define ALIGN_SENSE_BIT 3  //This is also PROBE_BIT
 #define Z_ENC_IDX_BIT 4
 #define Z_ENC_CHA_BIT 5
 #define Z_ENC_CHB_BIT 6
@@ -166,7 +166,7 @@
 #define FDBK_INT       PCIE2  // Pin change interrupt enable pin
 #define FDBK_INT_vect  PCINT2_vect
 #define FDBK_PCMSK     PCMSK2 // Pin change interrupt register
-#define FDBK_MASK ((1<<Z_ENC_IDX_BIT)|(1<<Z_ENC_CHA_BIT)|(1<<Z_ENC_CHB_BIT) |(1<<MAG_SENSE_BIT)  )
+#define FDBK_MASK ((1<<Z_ENC_IDX_BIT)|(1<<Z_ENC_CHA_BIT)|(1<<Z_ENC_CHB_BIT) |(1<<ALIGN_SENSE_BIT)  )
 
 #ifdef NEW_BOARD
 #define MVOLT_DDR DDRF

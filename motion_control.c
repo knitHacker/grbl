@@ -246,7 +246,6 @@ void mc_homing_cycle(uint8_t axis_mask)
   gc_sync_position();
 
   if (axis_mask&bit(Z_AXIS)) {
-    counters_set_idx_offset();
     counters_reset(Z_AXIS);
   }
   
