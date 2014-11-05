@@ -381,6 +381,16 @@ void report_counters()
   printPgmString(PSTR("}\r\n"));
 }
 
+/* extern uint64_t st_shutdown_start; */
+/* void report_stepper() { */
+/*   printInteger((unsigned long)(masterclock)); */
+/*   printPgmString(PSTR(",")); */
+/*   printInteger((unsigned long)(st_shutdown_start)); */
+/*   printPgmString(PSTR(",")); */
+/*   printInteger((unsigned long)(masterclock - st_shutdown_start)); */
+/*   printPgmString(PSTR("\n")); */
+/* } */
+
 //Prints voltage data: motor volts.
 void report_voltage()
 {

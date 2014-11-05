@@ -147,6 +147,8 @@ typedef struct {
 } st_prep_t;
 static st_prep_t prep;
 
+static uint64_t st_shutdown_start;
+static uint16_t st_shutdown_delay;  //ms (max = 32767)  
 
 /*    BLOCK VELOCITY PROFILE DEFINITION 
           __________________________
@@ -187,13 +189,21 @@ static st_prep_t prep;
 */
 
 
+//disable stepper output (0 to enable)
+void st_disable(uint8_t disable, uint8_t mask) {
+  if (mask & STEPPERS_LONG_LOCK_MASK) st_shutdown_start = 0;  //clear pending shutdown if we are enabling, or if it has pent.
+  if (bit_istrue(settings.flags,BITFLAG_INVERT_ST_ENABLE)) { disable = !disable; } // Apply pin invert.
+  if (disable) { STEPPERS_DISABLE_PORT |= (STEPPERS_DISABLE_MASK&mask); }
+  else { STEPPERS_DISABLE_PORT &= ~(STEPPERS_DISABLE_MASK&mask); }
+}
+
+
 // Stepper state initialization. Cycle should only start if the st.cycle_start flag is
 // enabled. Startup init and limits call this function but shouldn't start the cycle.
 void st_wake_up() 
 {
-  // Enable stepper drivers.
-  if (bit_istrue(settings.flags,BITFLAG_INVERT_ST_ENABLE)) { STEPPERS_DISABLE_PORT |= (STEPPERS_DISABLE_MASK); }
-  else { STEPPERS_DISABLE_PORT &= ~(STEPPERS_DISABLE_MASK); }
+  // Enable all stepper drivers.
+  st_disable(false,~0); 
 
   if (sys.state & (STATE_CYCLE | STATE_HOMING)){
     // Initialize stepper output bits
@@ -226,17 +236,33 @@ void st_go_idle()
   busy = false;
   
   // Set stepper driver idle state, disabled or enabled, depending on settings and circumstances.
-  bool pin_state = false; // Keep enabled.
-  if (((settings.stepper_idle_lock_time != 0xff) || bit_istrue(SYS_EXEC,EXEC_ALARM)) && sys.state != STATE_HOMING) {
     // Force stepper dwell to lock axes for a defined amount of time to ensure the axes come to a complete
     // stop and not drift from residual inertial forces at the end of the last movement.
-    delay_ms(settings.stepper_idle_lock_time);
-    pin_state = true; // Override. Disable steppers.
+  bool do_disable = false; // Keep enabled.
+  uint8_t mask = ~0; //all axes
+  if (sys.state != STATE_HOMING) {
+    if (bit_istrue(SYS_EXEC, EXEC_ALARM)) {
+      do_disable = true;  //disable all on alarm.
+    }
+    else if (settings.stepper_idle_lock_time != 0xff) { //else not always on
+      st_shutdown_delay = settings.stepper_idle_lock_time*STEPPERS_LOCK_TIME_MULTIPLE;
+      st_shutdown_start = masterclock|1; //use nearest odd number to handle rare case of mc==0
+
+      delay_ms(settings.stepper_idle_lock_time);
+      do_disable = true;  //disable most axes now.
+      mask = ~STEPPERS_LONG_LOCK_MASK;
+    }
   }
-  if (bit_istrue(settings.flags,BITFLAG_INVERT_ST_ENABLE)) { pin_state = !pin_state; } // Apply pin invert.
-  if (pin_state) { STEPPERS_DISABLE_PORT |= (STEPPERS_DISABLE_MASK); }
-  else { STEPPERS_DISABLE_PORT &= ~(STEPPERS_DISABLE_MASK); }
+  st_disable(do_disable, mask);
+
 }
+
+void st_check_disable() {
+  if (st_shutdown_start && ((uint16_t)(masterclock - st_shutdown_start) > st_shutdown_delay)) {
+    st_disable(true, STEPPERS_LONG_LOCK_MASK);  //disable long-dwell axes after timeout
+  }
+}
+
 
 
 /* "The Stepper Driver Interrupt" - This timer interrupt is the workhorse of Grbl. Grbl employs

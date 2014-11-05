@@ -42,8 +42,13 @@
 #define STEPPERS_DISABLE_PORT  PORTJ
 //  #define STEPPERS_DISABLE_BIT   1 // Atmega2560 pin X / Arduino Digital Pin 14 
 //#define STEPPERS_DISABLE_MASK (0x3C)   //Atmega2560 pins 65-68.   //Arduino xxxx
-#define STEPPERS_DISABLE_MASK (0x3E)   //Atmega2560 pins 65-68.   //temporarily add PJ1, Arduino 14
+#define STEPPERS_DISABLE_MASK (0x3C)   //Atmega2560 pins 65-68.   
 //TODO: separate bits if needed
+
+#define STEPPERS_LONG_LOCK_MASK  (0x10)  //Keep gripper engaged 
+#define STEPPERS_LOCK_TIME_MULTIPLE 200  //ms*250 = quarter seconds so 255->63.75s
+
+
   
 
 // NOTE: All limit bit pins must be on the same port
@@ -168,6 +173,7 @@
 #define FDBK_PCMSK     PCMSK2 // Pin change interrupt register
 #define FDBK_MASK ((1<<Z_ENC_IDX_BIT)|(1<<Z_ENC_CHA_BIT)|(1<<Z_ENC_CHB_BIT) |(1<<ALIGN_SENSE_BIT)  )
 
+#define NEW_BOARD
 #ifdef NEW_BOARD
 #define MVOLT_DDR DDRF
 #define MVOLT_PORT PORTF

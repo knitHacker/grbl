@@ -197,7 +197,8 @@ void protocol_execute_runtime()
     next_report^=(REQUEST_STATUS_REPORT|REQUEST_LIMIT_REPORT); //toggle between these two
     report_clock = clock;
   }
-    
+  st_check_disable();
+  
 
   if (rt_exec) { // Enter only if any bit flag is true
     
