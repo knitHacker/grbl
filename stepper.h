@@ -44,5 +44,8 @@ void st_prep_buffer();
 // Called by planner_recalculate() when the executing block is updated by the new plan.
 void st_update_plan_block_parameters();
 
+//called periodically to see if we should disable steppers
+void st_check_disable(); 
+
 
 #endif
