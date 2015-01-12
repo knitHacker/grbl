@@ -29,7 +29,7 @@
 #include "motion_control.h"
 #include "report.h"
 
-#define STATUS_REPORT_RATE_MS 333
+#define STATUS_REPORT_RATE_MS 333  //3 Hz
 
 static char line[LINE_BUFFER_SIZE]; // Line to be executed. Zero-terminated.
 
