@@ -40,14 +40,14 @@
           // Define stepper driver enable/disable output pin.
 #define STEPPERS_DISABLE_DDR   DDRJ
 #define STEPPERS_DISABLE_PORT  PORTJ
-//  #define STEPPERS_DISABLE_BIT   1 // Atmega2560 pin X / Arduino Digital Pin 14 
-//#define STEPPERS_DISABLE_MASK (0x3C)   //Atmega2560 pins 65-68.   //Arduino xxxx
-#define STEPPERS_DISABLE_MASK (0x3C)   //Atmega2560 pins 65-68.   
-//TODO: separate bits if needed
+#define X_DISABLE_BIT 2  // J2 / Atmega Pin 65
+#define Y_DISABLE_BIT 3  // J3 / Atmega Pin 66
+#define Z_DISABLE_BIT 4  // J4 / Atmega Pin 67
+#define C_DISABLE_BIT 5  // J5 /Atmega Pin 68
+#define STEPPERS_DISABLE_MASK ((1<<X_DISABLE_BIT)|(1<<Y_DISABLE_BIT)|(1<<Z_DISABLE_BIT)|(1<<C_DISABLE_BIT))   // All disable bits
 
-#define STEPPERS_LONG_LOCK_MASK  (0x10)  //Keep gripper engaged 
+#define STEPPERS_LONG_LOCK_MASK  ((1<<Y_DISABLE_BIT)|(1<<Z_DISABLE_BIT))  //Keep gripper and Y engaged longer
 #define STEPPERS_LOCK_TIME_MULTIPLE 200  //ms*250 = quarter seconds so 255->63.75s
-
 
   
 
