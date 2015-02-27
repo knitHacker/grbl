@@ -173,7 +173,9 @@ void limits_go_home(uint8_t cycle_mask)
       st_prep_buffer(); // Check and prep segment buffer. NOTE: Should take no longer than 200us.
       // Check only for user reset. No time to run protocol_execute_runtime() in this loop.
       protocol_execute_runtime();
-      if (SYS_EXEC & EXEC_RESET) { protocol_execute_runtime(); return; }
+      if (SYS_EXEC & (EXEC_RESET|EXEC_FEED_HOLD)) { 
+        protocol_execute_runtime(); return; 
+      }
 
       // Check if we never reached limit switch.  call it a Probe fail.
       if (SYS_EXEC & EXEC_CYCLE_STOP) {
