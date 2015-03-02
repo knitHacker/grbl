@@ -195,7 +195,7 @@ void limits_go_home(uint8_t cycle_mask)
     homing_rate = settings.homing_feed_rate;
     approach = ~approach; //toggle all bits
 
-  } while (n_cycle-- > 0);
+  } while (--n_cycle > 0);
 
   //force report of known position for compare to zero.
   linenumber_insert(LINENUMBER_SPECIAL|homing_line_number++);
