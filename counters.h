@@ -40,14 +40,8 @@ void counters_init();
 void counters_enable(int enable);
 
 
-// Returns counters pin state.
-uint8_t counters_get_state();
-
 // Returns counts for a given axis
 count_t counters_get_count(uint8_t axis);
-
-int16_t counters_get_idx();
-
 
 void  counters_reset(uint8_t axis);
 
