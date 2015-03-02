@@ -146,7 +146,6 @@ void limits_go_home(uint8_t cycle_mask)
     // and reset homing axis locks based on cycle mask.  
     uint8_t axislock = 0;
     float travel = (approach)?max_travel:settings.homing_pulloff;
-    travel*=HOMING_AXIS_SEARCH_SCALAR;
     
     for (idx=0; idx<N_AXIS; idx++) {
       if (bit_istrue(cycle_mask,bit(idx))) {
