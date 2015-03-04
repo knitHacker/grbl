@@ -115,7 +115,7 @@ void limits_go_home(uint8_t cycle_mask)
   uint8_t approach = ~0;  //approach has all bits set (negative dir) or none (positive)
   float homing_rate;
   uint8_t idx;
-  uint8_t n_cycle = (2*N_HOMING_LOCATE_CYCLE+1);
+  uint8_t n_cycle = (2*N_HOMING_LOCATE_CYCLE);
   float target[N_AXIS];
 
   uint8_t flipped = settings.homing_dir_mask>>X_DIRECTION_BIT;  //assumes keyme configuration.
@@ -185,22 +185,25 @@ void limits_go_home(uint8_t cycle_mask)
     st_reset(); // Immediately force kill steppers and reset step segment buffer.
     plan_reset(); // Reset planner buffer. Zero planner positions. Ensure homing motion is cleared.
 
+
+    if (!approach){
+      linenumber_insert(LINENUMBER_SPECIAL|(homing_line_number*4+LINEMASK_OFF_EDGE));
+      request_eol_report();
+      protocol_execute_runtime();
+    }
+  
     delay_ms(settings.homing_debounce_delay); // Delay to allow transient dynamics to dissipate.
 
-      /*   if (!approach){ */
-      /* linenumber_insert(LINENUMBER_SPECIAL|homing_line_number++); */
-      /* request_eol_report(); */
-      /*   } */
 
     // Reverse direction and reset homing rate for locate cycle(s).
     approach = ~approach; //toggle all bits
     homing_rate = settings.homing_feed_rate * sqrt(n_active_axis); ;
     
 
-  } while (--n_cycle > 0);
+  } while (n_cycle-- > 0);
 
   //force report of reference position for compare to zero.
-  linenumber_insert(LINENUMBER_SPECIAL|homing_line_number++);
+  linenumber_insert(LINENUMBER_SPECIAL|(homing_line_number*4+LINEMASK_ON_EDGE));
   request_eol_report();
   protocol_execute_runtime();
 
@@ -230,7 +233,9 @@ void limits_go_home(uint8_t cycle_mask)
   plan_sync_position(); // Sync planner position to current machine position for pull-off move.
 
   // Bypass mc_line(). Directly plan motion back to 0.  Report linenumber when done.
-  plan_buffer_line(target, min_seek_rate, false, LINENUMBER_SPECIAL|homing_line_number++); 
+  plan_buffer_line(target, min_seek_rate, false, LINENUMBER_SPECIAL|(homing_line_number*4+LINEMASK_DONE));
+  homing_line_number++;
+            
 
   // Initiate pull-off using main motion control routines.
   // TODO : Clean up state routines so that this motion still shows homing state.
