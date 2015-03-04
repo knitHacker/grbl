@@ -199,7 +199,7 @@ void limits_go_home(uint8_t cycle_mask)
 
   } while (--n_cycle > 0);
 
-  //force report of known position for compare to zero.
+  //force report of reference position for compare to zero.
   linenumber_insert(LINENUMBER_SPECIAL|homing_line_number++);
   request_eol_report();
   protocol_execute_runtime();
@@ -229,7 +229,8 @@ void limits_go_home(uint8_t cycle_mask)
   }
   plan_sync_position(); // Sync planner position to current machine position for pull-off move.
 
-  plan_buffer_line(target, min_seek_rate, false, LINENUMBER_SPECIAL|homing_line_number++); // Bypass mc_line(). Directly plan motion.
+  // Bypass mc_line(). Directly plan motion back to 0.  Report linenumber when done.
+  plan_buffer_line(target, min_seek_rate, false, LINENUMBER_SPECIAL|homing_line_number++); 
 
   // Initiate pull-off using main motion control routines.
   // TODO : Clean up state routines so that this motion still shows homing state.
