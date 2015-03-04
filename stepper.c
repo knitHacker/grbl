@@ -582,7 +582,6 @@ void stepper_init()
     TIMSK0 |= (1<<OCIE0A); // Enable Timer0 Compare Match A interrupt
   #endif
 
-  st_force_idle_lock(0); //No braking by default
   //Setup KeyMe specific ports
   keyme_init();
   st_force_idle_lock(0);  //use EEPROM settings by default
