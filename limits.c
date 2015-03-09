@@ -228,7 +228,7 @@ void limits_go_home(uint8_t cycle_mask)
   plan_sync_position(); // Sync planner position to current machine position for pull-off move.
 
   // Bypass mc_line(). Directly plan motion back to 0.  Report linenumber when done.
-  plan_buffer_line(target, min_seek_rate, false, LINENUMBER_SPECIAL|(homing_line_number*4+LINEMASK_DONE));
+  plan_buffer_line(target, min_seek_rate, false, LINENUMBER_SPECIAL|(homing_line_number*4+LINEMASK_HOMED));
   homing_line_number++;
             
 
