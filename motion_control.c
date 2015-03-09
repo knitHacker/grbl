@@ -343,3 +343,14 @@ void mc_reset()
     }
   }
 }
+
+
+// Method to stop motion in progress and clear the queues
+void mc_abort() { 
+  SYS_EXEC |= EXEC_FEED_HOLD;  //Stop motion;
+  while (sys.state & (STATE_CYCLE)) protocol_execute_runtime(); //spin untill stopped
+  st_reset  (); // Immediately force kill steppers and reset step segment buffer.
+  plan_reset(); // Reset planner buffer. Zero planner positions. Ensure probe motion is cleared.
+  plan_sync_position(); // Sync planner position to current machine position.
+  sys.state = STATE_IDLE;
+}
