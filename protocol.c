@@ -33,7 +33,6 @@
 
 static char line[LINE_BUFFER_SIZE]; // Line to be executed. Zero-terminated.
 
-static uint32_t report_clock=0; //time until next automatic report
 static uint8_t next_report=REQUEST_STATUS_REPORT;
 
 // Directs and executes one line of formatted input from protocol_process. While mostly
@@ -186,19 +185,20 @@ void protocol_main_loop()
 void protocol_execute_runtime()
 {
   uint8_t rt_exec = SYS_EXEC; // Copy to avoid calling volatile multiple times
+  static uint32_t report_clock = 0; //time until next automatic report
 
   uint32_t clock = masterclock;
-  if (clock >= (report_clock +  STATUS_REPORT_RATE_MS) || clock < report_clock) {
+  if ( (clock - report_clock) >= STATUS_REPORT_RATE_MS ) {
     rt_exec|= EXEC_RUNTIME_REPORT;
     sysflags.report_rqsts|=next_report;
     next_report^=(REQUEST_STATUS_REPORT|REQUEST_LIMIT_REPORT); //toggle between these two
     report_clock = clock;
   }
   st_check_disable();
-  
+
 
   if (rt_exec) { // Enter only if any bit flag is true
-    
+
     // System alarm. Everything has shutdown by something that has gone severely wrong. Report
     // the source of the error to the user. If critical, Grbl disables by entering an infinite
     // loop until system reset/abort.
