@@ -441,6 +441,7 @@ ISR(TIMER1_COMPA_vect)
     st.step_outbits &= ~(must_stop>>LIMIT_BIT_SHIFT);
     if (!st.step_outbits) {
       limits.ishoming=0; //if all axes at correct limit state, homing phase is over
+      request_report(REQUEST_STATUS_REPORT|REQUEST_LIMIT_REPORT,LINENUMBER_EMPTY_BLOCK);
     }
     //if limits made but not homing or alarmed already: critical alarm.
     if ( !(sys.state & (STATE_ALARM|STATE_HOMING)) && 
