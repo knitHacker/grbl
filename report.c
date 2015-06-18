@@ -212,12 +212,12 @@ void report_grbl_settings() {
   printPgmString(PSTR(" (homing seek c, mm/min)\r\n$35=")); printInteger(settings.homing_debounce_delay);
   printPgmString(PSTR(" (homing debounce, msec)\r\n$36=")); printFloat_SettingValue(settings.homing_pulloff);
   printPgmString(PSTR(" (homing pull-off, mm)"));
-#ifdef KEYME_BOARD
+  /* Begin KEYME Specific */
   printPgmString(PSTR("\r\n$37=")); print_uint8_base10(settings.microsteps);  //TODO: unpack for display
   printPgmString(PSTR(" (microsteps : ")); print_uint8_base2(settings.microsteps);
   printPgmString(PSTR(")\r\n$38=")); print_uint8_base10(settings.decay_mode);
   printPgmString(PSTR(" (decay mode, (0..3))"));
-#endif
+  /* End KEYME Specific */
   printPgmString(PSTR("\r\n"));
 }
 
@@ -360,7 +360,6 @@ void report_build_info(char *line)
   printPgmString(PSTR("]\r\n"));
 }
 
-#ifdef KEYME_BOARD
 //Prints encoder line: Counts and encoder pins
 void report_counters()
 {
@@ -379,16 +378,6 @@ void report_counters()
   printPgmString(PSTR("}\r\n"));
 }
 
-/* extern uint64_t st_shutdown_start; */
-/* void report_stepper() { */
-/*   printInteger((unsigned long)(masterclock)); */
-/*   printPgmString(PSTR(",")); */
-/*   printInteger((unsigned long)(st_shutdown_start)); */
-/*   printPgmString(PSTR(",")); */
-/*   printInteger((unsigned long)(masterclock - st_shutdown_start)); */
-/*   printPgmString(PSTR("\n")); */
-/* } */
-
 //Prints voltage data: motor volts.
 void report_voltage()
 {
@@ -404,7 +393,6 @@ void report_voltage()
   printPgmString(PSTR("|"));
   printPgmString(PSTR("\r\n"));
 }
-#endif
 
  // Prints real-time data. This function grabs a real-time snapshot of the stepper subprogram 
  // and the actual location of the CNC machine. Users may change the following function to their
@@ -425,12 +413,6 @@ uint8_t report_realtime_status()
   uint8_t i;
   memcpy(current_position,sys.position,sizeof(sys.position));
 
-  /* For linenumber debuggering
-    extern uint8_t ln_head();
-    printInteger(linenumber_next());
-    printPgmString(":");
-    printInteger(ln_head());
-  */
   float print_position[N_AXIS];
  
   // Report current machine state
@@ -473,10 +455,8 @@ uint8_t report_realtime_status()
     }
   }
 
-
   printPgmString(PSTR(":")); 
   printInteger(ln);
-    
   printPgmString(PSTR(">\r\n"));
 
   return (sys.flags & SYSFLAG_EOL_REPORT); //returns True if more work to do
