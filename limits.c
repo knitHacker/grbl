@@ -125,7 +125,7 @@ void limits_go_home(uint8_t cycle_mask)
   float min_seek_rate = 1e9; //arbitrary maximum=1km/s, will be reduced by axis setting below
   float max_travel = 0;
   uint8_t n_active_axis = 0;
-  uint8_t axislock = 0; 
+  uint8_t axislock = 0;
 
   for (idx=0; idx<N_AXIS; idx++){
     if (bit_istrue(cycle_mask,bit(idx))) {
@@ -143,23 +143,31 @@ void limits_go_home(uint8_t cycle_mask)
 
   do {
     // Set target location and rate for active axes.
-    // and reset homing axis locks based on cycle mask.  
-    float travel = approach?max_travel:settings.homing_pulloff; //limit travel away from the switch to the pulloff distance.
+    // and reset homing axis locks based on cycle mask.
+
+    // limit travel away from the switch to the pulloff distance.
+    float travel = approach ? max_travel : settings.homing_pulloff;
+    // set target for moving axes based on direction
     for (idx=0; idx<N_AXIS; idx++) {
       if (bit_istrue(cycle_mask,bit(idx))) {
-        if ((flipped&(1<<idx))^approach) { target[idx] = -travel; }
-        else {                             target[idx] = travel; }
-      } 
-      else {                               target[idx] = 0; 
-      } 
+        if ((flipped&(1<<idx))^approach) {
+          target[idx] = -travel;
+        }
+        else {
+          target[idx] = travel;
+        }
+      }
+      else {
+        target[idx] = 0;
+      }
     }
 
     // Perform homing cycle. Planner buffer should be empty, as required to initiate the homing cycle.
     plan_buffer_line(target, homing_rate, false, LINENUMBER_EMPTY_BLOCK);  // Bypass mc_line(). Directly plan homing motion.
 
-	 // axislock bit is high if axis is homing, so we only enable checking on moving axes.
+    // axislock bit is high if axis is homing, so we only enable checking on moving axes.
     limits_enable(axislock,~approach);  //expect 0 on approach (stop when 1). vice versa for pulloff
-    limits.ishoming =1;
+    limits.ishoming = 1;
 
     st_prep_buffer(); // Prep and fill segment buffer from newly planned block.
     st_wake_up(); // Initiate motion
@@ -168,8 +176,9 @@ void limits_go_home(uint8_t cycle_mask)
       st_prep_buffer(); // Check and prep segment buffer. NOTE: Should take no longer than 200us.
       // Check only for user reset. Keyme: fixed to allow protocol_execute_runtime() in this loop.
       protocol_execute_runtime();
-      if (SYS_EXEC & EXEC_RESET) { 
-        protocol_execute_runtime(); return; 
+      if (SYS_EXEC & EXEC_RESET) {
+        protocol_execute_runtime();
+        return;
       }
 
       // Check if we never reached limit switch.  call it a Probe fail.
@@ -191,14 +200,13 @@ void limits_go_home(uint8_t cycle_mask)
       request_eol_report();
       protocol_execute_runtime();
     }
-  
+
     delay_ms(settings.homing_debounce_delay); // Delay to allow transient dynamics to dissipate.
 
 
     // Reverse direction and reset homing rate for locate cycle(s).
     approach = ~approach; //toggle all bits
-    homing_rate = settings.homing_feed_rate * sqrt(n_active_axis); ;
-    
+    homing_rate = settings.homing_feed_rate * sqrt(n_active_axis);
 
   } while (n_cycle-- > 0);
 
@@ -235,7 +243,6 @@ void limits_go_home(uint8_t cycle_mask)
   // Bypass mc_line(). Directly plan motion back to 0.  Report linenumber when done.
   plan_buffer_line(target, min_seek_rate, false, LINENUMBER_SPECIAL|(homing_line_number*4+LINEMASK_DONE));
   homing_line_number++;
-            
 
   // Initiate pull-off using main motion control routines.
   // TODO : Clean up state routines so that this motion still shows homing state.
@@ -255,7 +262,7 @@ void limits_soft_check(float *target)
 {
   uint8_t idx;
   for (idx=0; idx<N_AXIS; idx++) {
-    if ((target[idx] < 0 || target[idx] > settings.max_travel[idx])  &&  
+    if ((target[idx] < 0 || target[idx] > settings.max_travel[idx])  &&
         (get_step_mask(idx)&HARDSTOP_MASK)) {   //if rotary axis, don't check
 
       // Force feed hold if cycle is active. All buffered blocks are guaranteed to be within 

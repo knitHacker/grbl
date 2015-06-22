@@ -60,7 +60,7 @@
 // If homing is enabled, homing init lock sets Grbl into an alarm state upon power up. This forces
 // the user to perform the homing cycle (or override the locks) before doing anything else. This is
 // mainly a safety feature to remind the user to home, since position is unknown to Grbl.
-//ADS: Temporariyl disabled: #define HOMING_INIT_LOCK // Comment to disable
+//ADS: Temporarily disabled: #define HOMING_INIT_LOCK // Comment to disable
 
 // Define the homing cycle patterns with bitmasks. The homing cycle first performs a search mode
 // to quickly engage the limit switches, followed by a slower locate mode, and finished by a short
@@ -77,9 +77,9 @@
 // on separate pin, but homed in one cycle. Also, it should be noted that the function of hard limits 
 // will not be affected by pin sharing.
 // NOTE: CYCLE is set for the keyme machine.  Gripper open first. Then Y, then X & Carousel
-#define HOMING_CYCLE_0 (1<<Z_AXIS)                // REQUIRED: First move 
+#define HOMING_CYCLE_0 (1<<X_AXIS)                // REQUIRED: First move X
 #define HOMING_CYCLE_1 (1<<Y_AXIS)                // Clear Y Axis
-#define HOMING_CYCLE_2 ((1<<X_AXIS)|(1<<C_AXIS))  // X and carousel ok at same time.
+#define HOMING_CYCLE_2 ((1<<Z_AXIS)|(1<<C_AXIS))  // Z and carousel ok at same time.
 
 
 #define HOMING_CYCLE_ALL  (HOMING_CYCLE_0|HOMING_CYCLE_1|HOMING_CYCLE_2)
