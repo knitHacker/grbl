@@ -364,32 +364,32 @@ void report_build_info(char *line)
 void report_counters()
 {
   uint8_t idx;
-  uint8_t pinval = FDBK_PIN&FDBK_MASK;
+  uint8_t pinval = FDBK_PIN & FDBK_MASK;
   printPgmString(PSTR("{"));
-  for (idx=0 ;idx<N_AXIS-1;idx++) {
+  for (idx=0; idx<N_AXIS-1; idx++) {
     printInteger(counters_get_count(idx));
     printPgmString(PSTR(","));
   }
   printInteger(counters_get_count(idx));
-  printPgmString(PSTR(":0,0,")); //todo replace with xy encoder state if installed
-  print_uint8_base2((pinval>>Z_ENC_IDX_BIT)&7); //3 bits    
+  printPgmString(PSTR(":0,0,")); // todo replace with xy encoder state if installed
+  print_uint8_base2((pinval>>Z_ENC_IDX_BIT) & 7); // 3 bits
   printPgmString(PSTR(","));
-  printInteger(~(pinval>>ALIGN_SENSE_BIT)&1); //1 bit sensor
+  printInteger(~(pinval>>ALIGN_SENSE_BIT) & 1); // 1 bit sensor
   printPgmString(PSTR("}\r\n"));
 }
 
 //Prints voltage data: motor volts.
 void report_voltage()
 {
-  uint8_t volts = MVOLT_PIN&MVOLT_MASK;
+  uint8_t volts = MVOLT_PIN & MVOLT_MASK;
   printPgmString(PSTR("|"));
-  printInteger((volts>>X_MVOLT_BIT)&1);
+  printInteger((volts>>X_MVOLT_BIT) & 1);
   printPgmString(PSTR(","));
-  printInteger((volts>>Y_MVOLT_BIT)&1);
+  printInteger((volts>>Y_MVOLT_BIT) & 1);
   printPgmString(PSTR(","));
-  printInteger((volts>>Z_MVOLT_BIT)&1);
+  printInteger((volts>>Z_MVOLT_BIT) & 1);
   printPgmString(PSTR(","));
-  printInteger((volts>>C_MVOLT_BIT)&1);
+  printInteger((volts>>C_MVOLT_BIT) & 1);
   printPgmString(PSTR("|"));
   printPgmString(PSTR("\r\n"));
 }
