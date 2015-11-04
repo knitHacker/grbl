@@ -43,8 +43,8 @@
 
 // Define runtime command special characters. These characters are 'picked-off' directly from the
 // serial read data stream and are not passed to the grbl line execution parser. Select characters
-// that do not and must not exist in the streamed g-code program. ASCII control characters may be 
-// used, if they are available per user setup. Also, extended ASCII codes (>127), which are never in 
+// that do not and must not exist in the streamed g-code program. ASCII control characters may be
+// used, if they are available per user setup. Also, extended ASCII codes (>127), which are never in
 // g-code programs, maybe selected for interface programs.
 // NOTE: If changed, manually update help message in report.c.
 #define CMD_STATUS_REPORT '?'
@@ -53,7 +53,6 @@
 #define CMD_FEED_HOLD '!'
 #define CMD_CYCLE_START '~'
 #define CMD_RESET 0x18 // ctrl-x.
-#define CMD_LIMIT_REPORT '^'
 #define CMD_VOLTAGE_REPORT '|'
 #define CMD_LINE_START '@'    //special start, not picked off, to ensure proper sequencing.
 
@@ -64,17 +63,17 @@
 
 // Define the homing cycle patterns with bitmasks. The homing cycle first performs a search mode
 // to quickly engage the limit switches, followed by a slower locate mode, and finished by a short
-// pull-off motion to disengage the limit switches. The following HOMING_CYCLE_x defines are executed 
+// pull-off motion to disengage the limit switches. The following HOMING_CYCLE_x defines are executed
 // in order starting with suffix 0 and completes the homing routine for the specified-axes only. If
 // an axis is omitted from the defines, it will not home, nor will the system update its position.
 // Meaning that this allows for users with non-standard cartesian machines, such as a lathe (x then z,
-// with no y), to configure the homing cycle behavior to their needs. 
+// with no y), to configure the homing cycle behavior to their needs.
 // NOTE: The homing cycle is designed to allow sharing of limit pins, if the axes are not in the same
 // cycle, but this requires some pin settings changes in cpu_map.h file. For example, the default homing
 // cycle can share the Z limit pin with either X or Y limit pins, since they are on different cycles.
 // By sharing a pin, this frees up a precious IO pin for other purposes. In theory, all axes limit pins
 // may be reduced to one pin, if all axes are homed with seperate cycles, or vice versa, all three axes
-// on separate pin, but homed in one cycle. Also, it should be noted that the function of hard limits 
+// on separate pin, but homed in one cycle. Also, it should be noted that the function of hard limits
 // will not be affected by pin sharing.
 // NOTE: CYCLE is set for the keyme machine.  Gripper open first. Then Y, then X & Carousel
 #define HOMING_CYCLE_0 (1<<X_AXIS)                // REQUIRED: First move X
@@ -84,7 +83,7 @@
 
 #define HOMING_CYCLE_ALL  (HOMING_CYCLE_0|HOMING_CYCLE_1|HOMING_CYCLE_2)
 // Number of homing cycles performed after when the machine initially jogs to limit switches.
-// This help in preventing overshoot and should improve repeatability. This value should be one or 
+// This help in preventing overshoot and should improve repeatability. This value should be one or
 // greater.
 #define N_HOMING_LOCATE_CYCLE 1 // Integer (1-128)
 
@@ -94,7 +93,7 @@
 // parser state depending on user preferences.
 #define N_STARTUP_LINE 2 // Integer (1-3)
 
-// Number of floating decimal points printed by Grbl for certain value types. These settings are 
+// Number of floating decimal points printed by Grbl for certain value types. These settings are
 // determined by realistic and commonly observed values in CNC machines. For example, position
 // values cannot be less than 0.001mm or 0.0001in, because machines can not be physically more
 // precise this. So, there is likely no need to change these, but you can if you need to here.
@@ -110,7 +109,7 @@
 #define USE_LINE_NUMBERS // Always enabled for Our build.
 
 
- 
+
 // Enables a second coolant control pin via the mist coolant g-code command M7 on the Arduino Uno
 // analog pin 5. Only use this option if you require a second coolant control pin.
 // NOTE: The M8 flood coolant control pin on analog pin 4 will still be functional regardless.
@@ -123,19 +122,19 @@
 // acceleration, particularly noticeable on machines that run at very high feedrates, but may negatively
 // impact performance. The correct value for this parameter is machine dependent, so it's advised to
 // set this only as high as needed. Approximate successful values can widely range from 50 to 200 or more.
-// NOTE: Changing this value also changes the execution time of a segment in the step segment buffer. 
+// NOTE: Changing this value also changes the execution time of a segment in the step segment buffer.
 // When increasing this value, this stores less overall time in the segment buffer and vice versa. Make
 // certain the step segment buffer is increased/decreased to account for these changes.
-#define ACCELERATION_TICKS_PER_SECOND 110 
+#define ACCELERATION_TICKS_PER_SECOND 110
 
-// Adaptive Multi-Axis Step Smoothing (AMASS) is an advanced feature that does what its name implies, 
+// Adaptive Multi-Axis Step Smoothing (AMASS) is an advanced feature that does what its name implies,
 // smoothing the stepping of multi-axis motions. This feature smooths motion particularly at low step
-// frequencies below 10kHz, where the aliasing between axes of multi-axis motions can cause audible 
+// frequencies below 10kHz, where the aliasing between axes of multi-axis motions can cause audible
 // noise and shake your machine. At even lower step frequencies, AMASS adapts and provides even better
 // step smoothing. See stepper.c for more details on the AMASS system works.
 #define ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING  // Default enabled. Comment to disable.
 
-// Sets which axis the tool length offset is applied. Assumes the spindle is always parallel with 
+// Sets which axis the tool length offset is applied. Assumes the spindle is always parallel with
 // the selected axis with the tool oriented toward the negative direction. In other words, a positive
 // tool length offset value is subtracted from the current location.
 #define TOOL_LENGTH_OFFSET_AXIS Z_AXIS // Default z-axis. Valid values are X_AXIS, Y_AXIS, or Z_AXIS.
@@ -147,9 +146,9 @@
 // #define VARIABLE_SPINDLE // Default disabled. Uncomment to enable.
 
 // Use by the variable spindle output only. These parameters set the maximum and minimum spindle speed
-// "S" g-code values to correspond to the maximum and minimum pin voltages. There are 256 discrete and 
+// "S" g-code values to correspond to the maximum and minimum pin voltages. There are 256 discrete and
 // equally divided voltage bins between the maximum and minimum spindle speeds. So for a 5V pin, 1000
-// max rpm, and 250 min rpm, the spindle output voltage would be set for the following "S" commands: 
+// max rpm, and 250 min rpm, the spindle output voltage would be set for the following "S" commands:
 // "S1000" @ 5V, "S250" @ 0.02V, and "S625" @ 2.5V (mid-range). The pin outputs 0V when disabled.
 #define SPINDLE_MAX_RPM 1000.0 // Max spindle RPM. This value is equal to 100% duty cycle on the PWM.
 #define SPINDLE_MIN_RPM 0.0    // Min spindle RPM. This value is equal to (1/256) duty cycle on the PWM.
@@ -162,26 +161,26 @@
 // should not be much greater than zero or to the minimum value necessary for the machine to work.
 #define MINIMUM_JUNCTION_SPEED 0.0 // (mm/min)
 
-// Number of arc generation iterations by small angle approximation before exact arc trajectory 
+// Number of arc generation iterations by small angle approximation before exact arc trajectory
 // correction. This parameter maybe decreased if there are issues with the accuracy of the arc
 // generations. In general, the default value is more than enough for the intended CNC applications
-// of grbl, and should be on the order or greater than the size of the buffer to help with the 
+// of grbl, and should be on the order or greater than the size of the buffer to help with the
 // computational efficiency of generating arcs.
 // NOTE: Arcs are now generated by a chordal tolerance
 #define N_ARC_CORRECTION 20 // Integer (1-255)
 
 // Time delay increments performed during a dwell. The default value is set at 50ms, which provides
 // a maximum time delay of roughly 55 minutes, more than enough for most any application. Increasing
-// this delay will increase the maximum dwell time linearly, but also reduces the responsiveness of 
-// run-time command executions, like status reports, since these are performed between each dwell 
+// this delay will increase the maximum dwell time linearly, but also reduces the responsiveness of
+// run-time command executions, like status reports, since these are performed between each dwell
 // time step. Also, keep in mind that the Arduino delay timer is not very accurate for long delays.
 #define DWELL_TIME_STEP 50 // Integer (1-255) (milliseconds)
 
 // Creates a delay between the direction pin setting and corresponding step pulse by creating
-// another interrupt (Timer2 compare) to manage it. The main Grbl interrupt (Timer1 compare) 
-// sets the direction pins, and does not immediately set the stepper pins, as it would in 
-// normal operation. The Timer2 compare fires next to set the stepper pins after the step 
-// pulse delay time, and Timer2 overflow will complete the step pulse, except now delayed 
+// another interrupt (Timer2 compare) to manage it. The main Grbl interrupt (Timer1 compare)
+// sets the direction pins, and does not immediately set the stepper pins, as it would in
+// normal operation. The Timer2 compare fires next to set the stepper pins after the step
+// pulse delay time, and Timer2 overflow will complete the step pulse, except now delayed
 // by the step pulse time plus the step pulse delay. (Thanks langwadt for the idea!)
 // NOTE: Uncomment to enable. The recommended delay must be > 3us, and, when added with the
 // user-supplied step pulse time, the total time must not exceed 127us. Reported successful
@@ -189,46 +188,46 @@
 #define STEP_PULSE_DELAY 10 // Step pulse delay in microseconds. Default disabled.
 
 // The number of linear motions in the planner buffer to be planned at any give time. The vast
-// majority of RAM that Grbl uses is based on this buffer size. Only increase if there is extra 
+// majority of RAM that Grbl uses is based on this buffer size. Only increase if there is extra
 // available RAM, like when re-compiling for a Mega or Sanguino. Or decrease if the Arduino
 // begins to crash due to the lack of available RAM or if the CPU is having trouble keeping
-// up with planning new incoming motions as they are executed. 
+// up with planning new incoming motions as they are executed.
 // #define BLOCK_BUFFER_SIZE 18  // Uncomment to override default in planner.h.
 
 // Governs the size of the intermediary step segment buffer between the step execution algorithm
 // and the planner blocks. Each segment is set of steps executed at a constant velocity over a
 // fixed time defined by ACCELERATION_TICKS_PER_SECOND. They are computed such that the planner
-// block velocity profile is traced exactly. The size of this buffer governs how much step 
-// execution lead time there is for other Grbl processes have to compute and do their thing 
+// block velocity profile is traced exactly. The size of this buffer governs how much step
+// execution lead time there is for other Grbl processes have to compute and do their thing
 // before having to come back and refill this buffer, currently at ~50msec of step moves.
 // #define SEGMENT_BUFFER_SIZE 6 // Uncomment to override default in stepper.h.
 
-// Line buffer size from the serial input stream to be executed. Also, governs the size of 
+// Line buffer size from the serial input stream to be executed. Also, governs the size of
 // each of the startup blocks, as they are each stored as a string of this size. Make sure
 // to account for the available EEPROM at the defined memory address in settings.h and for
 // the number of desired startup blocks.
-// NOTE: 70 characters is not a problem except for extreme cases, but the line buffer size 
-// can be too small and g-code blocks can get truncated. Officially, the g-code standards 
-// support up to 256 characters. In future versions, this default will be increased, when 
+// NOTE: 70 characters is not a problem except for extreme cases, but the line buffer size
+// can be too small and g-code blocks can get truncated. Officially, the g-code standards
+// support up to 256 characters. In future versions, this default will be increased, when
 // we know how much extra memory space we can re-invest into this.
 // #define LINE_BUFFER_SIZE 70  // Uncomment to override default in protocol.h
-  
+
 // Serial send and receive buffer size. The receive buffer is often used as another streaming
 // buffer to store incoming blocks to be processed by Grbl when its ready. Most streaming
-// interfaces will character count and track each block send to each block response. So, 
+// interfaces will character count and track each block send to each block response. So,
 // increase the receive buffer if a deeper receive buffer is needed for streaming and avaiable
 // memory allows. The send buffer primarily handles messages in Grbl. Only increase if large
 // messages are sent and Grbl begins to stall, waiting to send the rest of the message.
 // #define RX_BUFFER_SIZE 128 // Uncomment to override defaults in serial.h
 // #define TX_BUFFER_SIZE 64
-  
 
-// A simple software debouncing feature for hard limit switches. When enabled, the interrupt 
-// monitoring the hard limit switch pins will enable the Arduino's watchdog timer to re-check 
-// the limit pin state after a delay of about 32msec. This can help with CNC machines with 
-// problematic false triggering of their hard limit switches, but it WILL NOT fix issues with 
+
+// A simple software debouncing feature for hard limit switches. When enabled, the interrupt
+// monitoring the hard limit switch pins will enable the Arduino's watchdog timer to re-check
+// the limit pin state after a delay of about 32msec. This can help with CNC machines with
+// problematic false triggering of their hard limit switches, but it WILL NOT fix issues with
 // electrical interference on the signal cables from external sources. It's recommended to first
-// use shielded signal cables with their shielding connected to ground (old USB/computer cables 
+// use shielded signal cables with their shielding connected to ground (old USB/computer cables
 // work well and are cheap to find) and wire in a low-pass circuit into each limit pin.
 //#define ENABLE_SOFTWARE_DEBOUNCE // Default disabled. Uncomment to enable.
 
