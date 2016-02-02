@@ -1,8 +1,8 @@
 /*
-  settings.c - eeprom configuration handling 
+  settings.c - eeprom configuration handling
   Part of Grbl
 
-  Copyright (c) 2011-2014 Sungeun K. Jeon  
+  Copyright (c) 2011-2014 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
   Grbl is free software: you can redistribute it and/or modify
@@ -46,21 +46,21 @@ void settings_store_build_info(char *line)
 
 // Method to store coord data parameters into EEPROM
 void settings_write_coord_data(uint8_t coord_select, float *coord_data)
-{  
+{
   uint16_t addr = coord_select*(sizeof(float)*N_AXIS+1) + EEPROM_ADDR_PARAMETERS;
   memcpy_to_eeprom_with_checksum(addr,(char*)coord_data, sizeof(float)*N_AXIS);
-}  
+}
 
 
 // Method to store Grbl global settings struct and version number into EEPROM
-void write_global_settings() 
+void write_global_settings()
 {
   eeprom_put_char(0, SETTINGS_VERSION);
   memcpy_to_eeprom_with_checksum(EEPROM_ADDR_GLOBAL, (char*)&settings, sizeof(settings_t));
 }
 
 
-// Method to reset Grbl global settings back to defaults. 
+// Method to reset Grbl global settings back to defaults.
 void settings_reset() {
   settings.steps_per_mm[X_AXIS] = DEFAULT_X_STEPS_PER_MM;
   settings.steps_per_mm[Y_AXIS] = DEFAULT_Y_STEPS_PER_MM;
@@ -98,10 +98,11 @@ void settings_reset() {
   settings.stepper_idle_lock_time = DEFAULT_STEPPER_IDLE_LOCK_TIME;
   settings.max_travel[X_AXIS] = (DEFAULT_X_MAX_TRAVEL);
   settings.max_travel[Y_AXIS] = (DEFAULT_Y_MAX_TRAVEL);
-  settings.max_travel[Z_AXIS] = (DEFAULT_Z_MAX_TRAVEL);    
-  settings.max_travel[C_AXIS] = (DEFAULT_C_MAX_TRAVEL);  
+  settings.max_travel[Z_AXIS] = (DEFAULT_Z_MAX_TRAVEL);
+  settings.max_travel[C_AXIS] = (DEFAULT_C_MAX_TRAVEL);
   settings.microsteps = DEFAULT_MICROSTEPPING;
-  settings.decay_mode = DEFAULT_DECAY_MODE; 
+  settings.decay_mode = DEFAULT_DECAY_MODE;
+  settings.force_sensor_level = DEFAULT_FORCE_SENSOR_LEVEL;
   write_global_settings();
 }
 
@@ -141,13 +142,13 @@ uint8_t settings_read_coord_data(uint8_t coord_select, float *coord_data)
   uint16_t addr = coord_select*(sizeof(float)*N_AXIS+1) + EEPROM_ADDR_PARAMETERS;
   if (!(memcpy_from_eeprom_with_checksum((char*)coord_data, addr, sizeof(float)*N_AXIS))) {
     // Reset with default zero vector
-    clear_vector_float(coord_data); 
+    clear_vector_float(coord_data);
     settings_write_coord_data(coord_select,coord_data);
     return(false);
   } else {
     return(true);
   }
-}  
+}
 
 
 // Reads Grbl global settings struct from EEPROM.
@@ -160,7 +161,7 @@ uint8_t read_global_settings() {
       return(false);
     }
   } else {
-    return(false); 
+    return(false);
   }
   return(true);
 }
@@ -168,7 +169,7 @@ uint8_t read_global_settings() {
 
 // A helper method to set settings from command line
 uint8_t settings_store_global_setting(int parameter, float value) {
-  if (value < 0.0) { return(STATUS_NEGATIVE_VALUE); } 
+  if (value < 0.0) { return(STATUS_NEGATIVE_VALUE); }
   switch(parameter) {
     case 0: case 1: case 2: case 3:
       settings.steps_per_mm[parameter] = value; break;
@@ -180,11 +181,11 @@ uint8_t settings_store_global_setting(int parameter, float value) {
     case 9: settings.acceleration[Y_AXIS] = value*60*60; break; // Convert to mm/min^2 for grbl internal use.
     case 10: settings.acceleration[Z_AXIS] = value*60*60; break; // Convert to mm/min^2 for grbl internal use.
     case 11: settings.acceleration[C_AXIS] = value*60*60; break; // Convert to mm/min^2 for grbl internal use.
-    case 12: settings.max_travel[X_AXIS] = value; break; 
-    case 13: settings.max_travel[Y_AXIS] = value; break; 
-    case 14: settings.max_travel[Z_AXIS] = value; break; 
-    case 15: settings.max_travel[C_AXIS] = value; break; 
-    case 16: 
+    case 12: settings.max_travel[X_AXIS] = value; break;
+    case 13: settings.max_travel[Y_AXIS] = value; break;
+    case 14: settings.max_travel[Z_AXIS] = value; break;
+    case 15: settings.max_travel[C_AXIS] = value; break;
+    case 16:
       if (value < 3) { return(STATUS_SETTING_STEP_PULSE_MIN); }
       settings.pulse_microseconds = round(value); break;
     case 17: settings.step_invert_mask = trunc(value); break;
@@ -209,9 +210,9 @@ uint8_t settings_store_global_setting(int parameter, float value) {
       else { settings.flags &= ~BITFLAG_INVERT_LIMIT_PINS; }
       break;
     case 26:
-      if (value) { 
+      if (value) {
         if (bit_isfalse(settings.flags, BITFLAG_HOMING_ENABLE)) { return(STATUS_SOFT_LIMIT_ERROR); }
-        settings.flags |= BITFLAG_SOFT_LIMIT_ENABLE; 
+        settings.flags |= BITFLAG_SOFT_LIMIT_ENABLE;
       } else { settings.flags &= ~BITFLAG_SOFT_LIMIT_ENABLE; }
       break;
     case 27:
@@ -221,8 +222,8 @@ uint8_t settings_store_global_setting(int parameter, float value) {
       break;
     case 28:
       if (value) { settings.flags |= BITFLAG_HOMING_ENABLE; }
-      else { 
-        settings.flags &= ~BITFLAG_HOMING_ENABLE; 
+      else {
+        settings.flags &= ~BITFLAG_HOMING_ENABLE;
         settings.flags &= ~BITFLAG_SOFT_LIMIT_ENABLE; // Force disable soft-limits.
       }
       break;
@@ -236,7 +237,8 @@ uint8_t settings_store_global_setting(int parameter, float value) {
     case 36: settings.homing_pulloff = value; break;
     case 37: settings.microsteps = value; break;
     case 38: settings.decay_mode = value; break;
-    default: 
+    case 39: settings.force_sensor_level = value; break;
+    default:
       return(STATUS_INVALID_STATEMENT);
   }
   write_global_settings();

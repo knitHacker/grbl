@@ -2,7 +2,7 @@
   system.h - Header for system level commands and real-time processes
   Part of Grbl
 
-  Copyright (c) 2014 Sungeun K. Jeon  
+  Copyright (c) 2014 Sungeun K. Jeon
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@
 #include <avr/wdt.h>
 #include <util/delay.h>
 #include <math.h>
-#include <inttypes.h>    
+#include <inttypes.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -42,10 +42,10 @@
 
 
 
-// Define system executor bit map. Used internally by runtime protocol as runtime command flags, 
+// Define system executor bit map. Used internally by runtime protocol as runtime command flags,
 // which notifies the main program to execute the specified runtime command asynchronously.
 // NOTE: The system executor uses an unsigned 8-bit volatile variable (8 flag limit.) The default
-// flags are always false, so the runtime protocol only needs to check for a non-zero value to 
+// flags are always false, so the runtime protocol only needs to check for a non-zero value to
 // know when there is a runtime command to execute.
 #define EXEC_RUNTIME_REPORT bit(0) // bitmask 00000001
 #define EXEC_CYCLE_START    bit(1) // bitmask 00000010
@@ -72,7 +72,7 @@
 #define STATE_CYCLE      bit(4) // Cycle is running
 #define STATE_HOLD       bit(5) // Executing feed hold
 
-// Define Grbl alarm codes. Listed most to least serious 
+// Define Grbl alarm codes. Listed most to least serious
 #define ALARM_SOFT_LIMIT  bit(0) // soft limits exceeded
 #define ALARM_HARD_LIMIT  bit(1) // hard limit hit
 #define ALARM_ABORT_CYCLE bit(2) // abort during motion
@@ -91,8 +91,8 @@ typedef struct {
   uint8_t state;                 // Tracks the current state of Grbl.
   uint8_t flags;                 // see SYSFLAG_xxx above
   uint8_t alarm;                 // see ALARM_xxx above. which alarm(s) are active
-  int32_t position[N_AXIS];      // Real-time machine (aka home) position vector in steps. 
-                                 // NOTE: This may need to be a volatile variable, if problems arise.                             
+  int32_t position[N_AXIS];      // Real-time machine (aka home) position vector in steps.
+                                 // NOTE: This may need to be a volatile variable, if problems arise.
   int32_t probe_position[N_AXIS]; // Last probe position in machine coordinates and steps.
 
 } system_t;
@@ -108,7 +108,7 @@ extern volatile sys_flags_t sysflags;
 
 
 #ifndef UNPROTECTED_VOLATILES
-  #define SYS_EXEC GPIOR0 
+  #define SYS_EXEC GPIOR0
 #else
   #define SYS_EXEC sysflags.execute
 #endif
@@ -127,13 +127,13 @@ void system_execute_runtime();
 // Execute the startup script lines stored in EEPROM upon initialization
 void system_execute_startup(char *line);
 
-//  * Utilities for line numbeirng * 
+//  * Utilities for line numbeirng *
 // NOTE: Max line number is defined by the g-code standard to be 99999. It seems to be an
 // arbitrary value, and some GUIs may require more. So grbl increased it based on a max safe
 // value when converting a float (7.2 digit precision)s to an integer.
 
-// But We don't need such a big value, and we do need the high bit free 
-//#define MAX_LINE_NUMBER 9999999 
+// But We don't need such a big value, and we do need the high bit free
+//#define MAX_LINE_NUMBER 9999999
 #define LINENUMBER_EMPTY_BLOCK 0x8000 //the other bit, used as a flag
 #define LINENUMBER_SPECIAL      0x4000
 #define LINENUMBER_MAX         (LINENUMBER_SPECIAL-1)

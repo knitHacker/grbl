@@ -1,7 +1,7 @@
 /*
   main.c - An embedded CNC Controller with rs274/ngc (g-code) support
   Part of Grbl
-  
+
   Copyright (c) 2011-2014 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
@@ -36,8 +36,8 @@
 
 
 // Declare system global variable structure
-system_t sys; 
-volatile sys_flags_t sysflags; 
+system_t sys;
+volatile sys_flags_t sysflags;
 
 
 int main(void)
@@ -48,7 +48,7 @@ int main(void)
   stepper_init();  // Configure stepper pins and interrupt timers
   system_init();   // Configure pinout pins and pin-change interrupt
   counters_init(); //configure encoder and counter interrupt.
-  
+
   memset(&sys, 0, sizeof(sys));  // Clear all system variables
   memset((void*)&sysflags, 0, sizeof(sysflags));  // and volatile
   SYS_EXEC = 0;   //and mapped port if different
@@ -66,21 +66,21 @@ int main(void)
   #ifdef HOMING_INIT_LOCK
     if (bit_istrue(settings.flags,BITFLAG_HOMING_ENABLE)) { sys.state = STATE_ALARM; }
   #endif
-  
+
   // Grbl initialization loop upon power-up or a system abort. For the latter, all processes
   // will return to this loop to be cleanly re-initialized.
   for(;;) {
 
     // TODO: Separate configure task that require interrupts to be disabled, especially upon
     // a system abort and ensuring any active interrupts are cleanly reset.
-  
+
     // Reset Grbl primary systems.
     serial_reset_read_buffer(); // Clear serial read buffer
     gc_init(); // Set g-code parser to default state
     linenumber_init();  //reset line numbering buffer
     spindle_init();
     coolant_init();
-    limits_init(); 
+    limits_init();
     probe_init();
     plan_reset(); // Clear block buffer and planner variables
     st_reset(); // Clear stepper subsystem variables.
@@ -94,10 +94,10 @@ int main(void)
     SYS_EXEC = 0;
     if (bit_istrue(settings.flags,BITFLAG_AUTO_START)) { sys.flags |= SYSFLAG_AUTOSTART; }
     else { sys.flags &= ~SYSFLAG_AUTOSTART; }
-          
+
     // Start Grbl main loop. Processes program inputs and executes them.
     protocol_main_loop();
-    
+
   }
   return 0;   /* Never reached */
 }
