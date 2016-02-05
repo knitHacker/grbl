@@ -71,13 +71,13 @@
   #define DEFAULT_Z_STEPS_PER_MM 400.0
   #define DEFAULT_C_STEPS_PER_MM 58.0
   #define DEFAULT_X_MAX_RATE 1320.0 // mm/min
-  #define DEFAULT_Y_MAX_RATE 2100.0 // 
-  #define DEFAULT_Z_MAX_RATE 400.0 // 
-  #define DEFAULT_C_MAX_RATE 300.0 // 
-  #define DEFAULT_X_ACCELERATION (50.0*60*60) // mm/sec^2 
-  #define DEFAULT_Y_ACCELERATION (75.0*60*60) // mm/sec^2 
-  #define DEFAULT_Z_ACCELERATION (8.0*60*60) //  mm/sec^2 
-  #define DEFAULT_C_ACCELERATION (4.50*60*60) // mm/sec^2 
+  #define DEFAULT_Y_MAX_RATE 2100.0 //
+  #define DEFAULT_Z_MAX_RATE 400.0 //
+  #define DEFAULT_C_MAX_RATE 300.0 //
+  #define DEFAULT_X_ACCELERATION (50.0*60*60) // mm/sec^2
+  #define DEFAULT_Y_ACCELERATION (75.0*60*60) // mm/sec^2
+  #define DEFAULT_Z_ACCELERATION (8.0*60*60) //  mm/sec^2
+  #define DEFAULT_C_ACCELERATION (4.50*60*60) // mm/sec^2
   #define DEFAULT_X_MAX_TRAVEL 100.0 // mm
   #define DEFAULT_Y_MAX_TRAVEL 200.0 // mm
   #define DEFAULT_Z_MAX_TRAVEL 50.0 // mm
@@ -108,6 +108,7 @@
   #define DEFAULT_MICROSTEPPING 0x55   //half stepping on all axes
   #define DEFAULT_DECAY_MODE 0         //slowest
   #define DEFAULT_COUNTS_PER_IDX 4000  //counts per encoder rev
+  #define DEFAULT_FORCE_SENSOR_LEVEL 77 // 1.5V out of 5.0V=255 max
 #endif
 
 #ifdef DEFAULTS_BENCH
@@ -117,13 +118,13 @@
   #define DEFAULT_Z_STEPS_PER_MM 200.0
   #define DEFAULT_C_STEPS_PER_MM 200.0
   #define DEFAULT_X_MAX_RATE 600.0 // mm/min
-  #define DEFAULT_Y_MAX_RATE 600.0 // 
-  #define DEFAULT_Z_MAX_RATE 600.0 // 
-  #define DEFAULT_C_MAX_RATE 600.0 // 
-  #define DEFAULT_X_ACCELERATION (10.0*60*60) // 10*60*60 mm/min^2 
-  #define DEFAULT_Y_ACCELERATION (10.0*60*60) // 10*60*60 mm/min^2 
-  #define DEFAULT_Z_ACCELERATION (10.0*60*60) // 10*60*60 mm/min^2 
-  #define DEFAULT_C_ACCELERATION (6.0*60*60) // 1*60*60 mm/min^2 
+  #define DEFAULT_Y_MAX_RATE 600.0 //
+  #define DEFAULT_Z_MAX_RATE 600.0 //
+  #define DEFAULT_C_MAX_RATE 600.0 //
+  #define DEFAULT_X_ACCELERATION (10.0*60*60) // 10*60*60 mm/min^2
+  #define DEFAULT_Y_ACCELERATION (10.0*60*60) // 10*60*60 mm/min^2
+  #define DEFAULT_Z_ACCELERATION (10.0*60*60) // 10*60*60 mm/min^2
+  #define DEFAULT_C_ACCELERATION (6.0*60*60) // 1*60*60 mm/min^2
   #define DEFAULT_X_MAX_TRAVEL 250.0 // mm
   #define DEFAULT_Y_MAX_TRAVEL 250.0 // mm
   #define DEFAULT_Z_MAX_TRAVEL 250.0 // mm

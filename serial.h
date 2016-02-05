@@ -20,7 +20,7 @@
 */
 
 /* This code was initially inspired by the wiring_serial module by David A. Mellis which
-   used to be a part of the Arduino project. */ 
+   used to be a part of the Arduino project. */
 
 #ifndef serial_h
 #define serial_h
@@ -30,7 +30,7 @@
   #define RX_BUFFER_SIZE 128
 #endif
 #ifndef TX_BUFFER_SIZE
-  #define TX_BUFFER_SIZE 64
+  #define TX_BUFFER_SIZE 128
 #endif
 
 #define SERIAL_NO_DATA 0xff

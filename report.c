@@ -2,7 +2,7 @@
   report.c - reporting and messaging methods
   Part of Grbl
 
-  Copyright (c) 2012-2014 Sungeun K. Jeon  
+  Copyright (c) 2012-2014 Sungeun K. Jeon
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -18,11 +18,11 @@
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-/* 
-  This file functions as the primary feedback interface for Grbl. Any outgoing data, such 
+/*
+  This file functions as the primary feedback interface for Grbl. Any outgoing data, such
   as the protocol status messages, feedback messages, and status reports, are stored here.
-  For the most part, these functions primarily are called from protocol.c methods. If a 
-  different style feedback is desired (i.e. JSON), then a user can change these following 
+  For the most part, these functions primarily are called from protocol.c methods. If a
+  different style feedback is desired (i.e. JSON), then a user can change these following
   methods to accomodate their needs.
 */
 
@@ -40,14 +40,14 @@
 
 
 // Handles the primary confirmation protocol response for streaming interfaces and human-feedback.
-// For every incoming line, this method responds with an 'ok' for a successful command or an 
-// 'error:'  to indicate some error event with the line or some critical system error during 
+// For every incoming line, this method responds with an 'ok' for a successful command or an
+// 'error:'  to indicate some error event with the line or some critical system error during
 // operation. Errors events can originate from the g-code parser, settings module, or asynchronously
 // from a critical error, such as a triggered hard limit. Interface should always monitor for these
 // responses.
 // NOTE: In silent mode, all error codes are greater than zero.
 // TODO: Install silent mode to return only numeric values, primarily for GUIs.
-void report_status_message(uint8_t status_code) 
+void report_status_message(uint8_t status_code)
 {
   if (status_code == 0) { // STATUS_OK
     printPgmString(PSTR("ok\r\n"));
@@ -59,7 +59,7 @@ void report_status_message(uint8_t status_code)
   }
   else {
     printPgmString(PSTR("error: "));
-    switch(status_code) {          
+    switch(status_code) {
       case STATUS_EXPECTED_COMMAND_LETTER:
       printPgmString(PSTR("Expected command letter")); break;
       case STATUS_BAD_NUMBER_FORMAT:
@@ -81,8 +81,8 @@ void report_status_message(uint8_t status_code)
       case STATUS_SOFT_LIMIT_ERROR:
       printPgmString(PSTR("Homing not enabled")); break;
       case STATUS_OVERFLOW:
-      printPgmString(PSTR("Line overflow")); break; 
-      
+      printPgmString(PSTR("Line overflow")); break;
+
       // Common g-code parser errors.
       case STATUS_GCODE_MODAL_GROUP_VIOLATION:
       printPgmString(PSTR("Modal group violation")); break;
@@ -217,6 +217,8 @@ void report_grbl_settings() {
   printPgmString(PSTR(" (microsteps : ")); print_uint8_base2(settings.microsteps);
   printPgmString(PSTR(")\r\n$38=")); print_uint8_base10(settings.decay_mode);
   printPgmString(PSTR(" (decay mode, (0..3))"));
+  printPgmString(PSTR("\r\n$39=")); print_uint8_base10(settings.force_sensor_level);
+  printPgmString(PSTR(" (force sensor level, (0..255))"));
   /* End KEYME Specific */
   printPgmString(PSTR("\r\n"));
 }
@@ -267,14 +269,14 @@ void report_ngc_parameters()
       printFloat_CoordValue(coord_data[i]);
       if (i < (N_AXIS-1)) { printPgmString(PSTR(",")); }
       else { printPgmString(PSTR("]\r\n")); }
-    } 
+    }
   }
   printPgmString(PSTR("[G92:")); // Print G92,G92.1 which are not persistent in memory
   for (i=0; i<N_AXIS; i++) {
     printFloat_CoordValue(gc_state.coord_offset[i]);
     if (i < (N_AXIS-1)) { printPgmString(PSTR(",")); }
     else { printPgmString(PSTR("]\r\n")); }
-  } 
+  }
   printPgmString(PSTR("[TLO:")); // Print tool length offset value
   printFloat_CoordValue(gc_state.tool_length_offset);
   printPgmString(PSTR("]\r\n"));
@@ -295,25 +297,25 @@ void report_gcode_modes()
 
   printPgmString(PSTR(" G"));
   print_uint8_base10(gc_state.modal.coord_select+54);
-  
+
   switch (gc_state.modal.plane_select) {
     case PLANE_SELECT_XY : printPgmString(PSTR(" G17")); break;
     case PLANE_SELECT_ZX : printPgmString(PSTR(" G18")); break;
     case PLANE_SELECT_YZ : printPgmString(PSTR(" G19")); break;
   }
-  
+
   if (gc_state.modal.units == UNITS_MODE_MM) { printPgmString(PSTR(" G21")); }
   else if (gc_state.modal.units == UNITS_MODE_INCHES) { printPgmString(PSTR(" G20")); }
   else { printPgmString(PSTR(" G66")); }
   if (gc_state.modal.units == UNITS_MODE_MM) { printPgmString(PSTR(" G21")); }
   else { printPgmString(PSTR(" G20")); }
-  
+
   if (gc_state.modal.distance == DISTANCE_MODE_ABSOLUTE) { printPgmString(PSTR(" G90")); }
   else { printPgmString(PSTR(" G91")); }
-  
+
   if (gc_state.modal.feed_rate == FEED_RATE_MODE_INVERSE_TIME) { printPgmString(PSTR(" G93")); }
   else { printPgmString(PSTR(" G94")); }
-    
+
   switch (gc_state.modal.program_flow) {
     case PROGRAM_FLOW_RUNNING : printPgmString(PSTR(" M0")); break;
     case PROGRAM_FLOW_PAUSED : printPgmString(PSTR(" M1")); break;
@@ -325,7 +327,7 @@ void report_gcode_modes()
     case SPINDLE_ENABLE_CCW : printPgmString(PSTR(" M4")); break;
     case SPINDLE_DISABLE : printPgmString(PSTR(" M5")); break;
   }
-  
+
   switch (gc_state.modal.coolant) {
     case COOLANT_DISABLE : printPgmString(PSTR(" M9")); break;
     case COOLANT_FLOOD_ENABLE : printPgmString(PSTR(" M8")); break;
@@ -333,10 +335,10 @@ void report_gcode_modes()
       case COOLANT_MIST_ENABLE : printPgmString(PSTR(" M7")); break;
     #endif
   }
-  
+
   printPgmString(PSTR(" T"));
   print_uint8_base10(gc_state.tool);
-  
+
   printPgmString(PSTR(" F"));
   printFloat_RateValue(gc_state.feed_rate);
 
@@ -371,9 +373,7 @@ void report_counters()
     printPgmString(PSTR(","));
   }
   printInteger(counters_get_count(idx));
-  printPgmString(PSTR(":0,0,")); // todo replace with xy encoder state if installed
-  print_uint8_base2((pinval>>Z_ENC_IDX_BIT) & 7); // 3 bits
-  printPgmString(PSTR(","));
+  printPgmString(PSTR(":0,0,0,")); // TODO: replace with X,Y,Z encoders as appropriate, if installed
   printInteger(~(pinval>>ALIGN_SENSE_BIT) & 1); // 1 bit sensor
   printPgmString(PSTR("}\r\n"));
 }
@@ -381,30 +381,80 @@ void report_counters()
 //Prints voltage data: motor volts.
 void report_voltage()
 {
-  uint8_t volts = MVOLT_PIN & MVOLT_MASK;
+  // Set the ADC Reference
+  ADMUX = (1<<REFS0);
+
+  // Begin character
   printPgmString(PSTR("|"));
-  printInteger((volts>>X_MVOLT_BIT) & 1);
-  printPgmString(PSTR(","));
-  printInteger((volts>>Y_MVOLT_BIT) & 1);
-  printPgmString(PSTR(","));
-  printInteger((volts>>Z_MVOLT_BIT) & 1);
-  printPgmString(PSTR(","));
-  printInteger((volts>>C_MVOLT_BIT) & 1);
+
+  // This block should work to read the 4 analogs connected
+  // to the 24V feed lines.  It does work once on each new
+  // instance of a session, but then it goes to nonsense.
+  // Better to just skip it, or we may mess up the
+  // reading of the feedback sensor analog.
+  /*
+  uint8_t adcNum;
+  for (adcNum=0; adcNum<4; adcNum++)
+  {
+    // Enable ADC, start conversion, prescaler of 128x
+    ADCSRA = (1<<ADEN)|(1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0);
+
+    // Set MUX to the channel
+    ADMUX = ((1<<REFS0) + adcNum);
+
+    // Enable capture of ADC
+    ADCSRA |= (1<<ADSC);
+
+    // Wait for the result
+    while(ADCSRA & (1<<ADSC));
+
+    // Print the result
+    printInteger(ADC);
+    printPgmString(PSTR(","));
+
+    // Disable ADC
+    ADCSRA = (0<<ADEN);
+  }
+  */
+  // Remove thise line when the analogs above work properly
+  printPgmString(PSTR("0,0,0,0,"));
+
+  /////////////
+
+  // Enable ADC, start conversion, prescaler of 128x
+  ADCSRA = (1<<ADEN)|(1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0);
+
+  // Set read bit to be the special feedback bit (ADC14)
+  // This is bit select 6, plus
+  ADMUX = ((1<<REFS0) + (FVOLT_ADC));
+  ADCSRB = (1<<MUX5_BIT);
+  // Enable capture of ADC
+  ADCSRA |= (1<<ADSC);
+  // Wait for the result
+  while(ADCSRA & (1<<ADSC));
+  // Print the result
+  printInteger(ADC);
+
+  // Disable ADC
+  ADCSRA = (0<<ADEN);
+
+  //////////
+
   printPgmString(PSTR("|"));
   printPgmString(PSTR("\r\n"));
 }
 
- // Prints real-time data. This function grabs a real-time snapshot of the stepper subprogram 
+ // Prints real-time data. This function grabs a real-time snapshot of the stepper subprogram
  // and the actual location of the CNC machine. Users may change the following function to their
  // specific needs, but the desired real-time data report must be as short as possible. This is
- // requires as it minimizes the computational overhead and allows grbl to keep running smoothly, 
+ // requires as it minimizes the computational overhead and allows grbl to keep running smoothly,
  // especially during g-code programs with fast, short line segments and high frequency reports (5-20Hz).
 
 
 
 uint8_t report_realtime_status()
 {
-  // **Under construction** Bare-bones status report. Provides real-time machine position relative to 
+  // **Under construction** Bare-bones status report. Provides real-time machine position relative to
   // the system power on location (0,0,0) and work coordinate position (G54 and G92 applied). Eventually
   // to be added are distance to go on block, processed block id, and feed rate. Also a settings bitmask
   // for a user to select the desired real-time data.
@@ -414,7 +464,7 @@ uint8_t report_realtime_status()
   memcpy(current_position,sys.position,sizeof(sys.position));
 
   float print_position[N_AXIS];
- 
+
   // Report current machine state
   switch (sys.state) {
     case STATE_IDLE: printPgmString(PSTR("<Idle")); break;
@@ -425,7 +475,7 @@ uint8_t report_realtime_status()
     case STATE_ALARM: printPgmString(PSTR("<Alarm")); break;
     case STATE_CHECK_MODE: printPgmString(PSTR("<Check")); break;
   }
- 
+
   // Report machine position
   printPgmString(PSTR(":"));
   for (i=0; i< N_AXIS-1; i++) {
@@ -440,13 +490,13 @@ uint8_t report_realtime_status()
   printFloat_CoordValue(print_position[i]);
 
   // Report work position
-  printPgmString(PSTR(":")); 
+  printPgmString(PSTR(":"));
   for (i=0;i< N_AXIS-1; i++) {
     printInteger(current_position[i]);
-    printPgmString(PSTR(",")); 
+    printPgmString(PSTR(","));
   }
   printInteger(current_position[i]);
-    
+
   // Report current line number
   if (sys.flags & SYSFLAG_EOL_REPORT) {
     ln = linenumber_get()&~LINENUMBER_EMPTY_BLOCK;
@@ -455,7 +505,7 @@ uint8_t report_realtime_status()
     }
   }
 
-  printPgmString(PSTR(":")); 
+  printPgmString(PSTR(":"));
   printInteger(ln);
   printPgmString(PSTR(">\r\n"));
 
@@ -467,8 +517,8 @@ void report_limit_pins()
 {
   uint8_t limit_state = LIMIT_PIN & LIMIT_MASK;
   if (bit_istrue(settings.flags,BITFLAG_INVERT_LIMIT_PINS)) {
-	 limit_state^=LIMIT_MASK;
-  }  
+         limit_state^=LIMIT_MASK;
+  }
   printPgmString(PSTR("/"));
   printInteger((ESTOP_PIN>>ESTOP_BIT)&1);
   printInteger(probe_get_state()?1:0);

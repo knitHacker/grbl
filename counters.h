@@ -17,9 +17,9 @@
   You should have received a copy of the GNU General Public License
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
 */
-  
+
 #ifndef counters_h
-#define counters_h 
+#define counters_h
 
 typedef int32_t count_t;
 

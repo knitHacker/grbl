@@ -2,7 +2,7 @@
   system.c - Handles system level commands and real-time processes
   Part of Grbl
 
-  Copyright (c) 2014 Sungeun K. Jeon  
+  Copyright (c) 2014 Sungeun K. Jeon
 
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -30,22 +30,23 @@
 #include "planner.h"
 
 
-uint32_t masterclock=0;  
+uint32_t masterclock=0;
 
 
-void system_init() 
+void system_init()
 {
   TIMING_DDR |= TIMING_MASK;
   TIME_ON(ACTIVE_TIMER);
 
   linenumber_init();
 
-  //setup masterclock
-  
-  TIMSK2 &= (~(1<<OCIE2B));  
-  TIMSK2 |= ((1<<TOIE2)|(1<<OCIE2A)); // ovf INTERRUPT //TODO: test without TOIE2
-  TCCR2A = (1<<WGM21);  // CTC Mode, use OCRA2 as top 
+  // Setup masterclock
+  TIMSK2 &= (~(1<<OCIE2B));
+  TIMSK2 |= (1<<TOIE2)|(1<<OCIE2A); // ovf INTERRUPT //TODO: test without TOIE2
+
+  TCCR2A = (1<<WGM21);  // CTC Mode, use OCRA2 as top
   TCCR2B = 4;           // 64 prescale
+
   OCR2A = 249;          //(249+1) * 64 prescale / 16Mhz = 1 ms
   OCR2B = 0;
 }
@@ -56,10 +57,8 @@ ISR(TIMER2_COMPA_vect)
   masterclock++;
 }
 
-
-
 // Executes user startup script, if stored.
-void system_execute_startup(char *line) 
+void system_execute_startup(char *line)
 {
   uint8_t n;
   for (n=0; n < N_STARTUP_LINE; n++) {
@@ -70,21 +69,21 @@ void system_execute_startup(char *line)
         printString(line); // Echo startup line to indicate execution.
         report_status_message(gc_execute_line(line));
       }
-    } 
-  }  
+    }
+  }
 }
 
 // Directs and executes one line of formatted input from protocol_process. While mostly
-// incoming streaming g-code blocks, this also executes Grbl internal commands, such as 
+// incoming streaming g-code blocks, this also executes Grbl internal commands, such as
 // settings, initiating the homing cycle, and toggling switch states. This differs from
-// the runtime command module by being susceptible to when Grbl is ready to execute the 
+// the runtime command module by being susceptible to when Grbl is ready to execute the
 // next line during a cycle, so for switches like block delete, the switch only effects
-// the lines that are processed afterward, not necessarily real-time during a cycle, 
+// the lines that are processed afterward, not necessarily real-time during a cycle,
 // since there are motions already stored in the buffer. However, this 'lag' should not
 // be an issue, since these commands are not typically used during a cycle.
-uint8_t system_execute_line(char *line) 
-{   
-  uint8_t char_counter = 1; 
+uint8_t system_execute_line(char *line)
+{
+  uint8_t char_counter = 1;
   uint8_t helper_var = 0; // Helper variable
   float parameter, value;
   switch( line[char_counter] ) {
@@ -92,29 +91,29 @@ uint8_t system_execute_line(char *line)
     case 'G' : // Prints gcode parser state
       if ( line[++char_counter] != 0 ) { return(STATUS_INVALID_STATEMENT); }
       else { report_gcode_modes();  return(STATUS_QUIET_OK);}
-      break;   
+      break;
     case 'C' : // Set check g-code mode [IDLE/CHECK]
       if ( line[++char_counter] != 0 ) { return(STATUS_INVALID_STATEMENT); }
       // Perform reset when toggling off. Check g-code mode should only work if Grbl
       // is idle and ready, regardless of alarm locks. This is mainly to keep things
       // simple and consistent.
-      if ( sys.state == STATE_CHECK_MODE ) { 
-        mc_reset(); 
+      if ( sys.state == STATE_CHECK_MODE ) {
+        mc_reset();
         report_feedback_message(MESSAGE_DISABLED);
       } else {
         if (sys.state) { return(STATUS_IDLE_ERROR); } // Requires no alarm mode.
         sys.state = STATE_CHECK_MODE;
         report_feedback_message(MESSAGE_ENABLED);
       }
-      break; 
+      break;
     case 'X' : // Disable alarm lock [ALARM]
       if ( line[++char_counter] != 0 ) { return(STATUS_INVALID_STATEMENT); }
-      if (sys.state == STATE_ALARM) { 
+      if (sys.state == STATE_ALARM) {
         report_feedback_message(MESSAGE_ALARM_UNLOCK);
         sys.state = STATE_IDLE;
         // Don't run startup script. Prevents stored moves in startup from causing accidents.
       } // Otherwise, no effect.
-      break;      
+      break;
       /* KEYME SPECIFIC */
      case 'E': {
        char axis = line[++char_counter];
@@ -124,7 +123,7 @@ uint8_t system_execute_line(char *line)
             counters_enable(axis-'0');
           }
           else {
-            axis = get_axis_idx(axis); 
+            axis = get_axis_idx(axis);
             if (axis == N_AXIS) { return(STATUS_INVALID_STATEMENT); }
             counters_reset(axis);
           }
@@ -153,18 +152,18 @@ uint8_t system_execute_line(char *line)
       /* END KEYME SPECIFIC */
 
 //  case 'J' : break;  // Jogging methods
-    // TODO: Here jogging can be placed for execution as a seperate subprogram. It does not need to be 
+    // TODO: Here jogging can be placed for execution as a seperate subprogram. It does not need to be
     // susceptible to other runtime commands except for e-stop. The jogging function is intended to
-    // be a basic toggle on/off with controlled acceleration and deceleration to prevent skipped 
+    // be a basic toggle on/off with controlled acceleration and deceleration to prevent skipped
     // steps. The user would supply the desired feedrate, axis to move, and direction. Toggle on would
     // start motion and toggle off would initiate a deceleration to stop. One could 'feather' the
-    // motion by repeatedly toggling to slow the motion to the desired location. Location data would 
+    // motion by repeatedly toggling to slow the motion to the desired location. Location data would
     // need to be updated real-time and supplied to the user through status queries.
-    //   More controlled exact motions can be taken care of by inputting G0 or G1 commands, which are 
+    //   More controlled exact motions can be taken care of by inputting G0 or G1 commands, which are
     // handled by the planner. It would be possible for the jog subprogram to insert blocks into the
-    // block buffer without having the planner plan them. It would need to manage de/ac-celerations 
-    // on its own carefully. This approach could be effective and possibly size/memory efficient.        
-    default : 
+    // block buffer without having the planner plan them. It would need to manage de/ac-celerations
+    // on its own carefully. This approach could be effective and possibly size/memory efficient.
+    default :
       // Block any system command that requires the state as IDLE/ALARM. (i.e. EEPROM, homing)
       if ( !(sys.state == STATE_IDLE || sys.state == STATE_ALARM) ) { return(STATUS_IDLE_ERROR); }
       switch( line[char_counter] ) {

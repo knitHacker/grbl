@@ -27,13 +27,13 @@
 #ifdef CNC_CONFIGURATION
 
 void spindle_init()
-{    
+{
   // On the Uno, spindle enable and PWM are shared. Other CPUs have seperate enable pin.
   #ifdef VARIABLE_SPINDLE
     SPINDLE_PWM_DDR |= (1<<SPINDLE_PWM_BIT); // Configure as PWM output pin.
-    #ifndef CPU_MAP_ATMEGA328P 
+    #ifndef CPU_MAP_ATMEGA328P
       SPINDLE_ENABLE_DDR |= (1<<SPINDLE_ENABLE_BIT); // Configure as output pin.
-    #endif     
+    #endif
   #else
     SPINDLE_ENABLE_DDR |= (1<<SPINDLE_ENABLE_BIT); // Configure as output pin.
   #endif
@@ -47,24 +47,24 @@ void spindle_stop()
   // On the Uno, spindle enable and PWM are shared. Other CPUs have seperate enable pin.
   #ifdef VARIABLE_SPINDLE
     TCCRA_REGISTER &= ~(1<<COMB_BIT); // Disable PWM. Output voltage is zero.
-    #ifndef CPU_MAP_ATMEGA328P 
+    #ifndef CPU_MAP_ATMEGA328P
       SPINDLE_ENABLE_PORT &= ~(1<<SPINDLE_ENABLE_BIT); // Set pin to low.
     #endif
   #else
     SPINDLE_ENABLE_PORT &= ~(1<<SPINDLE_ENABLE_BIT); // Set pin to low.
-  #endif  
+  #endif
 }
 
 
-void spindle_run(uint8_t direction, float rpm) 
+void spindle_run(uint8_t direction, float rpm)
 {
   if (sys.state == STATE_CHECK_MODE) { return; }
-  
+
   // Empty planner buffer to ensure spindle is set when programmed.
   protocol_auto_cycle_start();  //temp fix for M3 lockup
-  protocol_buffer_synchronize(); 
+  protocol_buffer_synchronize();
 
-  // Halt or set spindle direction and rpm. 
+  // Halt or set spindle direction and rpm.
   if (direction == SPINDLE_DISABLE) {
 
     spindle_stop();
@@ -85,11 +85,11 @@ void spindle_run(uint8_t direction, float rpm)
       if ( rpm > SPINDLE_RPM_RANGE ) { rpm = SPINDLE_RPM_RANGE; } // Prevent uint8 overflow
       uint8_t current_pwm = floor( rpm*(255.0/SPINDLE_RPM_RANGE) + 0.5);
       OCR_REGISTER = current_pwm;
-    
+
       #ifndef CPU_MAP_ATMEGA328P // On the Uno, spindle enable and PWM are shared.
         SPINDLE_ENABLE_PORT |= (1<<SPINDLE_ENABLE_BIT);
       #endif
-    #else   
+    #else
       SPINDLE_ENABLE_PORT |= (1<<SPINDLE_ENABLE_BIT);
     #endif
 
