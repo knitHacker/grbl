@@ -117,7 +117,7 @@ ISR(SERIAL_UDRE)
   if (tail == tx_buffer_head) { UCSR0B &= ~(1 << UDRIE0); }
 }
 
-
+// Read data from rx_buffer at tail value 
 uint8_t serial_read()
 {
   uint8_t tail = rx_buffer_tail; // Temporary rx_buffer_tail (to optimize for volatile)
