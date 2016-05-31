@@ -162,5 +162,4 @@ enum {
 #define TIME_TOGGLE(tid)  (((tid)==ACTIVE_TIMER)?(TIMING_PIN|=TIMING_MASK):0)
 
 
-
 #endif
