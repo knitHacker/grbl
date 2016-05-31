@@ -136,9 +136,6 @@ void limits_go_home(uint8_t cycle_mask)
     }
   }
 
-  /************DEBUG VALUE**************/
-  //max_travel_Debug = max_travel;
-  /***************/
 
   max_travel *= HOMING_AXIS_SEARCH_SCALAR; // Ensure homing switches engaged by over-estimating max travel.
   max_travel += settings.homing_pulloff;
@@ -146,10 +143,6 @@ void limits_go_home(uint8_t cycle_mask)
 
   plan_reset(); // Reset planner buffer to zero planner current position and to clear previous motions.
    
-  /************DEBUG VALUE**************/
-  //homing_rate_Debug = homing_rate;
-  //homing_pulloff_Debug = settings.homing_pulloff; 
-  /***************/
   do {
     // Set target location and rate for active axes.
     // and reset homing axis locks based on cycle mask.
@@ -182,9 +175,6 @@ void limits_go_home(uint8_t cycle_mask)
     st_wake_up(); // Initiate motion
 
     do {
-      /********DEBUG VALUE*******/
-      //test1Val++;
-      /**************************/
 
       st_prep_buffer(); // Check and prep segment buffer. NOTE: Should take no longer than 200us.
       // Check only for user reset. Keyme: fixed to allow protocol_execute_runtime() in this loop.
@@ -204,9 +194,6 @@ void limits_go_home(uint8_t cycle_mask)
     } while (limits.ishoming);  //stepper isr sets this when limit is hit
 
     limits_disable();
-    /****DEBUG VALUE*****/
-    //test1Val=0;
-    /********************/
     
     st_reset(); // Immediately force kill steppers and reset step segment buffer.
     plan_reset(); // Reset planner buffer. Zero planner positions. Ensure homing motion is cleared.

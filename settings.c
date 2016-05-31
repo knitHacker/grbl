@@ -95,9 +95,6 @@ void settings_reset() {
   settings.homing_seek_rate[C_AXIS] = DEFAULT_C_HOMING_SEEK_RATE;
   settings.homing_debounce_delay = DEFAULT_HOMING_DEBOUNCE_DELAY;
   settings.homing_pulloff = DEFAULT_HOMING_PULLOFF;
-  /*****DEBUG VALUE******/
-  //homing_pulloff_Debug = DEFAULT_HOMING_PULLOFF; 
-  /**********************/
   settings.stepper_idle_lock_time = DEFAULT_STEPPER_IDLE_LOCK_TIME;
   settings.max_travel[X_AXIS] = (DEFAULT_X_MAX_TRAVEL);
   settings.max_travel[Y_AXIS] = (DEFAULT_Y_MAX_TRAVEL);
