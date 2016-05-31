@@ -145,8 +145,8 @@ void limits_go_home(uint8_t cycle_mask)
     // Set target location and rate for active axes.
     // and reset homing axis locks based on cycle mask.
 
-    // limit travel away from the switch to the pulloff distance.
-    float travel = approach ? max_travel : (MAXFLAGLEN*settings.homing_pulloff); //40mm is length of largest flag (should make into parameter in header file)
+    // limit travel distance to the length of the flag
+    float travel = approach ? max_travel : (MAXFLAGLEN*settings.homing_pulloff);
     // set target for moving axes based on direction
     for (idx=0; idx<N_AXIS; idx++) {
       if (bit_istrue(cycle_mask,bit(idx))) {
