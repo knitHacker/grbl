@@ -508,6 +508,7 @@ uint8_t report_realtime_status()
   printPgmString(PSTR(":"));
   printInteger(ln);
   printPgmString(PSTR(">\r\n"));
+  
 
   return (sys.flags & SYSFLAG_EOL_REPORT); //returns True if more work to do
 
