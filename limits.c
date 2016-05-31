@@ -139,7 +139,6 @@ void limits_go_home(uint8_t cycle_mask)
   max_travel += settings.homing_pulloff;
   homing_rate = min_seek_rate * sqrt(n_active_axis); //Adjust so individual axes all move at homing rate.
   plan_reset(); // Reset planner buffer to zero planner current position and to clear previous motions.
-   
   do {
     // Set target location and rate for active axes.
     // and reset homing axis locks based on cycle mask.
