@@ -508,6 +508,24 @@ uint8_t report_realtime_status()
   printPgmString(PSTR(":"));
   printInteger(ln);
   printPgmString(PSTR(">\r\n"));
+  
+  /*printPgmString(PSTR("test1Val: "));
+  print_uint32_base10(test1Val);
+  printPgmString(PSTR("\r\n"));
+
+  printPgmString(PSTR("max_travel: "));
+  printFloat_SettingValue(max_travel_Debug);
+  printPgmString(PSTR("\r\n"));
+
+  printPgmString(PSTR("homing_rate: "));
+  printFloat_RateValue(homing_rate_Debug);
+  printPgmString(PSTR("\r\n"));
+
+  printPgmString(PSTR("homing_pulloff: "));
+  printFloat_SettingValue(homing_pulloff_Debug);
+  printPgmString(PSTR("\r\n"));
+  */
+
 
   return (sys.flags & SYSFLAG_EOL_REPORT); //returns True if more work to do
 

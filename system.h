@@ -162,4 +162,16 @@ enum {
 #define TIME_TOGGLE(tid)  (((tid)==ACTIVE_TIMER)?(TIMING_PIN|=TIMING_MASK):0)
 
 
+////////////////////////////
+// These values are outputed
+// to the serial port for
+// debugging purposes
+////////////////////////////
+
+/*volatile uint32_t test1Val;
+volatile float    max_travel_Debug;
+volatile float    homing_rate_Debug;
+volatile float    homing_pulloff_Debug;
+*/
+
 #endif
