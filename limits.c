@@ -138,15 +138,14 @@ void limits_go_home(uint8_t cycle_mask)
   max_travel *= HOMING_AXIS_SEARCH_SCALAR; // Ensure homing switches engaged by over-estimating max travel.
   max_travel += settings.homing_pulloff;
   homing_rate = min_seek_rate * sqrt(n_active_axis); //Adjust so individual axes all move at homing rate.
-
   plan_reset(); // Reset planner buffer to zero planner current position and to clear previous motions.
 
   do {
     // Set target location and rate for active axes.
     // and reset homing axis locks based on cycle mask.
 
-    // limit travel away from the switch to the pulloff distance.
-    float travel = approach ? max_travel : settings.homing_pulloff;
+    // limit travel distance to the length of the largest flag
+    float travel = approach ? max_travel : MAXFLAGLEN;
     // set target for moving axes based on direction
     for (idx=0; idx<N_AXIS; idx++) {
       if (bit_istrue(cycle_mask,bit(idx))) {

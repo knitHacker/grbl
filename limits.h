@@ -22,6 +22,11 @@
 #ifndef limits_h
 #define limits_h 
 
+// Largest possible distance to move during pulloff motion of homing.
+// This is defined by the largest homing flag in the system. The Y flag is
+// the largest with a length of just under 40 mm.
+#define MAXFLAGLEN 40.0
+
 typedef struct {
   uint8_t expected;
   uint8_t active;
