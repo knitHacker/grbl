@@ -144,7 +144,7 @@ void limits_go_home(uint8_t cycle_mask)
     // Set target location and rate for active axes.
     // and reset homing axis locks based on cycle mask.
 
-    // limit travel distance to the length of the flag
+    // limit travel distance to the length of the largest flag
     float travel = approach ? max_travel : MAXFLAGLEN;
     // set target for moving axes based on direction
     for (idx=0; idx<N_AXIS; idx++) {
