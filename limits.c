@@ -135,7 +135,6 @@ void limits_go_home(uint8_t cycle_mask)
       min_seek_rate = min(min_seek_rate,settings.homing_seek_rate[idx]);
     }
   }
-
   max_travel *= HOMING_AXIS_SEARCH_SCALAR; // Ensure homing switches engaged by over-estimating max travel.
   max_travel += settings.homing_pulloff;
   homing_rate = min_seek_rate * sqrt(n_active_axis); //Adjust so individual axes all move at homing rate.
@@ -147,7 +146,6 @@ void limits_go_home(uint8_t cycle_mask)
 
     // limit travel distance to the length of the largest flag
     float travel = approach ? max_travel : MAXFLAGLEN;
-    
     // set target for moving axes based on direction
     for (idx=0; idx<N_AXIS; idx++) {
       if (bit_istrue(cycle_mask,bit(idx))) {
@@ -174,10 +172,6 @@ void limits_go_home(uint8_t cycle_mask)
     st_wake_up(); // Initiate motion
 
     do {
-      /********DEBUG VALUE*******/
-      //test1Val++;
-      /**************************/
-
       st_prep_buffer(); // Check and prep segment buffer. NOTE: Should take no longer than 200us.
       // Check only for user reset. Keyme: fixed to allow protocol_execute_runtime() in this loop.
       protocol_execute_runtime();
@@ -196,10 +190,6 @@ void limits_go_home(uint8_t cycle_mask)
     } while (limits.ishoming);  //stepper isr sets this when limit is hit
 
     limits_disable();
-    /****DEBUG VALUE*****/
-    //test1Val=0;
-    /********************/
-    
     st_reset(); // Immediately force kill steppers and reset step segment buffer.
     plan_reset(); // Reset planner buffer. Zero planner positions. Ensure homing motion is cleared.
 

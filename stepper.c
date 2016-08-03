@@ -645,6 +645,12 @@ void keyme_init() {
   */
 }
 
+/* This is used to change the Force Sensor Value in the
+   specific PWM register.*/
+void adjustForceSensorPWM(){
+  OCR3BL = settings.force_sensor_level;
+}
+
 /*
 // ISR's for above test code to drive a software PWM
 // Saved for posterity and maybe future use
