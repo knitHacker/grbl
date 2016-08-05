@@ -176,6 +176,14 @@ uint8_t system_execute_line(char *line)
           else { report_ngc_parameters(); }
           break;
 
+        case 'P': // Set force sensitivity parameter. Avoids hastle of changing eeprom settings.
+          char_counter++;
+          if (!read_float(line, &char_counter, &parameter)){
+            return(STATUS_BAD_NUMBER_FORMAT);
+          }
+          settings.force_sensor_level = (uint8_t)parameter;
+          adjustForceSensorPWM();
+          break;
         case 'H' : // Perform homing cycle [IDLE/ALARM], only if idle or lost
           if (bit_istrue(settings.flags,BITFLAG_HOMING_ENABLE)) {
             char axis = line[++char_counter];
