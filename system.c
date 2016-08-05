@@ -181,7 +181,7 @@ uint8_t system_execute_line(char *line)
           if (!read_float(line, &char_counter, &parameter)){
             return(STATUS_BAD_NUMBER_FORMAT);
           }
-          settings.force_sensor_level = parameter;
+          settings.force_sensor_level = (uint8_t)parameter;
           adjustForceSensorPWM();
           break;
         case 'H' : // Perform homing cycle [IDLE/ALARM], only if idle or lost
