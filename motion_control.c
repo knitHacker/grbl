@@ -257,6 +257,27 @@ void mc_homing_cycle(uint8_t axis_mask)
   limits_configure();
 }
 
+// Wrapper function for force servoing. This mimics the homing cycle.
+void mc_force_servo_cycle()
+{
+  sys.state = STATE_FORCESERVO; // Set system state variable
+  limits_disable(); // Disable hard limits pin change register for cycle duration
+    
+  // Perform force servoing.
+  limits_force_servo();
+  protocol_execute_runtime(); // Check for reset and set system abort.
+  if (sys.abort) { return; } // Did not complete. Alarm state set by mc_alarm.
+  // Force Servoing Complete! Setup system for normal operation.
+
+  // Gcode parser position was circumvented by the limits_force_servo() routine, so sync position now.
+  gc_sync_position();
+  
+  // Set idle state after servoing completes and before returning to main program.  
+  sys.state = STATE_IDLE;
+  st_go_idle();
+
+}
+
 
 // Perform tool length probe cycle. Requires probe switch.
 // NOTE: Upon probe failure, the program will be stopped and placed into ALARM state.
@@ -338,7 +359,7 @@ void mc_reset()
     // NOTE: If steppers are kept enabled via the step idle delay setting, this also keeps
     // the steppers enabled by avoiding the go_idle call altogether, unless the motion state is
     // violated, by which, all bets are off.
-    if (sys.state & (STATE_CYCLE | STATE_HOLD | STATE_HOMING)) {
+    if (sys.state & (STATE_CYCLE | STATE_HOLD | STATE_HOMING | STATE_FORCESERVO)) {
       sys.alarm |= ALARM_ABORT_CYCLE;  //killed while in motion
       SYS_EXEC |= EXEC_ALARM; // Flag main program to execute alarm state.
       st_go_idle(); // Force kill steppers. Position has likely been lost.

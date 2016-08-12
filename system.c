@@ -31,7 +31,8 @@
 
 
 uint32_t masterclock=0;
-
+//uint16_t voltage_result[VOLTAGE_SENSOR_COUNT];
+//uint8_t voltage_result_index = 0;
 
 void system_init()
 {
@@ -50,6 +51,92 @@ void system_init()
   OCR2A = 249;          //(249+1) * 64 prescale / 16Mhz = 1 ms
   OCR2B = 0;
 }
+  /* KEYME SPECIFIC START */
+  /* This was initially used for calculating motor and force voltages at fixed time intervals.
+     The ADC was triggered whenever Timer1 (16-bit) would reach a certain value. This has
+     potential consequences if the ADC interrupt triggers during the stepper motor ISR (which
+     is on Timer4 and re-enables interrupts within it) or if the stepper motor interrupt cannot
+     be entered if we are already within the ADC interrupt. Whenever an ISR is entered, the global
+     interrupt enable bit is disabled until the ISR is exited or until the global interrupt bit is
+     manually set within the ISR (which can be risky, but occurs in GRBL). If these situations
+     occurs, it is possible that the ADC ISR could cause the MCU to miss deadlines, which has
+     the consequence of not sending pulses to the stepper motors at the correct times.
+
+     The main difficulty is setting up the ADC ISR on the same timing interval as the stepper
+     motor ISR. This is because the compare value the Stepper Motor Timer (Timer4) needs to
+     reach before its ISR is triggered constantly changes within each iteration of the ISR.
+
+     The safer situation to this was to manually trigger the ADC in main code (protocol.c),
+     which allows the stepper ISR to interrupt it. Regardless, it may be cleaner to set up
+     AutoTriggering for ADC if the timing situation is figured out. This code is for reference
+     in case someone wishes to tackle this.
+
+     Setup Timer1 for AutoTriggering
+     Timer 1 was used for the ADC interrupt. Reasoning for commenting this out is discussed
+     below where the ADC ISR is defined.
+
+  // Part of system_init() start
+  PRR0 &= ~(1<<PRTIM1); // Gives power to Timer 1
+  TCCR1B &= ~(1<<WGM13); // waveform generation = 0100 = CTC
+  TCCR1B |=  (1<<WGM12);
+  TCCR1B |= (1<<CS11)|(1<<CS10); // Prescaler 64x
+  TCCR1A &= ~((1<<WGM11) | (1<<WGM10));
+  TCCR1A &= ~((1<<COM1A1) | (1<<COM1A0) | (1<<COM1B1) | (1<<COM1B0)); // Disconnect OC4 output
+
+  // Timer Match value of 0xFFFF. This can be reduced to retrieve voltage values sooner
+  OCR1A = 0XF0;
+  OCR1B = 0X00;
+
+  // Initialize ADC for Voltage Monitoring
+  init_ADC();
+}
+// Part of system_init() end
+
+
+void init_ADC(){
+  ADCSRB = 0;
+  ADCSRA = 0;
+  ADMUX = (1<<REFS0); // Set ADC reference
+  ADCSRA = (1<<ADPS2)|(1<<ADPS0); // Enable prescaler of 32x
+  ADCSRA |= (1<<ADIE); // Enable ADC interrupt
+  ADCSRA |= (1<<ADEN); // Enable ADC
+  ADCSRA |= (1<<ADATE); // Enable AutoTriggering
+  ADCSRB = (1<<ADTS2)|(1<<ADTS0); // Start conversion on Timer1 CTC
+}
+
+// The ADC completion Interrupt: This interrupt occurs once ADC completes its conversion
+// of target. The ADC is set to AutoTrigger, which means the conversion will begin at certain
+// intervals. In this case, the conversion begins when the TIMER1_COMPA_vector signals an
+// interrupt. Voltage values are stored in an array. Values in Array are printed on request
+// in report_voltage().
+ISR(ADC_vect){
+  // These bits are flipped to 0 while inside TIMER1_COMPA_vector interrupt and to 1 once we
+  // exit the interrupt. Since there is no ISR for this, we must manually flip them to signal
+  // that we have exited this interrupt.
+  TIFR1 |= (1<<OCF1A)|(1<<OCF1B);
+  
+  // The low pass filter has been commented out because it has been causing timing issues.
+  // Code is here and function is defined above for possible future use.
+  // Final conversion is a 10 bit value stored in ADC
+  //voltage_result[voltage_result_index] = low_pass_filter(BETA_LPF, ADC,
+  //                                           voltage_result[voltage_result_index]);
+  
+  voltage_result[voltage_result_index] = ADC;
+  voltage_result_index++;
+
+  if (voltage_result_index == VOLTAGE_SENSOR_COUNT)
+    voltage_result_index = 0;
+  if (voltage_result_index < VOLTAGE_SENSOR_COUNT-1){
+    ADCSRB &= ~(1<<MUX5_BIT); // Clear MUX5_BIT which is set when force sensor is target
+    ADMUX = (1<<REFS0) + voltage_result_index; // set next motor target for ADC
+  }
+  else{
+    // set force sensor as next target
+    ADMUX = (1<<REFS0) + FVOLT_ADC;
+    ADCSRB |= (1<<MUX5_BIT);
+  }
+}*/
+/* KEY ME SPECIFIC END */
 
 ISR(TIMER2_COMPA_vect)
 {
@@ -201,6 +288,16 @@ uint8_t system_execute_line(char *line)
             if (!sys.abort) { system_execute_startup(line); } // Execute startup scripts after successful homing.
             return STATUS_QUIET_OK; //already said ok
           } else { return(STATUS_SETTING_DISABLED); }
+          break;
+        case 'F': // Perform Force servo process. By default it is defined for Gripper-Axis(Z) only.
+          char_counter++;
+          read_float(line, &char_counter, &value);
+          // This is the force value the gripper motor will approach. Specified by kiosk.
+          force_target_val = (uint16_t)value;
+          report_status_message(STATUS_OK);
+          mc_force_servo_cycle();
+          if (!sys.abort) { system_execute_startup(line);}
+          return STATUS_QUIET_OK;
           break;
         case 'I' : // Print or store build info. [IDLE/ALARM]
           if ( line[++char_counter] == 0 ) {

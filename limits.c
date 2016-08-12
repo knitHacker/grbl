@@ -37,6 +37,8 @@ static linenumber_t homing_line_number;  //autoincremented every homing cycle, s
                                   //odd numbers are the switch position, 
                                   //even numbers are pulloff complete
 
+static linenumber_t servo_line_number; // line number for force servoing. Mimics homing_line_number.
+
 // Initializes hardware.
 void limits_init() 
 {
@@ -55,6 +57,7 @@ void limits_init()
   WDTCSR = (1<<WDP0); // Set time-out at ~32msec.
   #endif
   homing_line_number = 1;
+  servo_line_number = 1;
   limits_configure(); 
 }
 
@@ -283,3 +286,78 @@ void limits_soft_check(float *target)
     }
   }
 }
+
+/* KEYME SPECIFIC START*/
+// Currently this function servos the Gripper Motor (Z-Axis) until it reaches a desired force
+// for bumping. Future iterations may want to include a specific force to reach in order to
+// do any force related movements. More motor motions may be added to reach the desired force
+// more accurately.
+void limits_force_servo(){
+  if (sys.abort) { return; } // Block if system reset has been issued.
+
+  uint16_t bump_target_force = force_target_val; // This is the input target force sensor value
+  float servo_rate;
+  // Initialize homing in search mode to quickly engage the specified cycle_mask limit switches.
+  uint8_t approach = ~0;
+
+  if (analog_voltage_readings[FORCE_VALUE_INDEX]<(bump_target_force-GRIPPER_FORCE_THRESHOLD)){
+    travel_servo = MAXSERVODIST;
+  }
+  else if(analog_voltage_readings[FORCE_VALUE_INDEX]>(bump_target_force+GRIPPER_FORCE_THRESHOLD)){
+    travel_servo = -MAXSERVODIST;
+  }
+  //approach has all bits set (negative dir) or none (positive)
+  float target[N_AXIS];
+  
+  uint8_t axislock = AXISLOCKSERVO;
+  servo_rate = settings.homing_seek_rate[X_AXIS]/20.0; // TODO: make servo_rate into macro for servoing
+  plan_reset();
+
+  // set target for moving axes based on direction
+  target[X_AXIS] = 0;
+  target[Y_AXIS] = 0;
+  target[Z_AXIS] = travel_servo;
+  target[C_AXIS] = 0;
+
+  // Perform homing cycle. Planner buffer should be empty, as required to initiate the homing cycle.
+  plan_buffer_line(target, servo_rate, false, LINENUMBER_SPECIAL_SERVO|(servo_line_number*4+LINEMASK_ON_EDGE)); 
+
+  // axislock bit is high if axis is homing, so we only enable checking on moving axes.
+  limits_enable(axislock,~approach);  //expect 0 on approach (stop when 1). vice versa for pulloff
+  limits.isservoing = 1; // tell system we are servoing
+
+  st_prep_buffer(); // Prep and fill segment buffer from newly planned block.
+  st_wake_up(); // Initiate motion
+
+  do {
+    st_prep_buffer(); // Check and prep segment buffer. NOTE: Should take no longer than 200us.
+    // Check only for user reset. Keyme: fixed to allow protocol_execute_runtime() in this loop.
+    protocol_execute_runtime();
+    if (SYS_EXEC & EXEC_RESET) {
+      protocol_execute_runtime();
+      return;
+    }
+
+    // Check if we never reached limit switch.  call it a Probe fail.
+    if (SYS_EXEC & EXEC_CYCLE_STOP) {
+      sys.alarm |= ALARM_FORCESERVO_FAIL;
+      SYS_EXEC |= EXEC_CRIT_EVENT;
+      protocol_execute_runtime();
+      return;
+    }
+  } while (limits.isservoing);  // stepper isr sets this when force sensor value is reached
+
+  limits_disable();
+  st_reset(); // Immediately force kill steppers and reset step segment buffer.
+  plan_reset(); // Reset planner buffer. Zero planner positions. Ensure homing motion is cleared.
+
+  linenumber_insert(LINENUMBER_SPECIAL_SERVO|(servo_line_number*4+LINEMASK_DONE));
+  request_eol_report();
+  protocol_execute_runtime();
+  request_eol_report(); // need to report once more to report the "DONE" linenumber
+
+  servo_line_number++; // increment for next time we peform this process
+  
+  plan_sync_position(); // Sync planner position to current machine position for pull-off move.
+}
+/* KEYME SPECIFIC END */

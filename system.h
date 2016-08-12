@@ -71,6 +71,7 @@
 #define STATE_QUEUED     bit(3) // Indicates buffered blocks, awaiting cycle start.
 #define STATE_CYCLE      bit(4) // Cycle is running
 #define STATE_HOLD       bit(5) // Executing feed hold
+#define STATE_FORCESERVO bit(6) // Force servo process
 
 // Define Grbl alarm codes. Listed most to least serious
 #define ALARM_SOFT_LIMIT  bit(0) // soft limits exceeded
@@ -79,11 +80,13 @@
 #define ALARM_PROBE_FAIL  bit(3) // probe not found
 #define ALARM_HOME_FAIL   bit(4) // home switch transition not found
 #define ALARM_ESTOP       bit(5) // external estop pressed
+#define ALARM_FORCESERVO_FAIL bit(6) // force value not reached while servoing
 
 // Define system flags
 #define SYSFLAG_EOL_REPORT bit(0)  // Block is done executing, report linenum
 #define SYSFLAG_AUTOSTART  bit(1)  // autostart is active
 
+uint16_t force_target_val;
 
 // Define global system variables
 typedef struct {
@@ -135,12 +138,13 @@ void system_execute_startup(char *line);
 // But We don't need such a big value, and we do need the high bit free
 //#define MAX_LINE_NUMBER 9999999
 #define LINENUMBER_EMPTY_BLOCK 0x8000 //the other bit, used as a flag
-#define LINENUMBER_SPECIAL      0x4000
+#define LINENUMBER_SPECIAL      0x4000 //denotes Homing and Probing among a couple other processes
+#define LINENUMBER_SPECIAL_SERVO 0x10000 //denotes force servoing
 #define LINENUMBER_MAX         (LINENUMBER_SPECIAL-1)
 #define LINEMASK_OFF_EDGE         (0x0)
 #define LINEMASK_ON_EDGE         (0x1)
 #define LINEMASK_DONE           (0x2)
-typedef uint16_t linenumber_t;  //resize back to int32 for bigger numbers
+typedef uint32_t linenumber_t;
 
 
 void linenumber_init();
@@ -161,5 +165,8 @@ enum {
 #define TIME_ON(tid)  (((tid)==ACTIVE_TIMER)?(TIMING_PORT&=~TIMING_MASK):0)
 #define TIME_TOGGLE(tid)  (((tid)==ACTIVE_TIMER)?(TIMING_PIN|=TIMING_MASK):0)
 
-
+// Voltage Monitoring
+#define VOLTAGE_SENSOR_COUNT 5 // number of devices (X,Y,Z,C,F) for which voltage is measured
+// Reasoning for commenting this function is in system.c.
+//void init_ADC();
 #endif

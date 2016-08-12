@@ -26,6 +26,10 @@
   #define SEGMENT_BUFFER_SIZE 6
 #endif
 
+#define GRIPPER_FORCE_THRESHOLD 5
+
+extern float travel_servo;
+
 // Initialize and setup the stepper motor subsystem
 void stepper_init();
 

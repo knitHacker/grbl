@@ -103,12 +103,13 @@ void report_status_message(uint8_t status_code)
 void report_alarm_message(int8_t alarm_code)
 {
   printPgmString(PSTR("ALARM: "));
-  if (alarm_code & ALARM_SOFT_LIMIT)  printPgmString(PSTR("Soft limit "));
-  if (alarm_code & ALARM_HARD_LIMIT)  printPgmString(PSTR("Hard limit "));
-  if (alarm_code & ALARM_ABORT_CYCLE) printPgmString(PSTR("Abort during cycle "));
-  if (alarm_code & ALARM_PROBE_FAIL)  printPgmString(PSTR("Probe fail "));
-  if (alarm_code & ALARM_HOME_FAIL)   printPgmString(PSTR("Homing fail "));
-  if (alarm_code & ALARM_ESTOP)       printPgmString(PSTR("Estop pressed "));
+  if (alarm_code & ALARM_SOFT_LIMIT)      printPgmString(PSTR("Soft limit "));
+  if (alarm_code & ALARM_HARD_LIMIT)      printPgmString(PSTR("Hard limit "));
+  if (alarm_code & ALARM_ABORT_CYCLE)     printPgmString(PSTR("Abort during cycle "));
+  if (alarm_code & ALARM_PROBE_FAIL)      printPgmString(PSTR("Probe fail "));
+  if (alarm_code & ALARM_HOME_FAIL)       printPgmString(PSTR("Homing fail "));
+  if (alarm_code & ALARM_ESTOP)           printPgmString(PSTR("Estop pressed "));
+  if (alarm_code & ALARM_FORCESERVO_FAIL) printPgmString(PSTR("Force servoing fail"));
   printPgmString(PSTR("\r\n"));
   delay_ms(500); // Force delay to ensure message clears serial write buffer.
 }
@@ -149,6 +150,7 @@ void report_init_message()
 }
 
 // Grbl help message
+// TODO: Would like to add character '|' for reporting voltage of C,X,Y,Z,F
 void report_grbl_help() {
   printPgmString(PSTR("$$ (view Grbl settings)\r\n"
                       "$# (view # parameters)\r\n"
@@ -378,48 +380,47 @@ void report_counters()
   printPgmString(PSTR("}\r\n"));
 }
 
-//Prints voltage data: motor volts.
+// Prints motor bus voltage (C,X,Y,Z) and Force sensor value.
 void report_voltage()
 {
+  uint8_t i;
+  calculate_motor_voltage();
+  printPgmString(PSTR("|"));
+  for (i = 0; i<VOLTAGE_SENSOR_COUNT; i++){
+    printInteger((uint32_t)analog_voltage_readings[i]);
+    if (i<VOLTAGE_SENSOR_COUNT-1)
+      printPgmString(PSTR(","));
+  }
+  printPgmString(PSTR("|"));
+  printPgmString(PSTR("\r\n"));
+}
+
+// Calculates voltage at motors. Only called in report_voltage().
+void calculate_motor_voltage(){
+  uint8_t i;
+
   // Set the ADC Reference
   ADMUX = (1<<REFS0);
+  // Enable ADC, start conversion, prescaler of 128x
+  ADCSRA = (1<<ADEN)|(1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0);
 
-  // Begin character
-  printPgmString(PSTR("|"));
-
-  // This block should work to read the 4 analogs connected
-  // to the 24V feed lines.  It does work once on each new
-  // instance of a session, but then it goes to nonsense.
-  // Better to just skip it, or we may mess up the
-  // reading of the feedback sensor analog.
-  /*
-  uint8_t adcNum;
-  for (adcNum=0; adcNum<4; adcNum++)
-  {
-    // Enable ADC, start conversion, prescaler of 128x
-    ADCSRA = (1<<ADEN)|(1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0);
-
-    // Set MUX to the channel
-    ADMUX = ((1<<REFS0) + adcNum);
+  for (i=0;i<(VOLTAGE_SENSOR_COUNT-1); i++){
+    ADCSRB &= ~(1<<MUX5_BIT); // Clear MUX5_BIT which is set when force sensor is target
+    ADMUX = (1<<REFS0) + i; // set next motor target for ADC
 
     // Enable capture of ADC
     ADCSRA |= (1<<ADSC);
-
     // Wait for the result
     while(ADCSRA & (1<<ADSC));
-
-    // Print the result
-    printInteger(ADC);
-    printPgmString(PSTR(","));
-
-    // Disable ADC
-    ADCSRA = (0<<ADEN);
+    // Store result
+    analog_voltage_readings[i] = ADC;
   }
-  */
-  // Remove thise line when the analogs above work properly
-  printPgmString(PSTR("0,0,0,0,"));
+}
 
-  /////////////
+// Calculates force sensor value.
+void calculate_force_voltage(){
+  // Set the ADC Reference
+  ADMUX = (1<<REFS0);
 
   // Enable ADC, start conversion, prescaler of 128x
   ADCSRA = (1<<ADEN)|(1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0);
@@ -432,26 +433,19 @@ void report_voltage()
   ADCSRA |= (1<<ADSC);
   // Wait for the result
   while(ADCSRA & (1<<ADSC));
-  // Print the result
-  printInteger(ADC);
-
+  // Store the result
+  analog_voltage_readings[FORCE_VALUE_INDEX] = ADC;
   // Disable ADC
   ADCSRA = (0<<ADEN);
-
-  //////////
-
-  printPgmString(PSTR("|"));
-  printPgmString(PSTR("\r\n"));
 }
+
+
 
  // Prints real-time data. This function grabs a real-time snapshot of the stepper subprogram
  // and the actual location of the CNC machine. Users may change the following function to their
  // specific needs, but the desired real-time data report must be as short as possible. This is
  // requires as it minimizes the computational overhead and allows grbl to keep running smoothly,
  // especially during g-code programs with fast, short line segments and high frequency reports (5-20Hz).
-
-
-
 uint8_t report_realtime_status()
 {
   // **Under construction** Bare-bones status report. Provides real-time machine position relative to
@@ -464,7 +458,6 @@ uint8_t report_realtime_status()
   memcpy(current_position,sys.position,sizeof(sys.position));
 
   float print_position[N_AXIS];
-
   // Report current machine state
   switch (sys.state) {
     case STATE_IDLE: printPgmString(PSTR("<Idle")); break;
@@ -474,6 +467,7 @@ uint8_t report_realtime_status()
     case STATE_HOMING: printPgmString(PSTR("<Home")); break;
     case STATE_ALARM: printPgmString(PSTR("<Alarm")); break;
     case STATE_CHECK_MODE: printPgmString(PSTR("<Check")); break;
+    case STATE_FORCESERVO: printPgmString(PSTR("<Fservo")); break;
   }
 
   // Report machine position
@@ -499,7 +493,14 @@ uint8_t report_realtime_status()
 
   // Report current line number
   if (sys.flags & SYSFLAG_EOL_REPORT) {
-    ln = linenumber_get()&~LINENUMBER_EMPTY_BLOCK;
+    ln = linenumber_get();
+    if (ln & LINENUMBER_SPECIAL_SERVO){
+      // ln & ~LINENUMBER_EMPTY_BLOCK drops high bit of servoing linenumber
+      ln &= ~LINENUMBER_EMPTY_BLOCK | LINENUMBER_SPECIAL_SERVO;
+    }
+    else {
+      ln &= ~LINENUMBER_EMPTY_BLOCK;
+    }
     if ((linenumber_peek()&LINENUMBER_EMPTY_BLOCK) == 0) {
       sys.flags &=  ~SYSFLAG_EOL_REPORT;
     }
