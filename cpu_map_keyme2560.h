@@ -189,7 +189,8 @@
 #define FVOLT_MASK (1<<FVOLT_BIT)
 
 #define FVOLT_ADC 7  // value to write to ADCSRA to read ADC15
-#define MUX5_BIT 3
+#define MUX5_BIT_POS 3
+#define MUX5_BIT_VALUE 1 // 1 designates ADC 15
 
 // Measurement of Supply Voltage for all motors, MVOLT
 #define MVOLT_DDR DDRF

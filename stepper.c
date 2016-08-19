@@ -625,9 +625,9 @@ void keyme_init() {
 
   // With the comparators and timers set up, use OCR3xL to set compare value
   // In 8 bit mode, only the Low register is needed
-  OCR3AL = 51;  // 1V
+  OCR3AL = 254; // 5V, full current
   OCR3BL = settings.force_sensor_level; // 1.5V default
-  OCR3CL = 153; // 3V
+  OCR3CL = 254; // 5V, full current
 
   /*
   // THIS WAS TEST CODE TO TRY TO DRIVE A SOFTWARE PWM

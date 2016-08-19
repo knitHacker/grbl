@@ -405,8 +405,13 @@ void calculate_motor_voltage(){
   ADCSRA = (1<<ADEN)|(1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0);
 
   for (i=0;i<(VOLTAGE_SENSOR_COUNT-1); i++){
-    ADCSRB &= ~(1<<MUX5_BIT); // Clear MUX5_BIT which is set when force sensor is target
-    ADMUX = (1<<REFS0) + i; // set next motor target for ADC
+    // If MUX5 bit was set high, it must be cleared
+    // in order for the other analogs to read properly
+    if (MUX5_BIT_VALUE)
+      ADCSRB &= ~(MUX5_BIT_VALUE<<MUX5_BIT_POS);
+
+    // set next motor target for ADC
+    ADMUX = (1<<REFS0) + i;
 
     // Enable capture of ADC
     ADCSRA |= (1<<ADSC);
@@ -428,7 +433,7 @@ void calculate_force_voltage(){
   // Set read bit to be the special feedback bit (ADC14)
   // This is bit select 6, plus
   ADMUX = ((1<<REFS0) + (FVOLT_ADC));
-  ADCSRB = (1<<MUX5_BIT);
+  ADCSRB = (MUX5_BIT_VALUE<<MUX5_BIT_POS);
   // Enable capture of ADC
   ADCSRA |= (1<<ADSC);
   // Wait for the result
