@@ -25,7 +25,7 @@ uint32_t alignment_debounce_timer=0;
 #define PROBE_DEBOUNCE_DELAY_MS 25
 
 
-counters_t counters = {{0}};
+counters_t counters;
 
 // Counters pin initialization routine.
 void counters_init()
@@ -68,7 +68,7 @@ count_t counters_get_count(uint8_t axis)
 }
 
 
-int debounce(uint32_t* bounce_clock, int16_t lockout_ms) {
+int debounce(uint32_t* bounce_clock, uint16_t lockout_ms) {
   uint32_t clock = masterclock;
   //allow another reading if lockout has expired
   if ( (uint32_t)(clock - *bounce_clock) >= lockout_ms ) {
@@ -82,12 +82,12 @@ int debounce(uint32_t* bounce_clock, int16_t lockout_ms) {
 ISR(FDBK_INT_vect) {
   uint8_t state =  FDBK_PIN&FDBK_MASK;
   uint8_t change = (state^counters.state);
-  int8_t dir=0;
 
   // Encoder was removed in rev 4 board
   // Leaving this only as example code for how to read
   // encoder sensors in the future, if we ever add them back
   /*
+  int8_t dir=0;
   //look for encoder change
   if (change & ((1<<Z_ENC_CHA_BIT)|(1<<Z_ENC_CHB_BIT))) { //if a or b changed
     counters.anew = (state>>Z_ENC_CHA_BIT)&1;
