@@ -161,12 +161,17 @@ enum {
 };
 
 #define ACTIVE_TIMER time_STEP_ISR
-#define TIME_OFF(tid)  (((tid)==ACTIVE_TIMER)?(TIMING_PORT|=TIMING_MASK):0)
-#define TIME_ON(tid)  (((tid)==ACTIVE_TIMER)?(TIMING_PORT&=~TIMING_MASK):0)
-#define TIME_TOGGLE(tid)  (((tid)==ACTIVE_TIMER)?(TIMING_PIN|=TIMING_MASK):0)
+#define TIME_OFF(tid)  (((tid)==ACTIVE_TIMER)?(TIMING_PORT|=TIMING_MASK):(void)tid)
+#define TIME_ON(tid)  (((tid)==ACTIVE_TIMER)?(TIMING_PORT&=~TIMING_MASK):(void)tid)
+#define TIME_TOGGLE(tid)  (((tid)==ACTIVE_TIMER)?(TIMING_PIN|=TIMING_MASK):(void)tid)
 
 // Voltage Monitoring
 #define VOLTAGE_SENSOR_COUNT 5 // number of devices (X,Y,Z,C,F) for which voltage is measured
 // Reasoning for commenting this function is in system.c.
 //void init_ADC();
+
+// Helper for squelching 'unused parameter' errors
+#define UNUSED(param) (void)(param);
+
+
 #endif

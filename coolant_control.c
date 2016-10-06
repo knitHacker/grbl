@@ -69,5 +69,7 @@ void coolant_init()
 void coolant_stop()
 {}
 void coolant_run(uint8_t m)
-{}
+{
+    UNUSED(m);
+}
 #endif

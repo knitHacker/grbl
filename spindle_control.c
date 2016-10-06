@@ -103,5 +103,8 @@ void spindle_init()
 void spindle_stop()
 {}
 void spindle_run(uint8_t d,float r)
-{}
+{
+    UNUSED(d);
+    UNUSED(r);
+}
 #endif
