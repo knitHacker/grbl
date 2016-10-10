@@ -22,15 +22,13 @@
 #include "probe.h"
 #include "counters.h"
 
-
-
 // Probe pin initialization routine.
 void probe_init() 
 {
   PROBE_DDR &= ~(PROBE_MASK); // Configure as input pins
   PROBE_PORT |= PROBE_MASK;   // Enable internal pull-up resistors. Normal high operation.
-}
 
+}
 
 // Monitors probe pin state and records the system position when detected. Called by the
 // stepper ISR per ISR tick.

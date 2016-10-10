@@ -28,6 +28,7 @@
 #include "limits.h"
 #include "motion_control.h"
 #include "report.h"
+#include "magazine.h"
 
 // Some useful constants.
 #define DT_SEGMENT (1.0/(ACCELERATION_TICKS_PER_SECOND*60.0)) // min/segment
@@ -196,7 +197,6 @@ void st_disable(uint8_t disable, uint8_t mask) {
   if (disable) { STEPPERS_DISABLE_PORT |= (STEPPERS_DISABLE_MASK&mask); }
   else { STEPPERS_DISABLE_PORT &= ~(STEPPERS_DISABLE_MASK&mask); }
 }
-
 
 // Stepper state initialization. Cycle should only start if the st.cycle_start flag is
 // enabled. Startup init and limits call this function but shouldn't start the cycle.
@@ -389,10 +389,11 @@ ISR(TIMER4_COMPA_vect)
       return; // Nothing to do but exit.
     }
   }
-
-
   // Check probing state.
   probe_state_monitor();
+
+  // Check if mag is missing on the carousel
+  magazine_gap_monitor();
 
   // Reset step out bits.
   st.step_outbits = 0;

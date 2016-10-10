@@ -108,7 +108,7 @@ ISR(FDBK_INT_vect) {
   //count conveyor axis alignment pulses.
   if (change & (1<<ALIGN_SENSE_BIT)) { //sensor changed
     if (debounce(&alignment_debounce_timer, PROBE_DEBOUNCE_DELAY_MS)){
-      if (!(state&PROBE_MASK)) { //low is on.
+      if (!(state & MAGAZINE_ALIGNMENT_MASK)) { //low is on.
         counters.counts[C_AXIS]++;
       }
     }

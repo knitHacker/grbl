@@ -33,6 +33,9 @@
 #define DEFAULTS_KEYME_FM
 //#define DEFAULTS_BENCH
 
+// Check the gap between magazines and activate alarm if magazine is missing
+#define MAG_GAP_CHECK_ENABLE 1
+
 // Serial baud rate
 #define BAUD_RATE 38400
 

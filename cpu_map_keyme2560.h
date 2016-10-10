@@ -112,11 +112,17 @@
 #define PINOUT_MASK ((1<<PIN_RESET)|(1<<PIN_FEED_HOLD)|(1<<PIN_CYCLE_START))
 
 // Define probe switch input pin.
-#define PROBE_DDR       DDRK
-#define PROBE_PIN       PINK
-#define PROBE_PORT      PORTK
-#define PROBE_BIT       3   // Atmega2560 pin 86 // Arduino Analog Pin 11
-#define PROBE_MASK      (1<<PROBE_BIT)
+#define MAGAZINE_ALIGNMENT_DDR       DDRK
+#define MAGAZINE_ALIGNMENT_PIN       PINK
+#define MAGAZINE_ALIGNMENT_PORT      PORTK
+#define MAGAZINE_ALIGNMENT_BIT       3   // Atmega2560 pin 86 // Arduino Analog Pin 11
+#define MAGAZINE_ALIGNMENT_MASK      (1 << MAGAZINE_ALIGNMENT_BIT)
+
+//Alias existing probe masks in default Grbl
+#define PROBE_DDR       MAGAZINE_ALIGNMENT_DDR
+#define PROBE_PIN       MAGAZINE_ALIGNMENT_PIN
+#define PROBE_PORT      MAGAZINE_ALIGNMENT_PORT
+#define PROBE_MASK      MAGAZINE_ALIGNMENT_MASK
 
 // Start of PWM & Stepper Enabled Spindle
 #ifdef VARIABLE_SPINDLE

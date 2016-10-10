@@ -31,6 +31,7 @@
 #include "motion_control.h"
 #include "limits.h"
 #include "probe.h"
+#include "magazine.h"
 #include "report.h"
 #include "counters.h"
 
@@ -82,6 +83,7 @@ int main(void)
     coolant_init();
     limits_init();
     probe_init();
+    magazine_init();
     plan_reset(); // Clear block buffer and planner variables
     st_reset(); // Clear stepper subsystem variables.
 

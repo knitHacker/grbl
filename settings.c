@@ -103,6 +103,7 @@ void settings_reset() {
   settings.microsteps = DEFAULT_MICROSTEPPING;
   settings.decay_mode = DEFAULT_DECAY_MODE;
   settings.force_sensor_level = DEFAULT_FORCE_SENSOR_LEVEL;
+  settings.mag_gap_limit = DEFAULT_MAG_GAP_LIMIT;
   write_global_settings();
 }
 
