@@ -42,7 +42,7 @@ FUSES      = -U hfuse:w:0xd8:m -U lfuse:w:0xff:m
 # Tune the lines below only if you know what you are doing:
 
 AVRDUDE = avrdude  $(PROGRAMMER) -p $(DEVICE) -B 10 -F -D
-CFLAGS = -Wall -Werror -Wextra -Os -DF_CPU=$(CLOCK) -mmcu=$(DEVICE)
+CFLAGS = -Wall -Werror -Wextra -Os -fstack-usage -DF_CPU=$(CLOCK) -mmcu=$(DEVICE)
 COMPILE = avr-gcc $(CFLAGS) -I. -ffunction-sections
 
 # symbolic targets:
@@ -78,16 +78,29 @@ load: all
 	bootloadHID grbl.hex
 
 clean:
-	rm -f grbl.hex main.elf $(OBJECTS) $(OBJECTS:.o=.d)
+	rm -f grbl.hex main.elf $(OBJECTS) $(OBJECTS:.o=.d) grbl.stack *.su grbl.cflow grbl_callgraph.pdf
 
 # file targets:
 main.elf: $(OBJECTS)
 	$(COMPILE) -o main.elf $(OBJECTS) -lm -Wl,--gc-sections
 
+grbl.stack: main.elf
+	cat $(OBJECTS:.o=.su) > $@
+
+grbl.cflow: main.elf
+	cflow $(OBJECTS:.o=.c) -o $@
+
+grbl_callgraph.pdf: grbl.cflow grbl.stack
+	./script/stackusage.py -s grbl.stack -f grbl.cflow -c grbl_callgraph.pdf
+
+stack_analysis: grbl.stack grbl.cflow
+	./script/stackusage.py -s grbl.stack -f grbl.cflow -a
+
 grbl.hex: main.elf
 	rm -f grbl.hex
 	avr-objcopy -j .text -j .data -O ihex main.elf grbl.hex
 	avr-size --format=berkeley main.elf
+
 # If you have an EEPROM section, you must also create a hex file for the
 # EEPROM and add it to the "flash" target.
 
