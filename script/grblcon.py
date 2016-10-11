@@ -429,7 +429,7 @@ class GrblCon:
         """
         self._status.limit_flags = line.strip('/')
 
-    def _check_and_clean_line(self, line):
+    def _check_and_clean(self, line):
         """Performs a checksum on serial line data and filters bad responses
 
         :param line: A string in the format [data0..n][checksum][\n]
@@ -437,23 +437,21 @@ class GrblCon:
         :rtype: None/str
 
         """
-        *line, checksum, _ = line
+        *line, checksum = line
 
-        line = ''.join(line)
-
-        calcsum = sum([ord(x) for x in line]) & 0xff
-        residue = calcsum ^ ord(checksum)
+        calcsum = sum(line) & 0xff
+        residue = calcsum ^ checksum
 
         if residue:
             err = 'Bad Checksum. {} != {}. Data: {}'.format(
                 calcsum,
-                ord(checksum),
-                line.strip()
+                checksum,
+                ''.join([chr(x) for x in line]).strip()
             )
             self._log_error(err)
             return None
 
-        return line.strip()
+        return line
 
     def _process_serial_line(self, bytestring):
         """Sorts and handles lines of data from the grbl firmware
@@ -463,29 +461,29 @@ class GrblCon:
         :rtype: None
 
         """
-        line = self._check_and_clean_line(bytestring.decode('latin'))
+        for line in bytestring.decode('ISO-8859-1').splitlines():
 
-        # Short circuit in case we got a bad checksum
-        if not line:
-            return
+            # Short circuit in case we got a bad checksum
+            if not line:
+                return
 
-        # Assume that we'll filter the message. This will be used
-        # later to see if we should update the display with the data
-        # that came back
-        filtered = True
+            # Assume that we'll filter the message. This will be used
+            # later to see if we should update the display with the data
+            # that came back
+            filtered = True
 
-        if line.startswith('<'):   # Real time state
-            self._process_realtime_state(line)
-        elif line.startswith('/'):  # Limit pin state
-            self._process_limit_flags(line)
-        else:
-            filtered = False
-            self._update_text_display(line)
+            if line.startswith('<'):   # Real time state
+                self._process_realtime_state(line)
+            elif line.startswith('/'):  # Limit pin state
+                self._process_limit_flags(line)
+            else:
+                filtered = False
+                self._update_text_display(line)
 
-        if filtered and not self._quiet:
-            self._update_text_display(line)
+            if filtered and not self._quiet:
+                self._update_text_display(line)
 
-        self._update_status()
+            self._update_status()
 
     def _serial_rx(self):
         if not self._port:
@@ -493,9 +491,18 @@ class GrblCon:
 
         self._write_fd = self.loop.watch_pipe(self._process_serial_line)
         while not self._end_evt.isSet():
+            # Read a line of data + its checksum
             line = self._port.readline()
+            line += self._port.read()
+
+            line = self._check_and_clean(line)
+
+            if not line:
+                continue
+
             if self._write_fd and line:
                 os.write(self._write_fd, bytes(line))
+
             if self._reset_req.is_set():
                 self._log_info("Resetting")
                 self._port.setDTR(False)
