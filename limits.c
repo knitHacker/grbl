@@ -76,6 +76,7 @@ void limits_enable(uint8_t axes, uint8_t expected) {
   //    LIMIT_PCMSK |= LIMIT_MASK; // Enable specific pins of the Pin Change Interrupt
   limits.expected = bit_istrue(settings.flags,BITFLAG_INVERT_LIMIT_PINS)?~expected:expected;
   limits.active = axes<<LIMIT_BIT_SHIFT;
+  limits.mag_gap_check = MAG_GAP_CHECK_ENABLE;
 }
 
 
@@ -231,8 +232,10 @@ void limits_go_home(uint8_t cycle_mask)
       if ( settings.homing_dir_mask & get_direction_mask(idx) ) {
         target[idx] = settings.max_travel[idx];
         sys.position[idx] = lround((settings.homing_pulloff+settings.max_travel[idx])*settings.steps_per_mm[idx]);
+        memcpy(sys.probe_position, sys.position, sizeof(uint32_t) * N_AXIS); //Set probe position to position
       } else {
         sys.position[idx] = -settings.homing_pulloff*settings.steps_per_mm[idx];
+        memcpy(sys.probe_position, sys.position, sizeof(uint32_t) * N_AXIS); //Set probe position to position
         target[idx] = 0;
       }
       if (settings.homing_pulloff == 0.0) {request_eol_report(); } //force report if we are not going to move 
@@ -255,6 +258,7 @@ void limits_go_home(uint8_t cycle_mask)
 
   // Set system state to homing before returning.
   sys.state = STATE_HOMING;
+
 }
 
 
@@ -294,6 +298,8 @@ void limits_soft_check(float *target)
 // more accurately.
 void limits_force_servo(){
   if (sys.abort) { return; } // Block if system reset has been issued.
+
+  limits.mag_gap_check = 0; // Do not look for gaps in magazine on carousel
 
   uint16_t bump_target_force = force_target_val; // This is the input target force sensor value
   float servo_rate;
@@ -359,5 +365,7 @@ void limits_force_servo(){
   servo_line_number++; // increment for next time we peform this process
   
   plan_sync_position(); // Sync planner position to current machine position for pull-off move.
+
+  limits.mag_gap_check = MAG_GAP_CHECK_ENABLE; // Start checking magazine gaps on carousel again
 }
 /* KEYME SPECIFIC END */

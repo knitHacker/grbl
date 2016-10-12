@@ -35,6 +35,7 @@ typedef struct {
   uint8_t active;
   volatile uint8_t ishoming;
   volatile uint8_t isservoing;
+  uint8_t mag_gap_check; //keyme specific
 } limit_t;
 
 extern limit_t limits;

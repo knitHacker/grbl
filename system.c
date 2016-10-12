@@ -235,7 +235,6 @@ uint8_t system_execute_line(char *line)
       plan_sync_position(); // Sync planner position to current machine position for pull-off move.
       sys.state = STATE_IDLE;
       break;
-
       /* END KEYME SPECIFIC */
 
 //  case 'J' : break;  // Jogging methods
