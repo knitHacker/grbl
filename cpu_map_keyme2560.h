@@ -12,7 +12,7 @@
 #define RX_BUFFER_SIZE		255
 #define TX_BUFFER_SIZE		128
 #define BLOCK_BUFFER_SIZE	48
-#define LINE_BUFFER_SIZE	100
+#define LINE_BUFFER_SIZE	255
 
 // Define step pulse output pins. NOTE: All step bit pins must be on the same port.
 #define STEP_DDR      DDRH
