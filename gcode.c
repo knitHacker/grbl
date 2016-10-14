@@ -318,8 +318,8 @@ uint8_t gc_execute_line(char *line)
         // NOTE: Variable 'word_bit' is always assigned, if the command is valid.
         if ( bit_istrue(command_words,bit(word_bit)) ) { FAIL(STATUS_GCODE_MODAL_GROUP_VIOLATION); }
         bit_true(command_words,bit(word_bit));
-        break;
         }            
+        break;
       
       // NOTE: All remaining letters assign values.
       default: 
