@@ -84,15 +84,12 @@ void serial_sendchar(uint8_t data) {
 }
 
 void serial_write(uint8_t data) {
+  checksum+=data;
+  serial_sendchar(data);
   if (data == '\n') {
     serial_sendchar(checksum);
     checksum = 0;
   }
-  else {
-    checksum+=data;
-  }
-  serial_sendchar(data);
-
 }
 
 
