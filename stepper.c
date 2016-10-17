@@ -569,8 +569,8 @@ void keyme_init() {
 
   // FDBK is for additional 1 voltage sensor (gripper force feedback)
   // Feedback sensor voltage is called FVOLT
-  FVOLT_DDR |= ~(FVOLT_MASK);
-  FVOLT_PORT |= FVOLT_MASK;  // internal pull-up????  it's an analog
+  ////FVOLT_DDR |= ~(FVOLT_MASK);
+  //FVOLT_PORT |= FVOLT_MASK;  // internal pull-up????  it's an analog
 
   // Setup CCTRL (current control) ports
   // TODO: make this output PWMs with configurable values

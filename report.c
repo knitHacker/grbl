@@ -431,9 +431,10 @@ void calculate_force_voltage(){
   ADCSRA = (1<<ADEN)|(1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0);
 
   // Set read bit to be the special feedback bit (ADC14)
-  // This is bit select 6, plus
+  // This is bit select 6, plus 0b0111 (7), stored in FVOLT
   ADMUX = ((1<<REFS0) + (FVOLT_ADC));
   ADCSRB = (MUX5_BIT_VALUE<<MUX5_BIT_POS);
+
   // Enable capture of ADC
   ADCSRA |= (1<<ADSC);
   // Wait for the result

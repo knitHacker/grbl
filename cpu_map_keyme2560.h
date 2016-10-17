@@ -43,7 +43,7 @@
 #define C_DISABLE_BIT 5  // J5 /Atmega Pin 68
 #define STEPPERS_DISABLE_MASK ((1<<X_DISABLE_BIT)|(1<<Y_DISABLE_BIT)|(1<<Z_DISABLE_BIT)|(1<<C_DISABLE_BIT))   // All disable bits
 
-#define STEPPERS_LONG_LOCK_MASK  ((1<<Y_DISABLE_BIT)|(1<<Z_DISABLE_BIT))  //Keep gripper and Y engaged longer
+#define STEPPERS_LONG_LOCK_MASK  ((1<<Y_DISABLE_BIT)|(1<<Z_DISABLE_BIT))
 #define STEPPERS_LOCK_TIME_MULTIPLE 200  //ms*250 = quarter seconds so 255->63.75s
 
 
@@ -176,6 +176,7 @@
 #define CCTRL_CG_BIT 5
 #define CCTRL_XY_BIT 4
 
+
 // Force Sensor Sensitivity Control output
 // TODO: remove this functionality on rev5 and beyond in favor of PWM pin
 #define FSCTRL_DDR DDRG
@@ -185,12 +186,13 @@
 // Feedback sensor voltage is now analog and called FVOLT
 #define FVOLT_DDR DDRK
 #define FVOLT_PORT PORTK
-#define FVOLT_BIT 7
-#define FVOLT_MASK (1<<FVOLT_BIT)
+#define FVOLT_BIT 7      // 111
+#define FVOLT_REV_DIV 4  // 100
+//#define FVOLT_MASK (1<<FVOLT_BIT)
 
 #define FVOLT_ADC 7  // value to write to ADCSRA to read ADC15
 #define MUX5_BIT_POS 3
-#define MUX5_BIT_VALUE 1 // 1 designates ADC 15
+#define MUX5_BIT_VALUE 0 // 1 designates ADC 15
 
 // Measurement of Supply Voltage for all motors, MVOLT
 #define MVOLT_DDR DDRF
@@ -200,13 +202,10 @@
 #define Y_MVOLT_BIT 2
 #define Z_MVOLT_BIT 3
 #define C_MVOLT_BIT 0
+#define RD_MVOLT_BIT 4 // Rev-Dev (revision voltage divider, 0.5V per division)
+#define F_MVOLT_BIT 7  // Second location for force sensor
 
-#define X_MVOLT_ADC 1
-#define Y_MVOLT_ADC 2
-#define Z_MVOLT_ADC 3
-#define C_MVOLT_ADC 0
-
-#define MVOLT_MASK ((1<<X_MVOLT_BIT)|(1<<Y_MVOLT_BIT)|(1<<Z_MVOLT_BIT)|(1<<C_MVOLT_BIT))
+#define MVOLT_MASK ((1<<X_MVOLT_BIT)|(1<<Y_MVOLT_BIT)|(1<<Z_MVOLT_BIT)|(1<<C_MVOLT_BIT)|(1<<F_MVOLT_BIT)|(1<<RD_MVOLT_BIT))
 
 // Define and configure PWM out(s) on timer3 to control the
 // force sensor sensitivity and current driving pins (XY and CG)
@@ -221,35 +220,6 @@
 // IO Reset Functionality
 #define IO_RESET_DDR DDRA
 #define IO_RESET_PORT PORTA
-#define IO_RESET_BIT 0
-#define IO_RESET_MASK (1<<IO_RESET_BIT)
-
-#else
-
-#define FDBK_DDR DDRK
-#define FDBK_PORT PORTK
-#define FDBK_PIN PINK
-#define ALIGN_SENSE_BIT 3  //This is also PROBE_BIT
-#define Z_ENC_IDX_BIT 4
-#define Z_ENC_CHA_BIT 5
-#define Z_ENC_CHB_BIT 6
-
-#define FDBK_INT       PCIE2  // Pin change interrupt enable pin
-#define FDBK_INT_vect  PCINT2_vect
-#define FDBK_PCMSK     PCMSK2 // Pin change interrupt register
-#define FDBK_MASK ((1<<Z_ENC_IDX_BIT)|(1<<Z_ENC_CHA_BIT)|(1<<Z_ENC_CHB_BIT)|(1<<ALIGN_SENSE_BIT))
-
-#define MVOLT_DDR DDRD
-#define MVOLT_PORT PORTD
-#define MVOLT_PIN PIND
-#define X_MVOLT_BIT 1
-#define Y_MVOLT_BIT 2
-#define Z_MVOLT_BIT 3
-#define C_MVOLT_BIT 0
-#define MVOLT_MASK ((1<<X_MVOLT_BIT)|(1<<Y_MVOLT_BIT)|(1<<Z_MVOLT_BIT)|(1<<C_MVOLT_BIT))
-
-#define IO_RESET_DDR DDRF
-#define IO_RESET_PORT PORTF
 #define IO_RESET_BIT 0
 #define IO_RESET_MASK (1<<IO_RESET_BIT)
 
