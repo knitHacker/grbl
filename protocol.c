@@ -155,6 +155,9 @@ void protocol_execute_runtime()
 
   /* Give the program manager some time to manage the serial traffic */
   progman_execute();
+  
+  // Update force sensor voltage
+  calculate_force_voltage();
 
   if (clock >= (report_clock +  STATUS_REPORT_RATE_MS) || clock < report_clock) {
     rt_exec|= EXEC_RUNTIME_REPORT;
@@ -273,8 +276,6 @@ void protocol_execute_runtime()
   // Reload step segment buffer
   if (sys.state & (STATE_CYCLE | STATE_HOLD | STATE_HOMING | STATE_FORCESERVO))
   { st_prep_buffer(); }
-
-  calculate_force_voltage();
 
   // Clear IO Reset bit.
   IO_RESET_PORT &= (~IO_RESET_MASK);

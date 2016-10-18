@@ -189,14 +189,32 @@
 #define FSCTRL_BIT 5
 
 // Feedback sensor voltage is now analog and called FVOLT
-#define FVOLT_DDR DDRK
-#define FVOLT_PORT PORTK
-#define FVOLT_BIT 7
-#define FVOLT_MASK (1<<FVOLT_BIT)
+#define FORCE_DDR DDRK
+#define FORCE_BIT 7
+#define FORCE_PORT PORTK
+#define FORCE_MASK (1 << FORCE_BIT)
 
-#define FVOLT_ADC 7  // value to write to ADCSRA to read ADC15
-#define MUX5_BIT_POS 3
-#define MUX5_BIT_VALUE 1 // 1 designates ADC 15
+// ADC Selection
+#define F_ADC          15 // ADC 15 - Force
+#define X_ADC           1  // ADC 1 - X axis
+#define Y_ADC           2  // ADC 2 - Y axis
+#define Z_ADC           3  // ADC 3 - Z axis
+#define C_ADC           0  // ADC 0 - C axis
+#define RD_ADC          4  // ADC 4 Revision voltage divider - RevDiv
+#define LC_ADC          7  // ADC 7 Load Cell
+#define MUX5_BIT_POS    3  // This bit needs to be set in ADCSRB if the ADC channel is between 8 and 15
+
+// Load cell analog input
+#define LC_DDR DDRF
+#define LC_PORT PORTF
+#define LC_BIT 7
+#define LC_MASK (1 << LC_BIT) 
+
+// Revision voltage divider - 0.5V per division
+#define RD_DDR DDRF
+#define RD_PORT PORTF
+#define RD_BIT 4
+#define RD_MASK (1 << RD_BIT)
 
 // Measurement of Supply Voltage for all motors, MVOLT
 #define MVOLT_DDR DDRF
@@ -206,11 +224,6 @@
 #define Y_MVOLT_BIT 2
 #define Z_MVOLT_BIT 3
 #define C_MVOLT_BIT 0
-
-#define X_MVOLT_ADC 1
-#define Y_MVOLT_ADC 2
-#define Z_MVOLT_ADC 3
-#define C_MVOLT_ADC 0
 
 #define MVOLT_MASK ((1<<X_MVOLT_BIT)|(1<<Y_MVOLT_BIT)|(1<<Z_MVOLT_BIT)|(1<<C_MVOLT_BIT))
 

@@ -37,6 +37,7 @@
 #include "stepper.h"
 #include "counters.h"
 #include "probe.h"
+#include "adc.h"
 
 
 // Handles the primary confirmation protocol response for streaming interfaces and human-feedback.
@@ -385,10 +386,10 @@ void report_voltage()
 {
   uint8_t i;
   calculate_motor_voltage();
-  printPgmString(PSTR("|"));
-  for (i = 0; i<VOLTAGE_SENSOR_COUNT; i++){
+  printPgmString( PSTR("|") );
+  for (i = 0; i < VOLTAGE_SENSOR_COUNT; i++) {
     printInteger((uint32_t)analog_voltage_readings[i]);
-    if (i<VOLTAGE_SENSOR_COUNT-1)
+    if (i < VOLTAGE_SENSOR_COUNT - 1)
       printPgmString(PSTR(","));
   }
   printPgmString(PSTR("|"));
@@ -399,51 +400,29 @@ void report_voltage()
 void calculate_motor_voltage(){
   uint8_t i;
 
-  // Set the ADC Reference
-  ADMUX = (1<<REFS0);
-  // Enable ADC, start conversion, prescaler of 128x
-  ADCSRA = (1<<ADEN)|(1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0);
-
-  for (i=0;i<(VOLTAGE_SENSOR_COUNT-1); i++){
-    // If MUX5 bit was set high, it must be cleared
-    // in order for the other analogs to read properly
-    if (MUX5_BIT_VALUE)
-      ADCSRB &= ~(MUX5_BIT_VALUE<<MUX5_BIT_POS);
-
-    // set next motor target for ADC
-    ADMUX = (1<<REFS0) + i;
-
-    // Enable capture of ADC
-    ADCSRA |= (1<<ADSC);
-    // Wait for the result
-    while(ADCSRA & (1<<ADSC));
-    // Store result
-    analog_voltage_readings[i] = ADC;
+  for (i = 0; i < (N_AXIS - 1); i++) {
+    // Assumes the motors are on ADC channels 0-3 and in the same
+    // order in analog_voltage_readings If the pins are changed, a
+    // map should be made to motors to ADC channels.
+    analog_voltage_readings[i] = adc_read_channel(i);
   }
 }
 
 // Calculates force sensor value.
-void calculate_force_voltage(){
-  // Set the ADC Reference
-  ADMUX = (1<<REFS0);
-
-  // Enable ADC, start conversion, prescaler of 128x
-  ADCSRA = (1<<ADEN)|(1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0);
-
-  // Set read bit to be the special feedback bit (ADC14)
-  // This is bit select 6, plus
-  ADMUX = ((1<<REFS0) + (FVOLT_ADC));
-  ADCSRB = (MUX5_BIT_VALUE<<MUX5_BIT_POS);
-  // Enable capture of ADC
-  ADCSRA |= (1<<ADSC);
-  // Wait for the result
-  while(ADCSRA & (1<<ADSC));
-  // Store the result
-  analog_voltage_readings[FORCE_VALUE_INDEX] = ADC;
-  // Disable ADC
-  ADCSRA = (0<<ADEN);
+void calculate_force_voltage()
+{
+  #ifdef USE_LOAD_CELL
+    analog_voltage_readings[FORCE_VALUE_INDEX] = adc_read_channel(LC_ADC);
+  #else
+    analog_voltage_readings[FORCE_VALUE_INDEX] = adc_read_channel(F_ADC); 
+  #endif
 }
 
+// Report the version of the board based on the revision voltage divider
+void report_revision()
+{
+  analog_voltage_readings[REV_VALUE_INDEX] = adc_read_channel(RD_ADC);
+}
 
 
  // Prints real-time data. This function grabs a real-time snapshot of the stepper subprogram

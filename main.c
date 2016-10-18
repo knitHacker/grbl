@@ -35,7 +35,7 @@
 #include "report.h"
 #include "counters.h"
 #include "progman.h"
-
+#include "adc.h"
 
 // Declare system global variable structure
 system_t sys;
@@ -50,6 +50,7 @@ int main(void)
   stepper_init();  // Configure stepper pins and interrupt timers
   system_init();   // Configure pinout pins and pin-change interrupt
   counters_init(); //configure encoder and counter interrupt.
+  adc_init();
 
   memset(&sys, 0, sizeof(sys));  // Clear all system variables
   memset((void*)&sysflags, 0, sizeof(sysflags));  // and volatile
@@ -88,6 +89,8 @@ int main(void)
     plan_reset(); // Clear block buffer and planner variables
     st_reset(); // Clear stepper subsystem variables.
     progman_init();
+    report_revision(); // ADC - read revision voltage form revision voltage divider  
+  
 
     // Sync cleared gcode and planner positions to current system position.
     plan_sync_position();
