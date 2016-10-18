@@ -154,7 +154,10 @@ void system_execute_startup(char *line)
     } else {
       if (line[0] != 0) {
         printString(line); // Echo startup line to indicate execution.
-        report_status_message(gc_execute_line(line));
+	uint8_t status = gc_execute_line(line);
+	if (status) {
+	  report_status_message(status);
+	}
       }
     }
   }
@@ -282,7 +285,6 @@ uint8_t system_execute_line(char *line)
               if (axis == N_AXIS) { return(STATUS_INVALID_STATEMENT); }
               axis = (1<<axis);  //convert idx to mask
             }
-            report_status_message(STATUS_OK); //report that we are homing
             mc_homing_cycle(axis);
             if (!sys.abort) { system_execute_startup(line); } // Execute startup scripts after successful homing.
             return STATUS_QUIET_OK; //already said ok
@@ -293,7 +295,6 @@ uint8_t system_execute_line(char *line)
           read_float(line, &char_counter, &value);
           // This is the force value the gripper motor will approach. Specified by kiosk.
           force_target_val = (uint16_t)value;
-          report_status_message(STATUS_OK);
           mc_force_servo_cycle();
           if (!sys.abort) { system_execute_startup(line);}
           return STATUS_QUIET_OK;

@@ -196,7 +196,7 @@ void mc_arc(float *position, float *target, float *offset, float radius, float f
 // Execute dwell in seconds.
 void mc_dwell(float seconds) 
 {
-  report_status_message(STATUS_OK); //report that we are dwelling
+  /* TODO: Report a dwell status? -JC */
   if (sys.state == STATE_CHECK_MODE) { return; }
    
   uint16_t i = floor(1000/DWELL_TIME_STEP*seconds);
@@ -287,7 +287,7 @@ void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate, li
   protocol_buffer_synchronize(); // Finish all queued commands
   if (sys.abort) { return; } // Return if system reset has been issued.
 
-  report_status_message(STATUS_OK); //report that we are probing
+  /* TODO: Report a probing status? -JC */
 
   // Perform probing cycle. Planner buffer should be empty at this point.
   mc_line(target, feed_rate, invert_feed_rate, line_number);

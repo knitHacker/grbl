@@ -28,6 +28,7 @@
 #include "stepper.h"
 #include "motion_control.h"
 #include "report.h"
+#include "progman.h"
 
 #define STATUS_REPORT_RATE_MS 333  //3 Hz
 
@@ -44,16 +45,14 @@ static void protocol_execute_line(char *line)
   protocol_execute_runtime(); // Runtime command check point.
   if (sys.abort) { return; } // Bail to calling function upon system abort
 
-  if (line[0] == 0) {
-    // Empty or comment line. Send status message for syncing purposes.
-    report_status_message(STATUS_OK);
+  uint8_t status = STATUS_OK;
 
-  } else if (line[0] == '$') {
+  if (line[0] == '$') {
     // Grbl '$' system command
-    report_status_message(system_execute_line(line));
-
+    status = system_execute_line(line);
   } else if (sys.state == STATE_ALARM) {
     // Everything else is gcode. Block if in alarm mode.
+    status = STATUS_ALARM_LOCK;
     report_status_message(STATUS_ALARM_LOCK);
 
   } else if (line[0] == CMD_LINE_START) {
@@ -61,10 +60,13 @@ static void protocol_execute_line(char *line)
     // the previous line - it won't be picked out of the serial stream while
     // gc_execute_line is still parsing the previous line.
     SYS_EXEC |= EXEC_CYCLE_START;
-    report_status_message(STATUS_OK);
   } else {
-    // Parse and execute g-code block!
-    report_status_message(gc_execute_line(line));
+    status = gc_execute_line(line);
+  }
+
+  /* If there was an error, report it */
+  if (status) {
+    report_status_message(status);
   }
 }
 
@@ -94,68 +96,31 @@ void protocol_main_loop()
   // Primary loop! Upon a system abort, this exits back to main() to reset the system.
   // ---------------------------------------------------------------------------------
 
-  uint8_t iscomment = false;
   uint8_t char_counter = 0;
   uint8_t c;
   for (;;) {
 
-    // Process one line of incoming serial data, as the data becomes available. Performs an
+    // Process one line of incoming Gcode data, as the data becomes available. Performs an
     // initial filtering by removing spaces and comments and capitalizing all letters.
 
-    // NOTE: While comment, spaces, and block delete(if supported) handling should technically
-    // be done in the g-code parser, doing it here helps compress the incoming data into Grbl's
-    // line buffer, which is limited in size. The g-code standard actually states a line can't
-    // exceed 256 characters, but the Arduino Uno does not have the memory space for this.
-    // With a better processor, it would be very easy to pull this initial parsing out as a
-    // seperate task to be shared by the g-code parser and Grbl's system commands.
+    // NOTE: The Program Manager handles the filtering of comments,
+    // spaces, and block skips. All data *should* come through as
+    // complete newline delimited blocks
 
-    while((c = serial_read()) != SERIAL_NO_DATA) {
+    while(progman_read(&c)) {
       if ((c == '\n') || (c == '\r')) { // End of line reached
         line[char_counter] = 0; // Set string termination character.
         protocol_execute_line(line); // Line is complete. Execute it!
-        iscomment = false;
         char_counter = 0;
       } else {
-        if (iscomment) {
-          // Throw away all comment characters
-          if (c == ')') {
-            // End of comment. Resume line.
-            iscomment = false;
-          }
-        } else {
-          if (c <= ' ') {
-            // Throw away whitepace and control characters
-          } else if (c == '/') {
-            // Block delete NOT SUPPORTED. Ignore character.
-            // NOTE: If supported, would simply need to check the system if block delete is enabled.
-          } else if (c == '(') {
-            // Enable comments flag and ignore all characters until ')' or EOL.
-            // NOTE: This doesn't follow the NIST definition exactly, but is good enough for now.
-            // In the future, we could simply remove the items within the comments, but retain the
-            // comment control characters, so that the g-code parser can error-check it.
-            iscomment = true;
-          // } else if (c == ';') {
-            // Comment character to EOL NOT SUPPORTED. LinuxCNC definition. Not NIST.
-
-          // TODO: Install '%' feature
-          // } else if (c == '%') {
-            // Program start-end percent sign NOT SUPPORTED.
-            // NOTE: This maybe installed to tell Grbl when a program is running vs manual input,
-            // where, during a program, the system auto-cycle start will continue to execute
-            // everything until the next '%' sign. This will help fix resuming issues with certain
-            // functions that empty the planner buffer to execute its task on-time.
-
-          } else if (char_counter >= LINE_BUFFER_SIZE-1) {
-            // Detect line buffer overflow. Report error and reset line buffer.
-            report_status_message(STATUS_OVERFLOW);
-            iscomment = false;
+	if (char_counter >= LINE_BUFFER_SIZE-1) {
+	  // Detect line buffer overflow. Report error and reset line buffer.
+	  report_status_message(STATUS_OVERFLOW);
             char_counter = 0;
-          } else if (c >= 'a' && c <= 'z') { // Upcase lowercase
-            line[char_counter++] = c-'a'+'A';
-          } else {
-            line[char_counter++] = c;
-          }
-        }
+	} else {
+	  /* Put the capitalized letter in the buffer */
+	  line[char_counter++] = (c >= 'a' && c <= 'z') ? (c - 'a' + 'A') : c;
+	}
       }
     }
 
@@ -186,8 +151,11 @@ void protocol_main_loop()
 void protocol_execute_runtime()
 {
   uint8_t rt_exec = SYS_EXEC; // Copy to avoid calling volatile multiple times
-
   uint32_t clock = masterclock;
+
+  /* Give the program manager some time to manage the serial traffic */
+  progman_execute();
+
   if (clock >= (report_clock +  STATUS_REPORT_RATE_MS) || clock < report_clock) {
     rt_exec|= EXEC_RUNTIME_REPORT;
     sysflags.report_rqsts|=next_report;

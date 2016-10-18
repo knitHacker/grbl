@@ -125,13 +125,16 @@ class GrblCon:
     # NOTE: the /{number} in the dictionary value represents the
     # command's arity.
     _command_help = {
+        'break': '/0 Print a pagebreak',
         'clear': '/0 Clear the screen',
         'close': '/0 Close the current grbl connection',
         'help': '/0 Display this dialog',
+        'load_gcode': '/1 Send the specified gcode file to grbl',
         'log': '/0 Display the event log',
         'open': '/2 (dev, baud) Open a grbl connection to dev@baud',
         'quit': '/0 Close any active grbl connection and exit',
         'reset': '/0 Reset the currently connected grbl board',
+        'run': '/0 Begins execution of loaded gcode program',
         'toggle_quiet': '/0 Toggle squelching of status messages',
         '\\': '/? Sends a raw command strait to grbl',
     }
@@ -297,8 +300,31 @@ class GrblCon:
         self._close_serial()
         raise urwid.ExitMainLoop
 
+    def _handle_load_gcode(self, *args):  # pylint: disable=unused-argument
+        filename = args[0][0]
+
+        filename = os.path.expanduser(filename)
+        filename = os.path.abspath(filename)
+
+        with open(filename) as gcfil:
+            lines = gcfil.readlines()
+
+        lnum = 0
+        for line in lines:
+            numbered_line = 'N{} {}'.format(lnum, line)
+            lnum += 1
+            self._update_text_display(numbered_line)
+            if self._port:
+                self._port.write(bytes(numbered_line + '\n', 'ascii'))
+
+    def _handle_run(self, *args):  # pylint: disable=unused-argument
+        self._port.write(bytes(b'~\n'))
+
     def _handle_clear(self, *args):  # pylint: disable=unused-argument
         self._clear_screen()
+
+    def _handle_break(self, *args):  # pylint: disable=unused-argument
+        self._delimit_display()
 
     def _handle_help(self, *args):  # pylint: disable=unused-argument
         help_str = '\n'.join([
