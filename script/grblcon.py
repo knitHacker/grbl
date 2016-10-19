@@ -129,11 +129,13 @@ class GrblCon:
         'clear': '/0 Clear the screen',
         'close': '/0 Close the current grbl connection',
         'help': '/0 Display this dialog',
+        'home': '/0..4 (X/Y/Z/C) Homes the specified axis. Multiple axis may be provided (or none to home all)',
         'load_gcode': '/1 Send the specified gcode file to grbl',
         'log': '/0 Display the event log',
         'open': '/2 (dev, baud) Open a grbl connection to dev@baud',
         'quit': '/0 Close any active grbl connection and exit',
-        'reset': '/0 Reset the currently connected grbl board',
+        'readadc': '/0 Performs a read of the on-board ADCs',
+        'reset': '/1 (hard?) Reset GRBL via command. If `reset hard`, performs a hardware reset',
         'run': '/0 Begins execution of loaded gcode program',
         'toggle_quiet': '/0 Toggle squelching of status messages',
         '\\': '/? Sends a raw command strait to grbl',
@@ -281,6 +283,28 @@ class GrblCon:
         """
         return self._serial_thread is not None
 
+    def _write(self, data):
+        """Wraps our serial port so that connection status and encoding are
+        automatically handled
+
+        :param data: str - data to write
+
+        """
+
+        if self.connected:
+            self._port.write(bytes(data, 'ISO-8859-1'))
+        else:
+            self._log_crit("Not connected to GRBL!")
+
+    def _writeline(self, data):
+        """Writes provided string to the serial port (if connected) and appends a newline
+
+        :param data: str - data to write
+
+        """
+
+        self._write(data + '\n')
+
     def _clear_screen(self):
         """ Resets the text display area
 
@@ -301,7 +325,7 @@ class GrblCon:
         raise urwid.ExitMainLoop
 
     def _handle_load_gcode(self, *args):  # pylint: disable=unused-argument
-        filename = args[0][0]
+        filename = args[0]
 
         filename = os.path.expanduser(filename)
         filename = os.path.abspath(filename)
@@ -314,11 +338,10 @@ class GrblCon:
             numbered_line = 'N{} {}'.format(lnum, line)
             lnum += 1
             self._update_text_display(numbered_line)
-            if self._port:
-                self._port.write(bytes(numbered_line + '\n', 'ascii'))
+            self._write(numbered_line + '\n')
 
     def _handle_run(self, *args):  # pylint: disable=unused-argument
-        self._port.write(bytes(b'~\n'))
+        self._write('~')
 
     def _handle_clear(self, *args):  # pylint: disable=unused-argument
         self._clear_screen()
@@ -350,6 +373,15 @@ class GrblCon:
                        'args should be space separated!')
         self._update_text_display(help_footer)
 
+    def _handle_home(self, *args):
+        cmd = '$H'
+
+        for arg in args:
+            if arg in 'XYZCxyzc' and not arg in cmd:
+                cmd += arg
+
+        self._write(cmd)
+
     def _handle_quit(self, *args):  # pylint: disable=unused-argument
         self.quit()
 
@@ -360,12 +392,24 @@ class GrblCon:
         self._log_info('Closing GRBL Connection')
         self._close_serial()
 
+    def _handle_readadc(self, *args):  # pylint: disable=unused-argument
+        if not self.connected:
+            return
+
+        self._write('|')
+
     def _handle_reset(self, *args):  # pylint: disable=unused-argument
-        if self.connected:
+        if not self.connected:
+            return
+
+        if len(args) and args[0] == 'hard':
             self._reset_req.set()
+        else:
+            # Send a ctrl-x
+            self._write('\x18')
 
     def _handle_open(self, *args):  # pylint: disable=unused-argument
-        self._open_port(*args[0])
+        self._open_port(*args)
 
     def _handle_log(self, *args):  # pylint: disable=unused-argument
         self._delimit_display()
@@ -390,8 +434,7 @@ class GrblCon:
         text = text[1:]
 
         self._update_text_display(text)
-        if self._port:
-            self._port.write(bytes(text + '\n', 'ascii'))
+        self._writeline(text)
 
     def _process_cmd(self, text):
         try:
@@ -402,7 +445,7 @@ class GrblCon:
 
         cmd_handler = '_handle_{}'.format(cmd)
         if hasattr(self, cmd_handler):
-            getattr(self, cmd_handler)(cmd_args)
+            getattr(self, cmd_handler)(*cmd_args)
 
     def _process_user_input(self, key):
         """Sorts and handles user input lines
