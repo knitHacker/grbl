@@ -87,16 +87,22 @@ uint8_t report_realtime_status();
 // Prints state of limit pins and estop
 void report_limit_pins();
 
-// Prinst state of counters
+// Prints state of counters
 void report_counters();
 
-// Prinst voltage of motors
+// Read voltage of ADCs
+
 void report_voltage();
 void calculate_motor_voltage();
 void calculate_force_voltage();
+void report_revision();
+
 // Variable for holding voltage value after ADC
+
 uint16_t analog_voltage_readings[VOLTAGE_SENSOR_COUNT];
+
 #define FORCE_VALUE_INDEX 4 // Index of analog_voltage_readings that holds force value
+#define REV_VALUE_INDEX 5
 
 // Prints recorded probe position
 void report_probe_parameters(uint8_t error);

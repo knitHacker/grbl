@@ -167,7 +167,7 @@ enum {
 #define TIME_TOGGLE(tid)  (((tid)==ACTIVE_TIMER)?(TIMING_PIN|=TIMING_MASK):(void)tid)
 
 // Voltage Monitoring
-#define VOLTAGE_SENSOR_COUNT 5 // number of devices (X,Y,Z,C,F) for which voltage is measured
+#define VOLTAGE_SENSOR_COUNT 6 // number of devices (X,Y,Z,C,F,RD) for which voltage is measured
 // Reasoning for commenting this function is in system.c.
 //void init_ADC();
 

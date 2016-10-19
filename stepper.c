@@ -566,12 +566,6 @@ void keyme_init() {
   // MVOLT is used for voltage sensing
   // TODO:  read on command.  (create command)
   MVOLT_DDR &= ~(MVOLT_MASK);
-  MVOLT_PORT |= MVOLT_MASK; // internal pull-up, normal high
-
-  // FDBK is for additional 1 voltage sensor (gripper force feedback)
-  // Feedback sensor voltage is called FVOLT
-  FVOLT_DDR |= ~(FVOLT_MASK);
-  FVOLT_PORT |= FVOLT_MASK;  // internal pull-up????  it's an analog
 
   // Setup CCTRL (current control) ports
   // TODO: make this output PWMs with configurable values
