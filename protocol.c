@@ -153,7 +153,7 @@ void protocol_execute_runtime()
   uint8_t rt_exec = SYS_EXEC; // Copy to avoid calling volatile multiple times
   uint32_t clock = masterclock;
 
-  /* Give the program manager some time to manage the serial traffic */
+  //Give the program manager some time to manage the serial traffic
   progman_execute();
   
   // Update force sensor voltage
@@ -183,11 +183,16 @@ void protocol_execute_runtime()
         report_feedback_message(MESSAGE_CRITICAL_EVENT);
         bit_false(SYS_EXEC,EXEC_RESET); // Disable any existing reset
         do {
-          // Nothing. Block EVERYTHING until user issues reset or power cycles. Hard limits
-          // typically occur while unattended or not paying attention. Gives the user time
-          // to do what is needed before resetting, like killing the incoming stream. The
-          // same could be said about soft limits. While the position is not lost, the incoming
-          // stream could be still engaged and cause a serious crash if it continues afterwards.
+          // Block EVERYTHING until user issues reset or power cycles
+          // (requires the program manager to handle from the incoming
+          // serial stream). Hard limits typically occur while
+          // unattended or not paying attention. Gives the user time
+          // to do what is needed before resetting, like killing the
+          // incoming stream. The same could be said about soft
+          // limits. While the position is not lost, the incoming
+          // stream could be still engaged and cause a serious crash
+          // if it continues afterwards.
+	  progman_execute();
         } while (bit_isfalse(SYS_EXEC,EXEC_RESET));
       }
       bit_false(SYS_EXEC,(EXEC_ALARM | EXEC_CRIT_EVENT));
