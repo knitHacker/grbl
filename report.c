@@ -111,6 +111,7 @@ void report_alarm_message(int8_t alarm_code)
   if (alarm_code & ALARM_HOME_FAIL)       printPgmString(PSTR("Homing fail "));
   if (alarm_code & ALARM_ESTOP)           printPgmString(PSTR("Estop pressed "));
   if (alarm_code & ALARM_FORCESERVO_FAIL) printPgmString(PSTR("Force servoing fail"));
+  if (alarm_code & ALARM_MAG_MISSING)     printPgmString(PSTR("Magazine Missing"));
   printPgmString(PSTR("\r\n"));
   delay_ms(500); // Force delay to ensure message clears serial write buffer.
 }
