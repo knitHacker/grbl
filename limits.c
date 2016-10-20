@@ -27,6 +27,7 @@
 #include "motion_control.h"
 #include "limits.h"
 #include "report.h"
+#include "magazine.h"
 
 #define HOMING_AXIS_SEARCH_SCALAR  1.1  // Axis search distance multiplier. Must be > 1.
 
@@ -77,6 +78,7 @@ void limits_enable(uint8_t axes, uint8_t expected) {
   limits.expected = bit_istrue(settings.flags,BITFLAG_INVERT_LIMIT_PINS)?~expected:expected;
   limits.active = axes<<LIMIT_BIT_SHIFT;
   limits.mag_gap_check = MAG_GAP_CHECK_ENABLE;
+  memcpy(sys.probe_position, sys.position, sizeof(float) * N_AXIS);
 }
 
 
@@ -87,6 +89,60 @@ void limits_disable()
   limits.active = 0;
 }
 
+// Called from limits_go_home
+void limits_update_homing_values(uint8_t cycle_mask, float * homing_rate, float * min_seek_rate, uint8_t * axislock, float * max_travel, uint8_t * n_active_axis)
+{
+  uint8_t idx;
+  for (idx = 0; idx < N_AXIS; idx++) {
+    if (bit_istrue(cycle_mask, bit(idx))) {
+      (*n_active_axis)++;
+      *axislock |= (1 << (X_STEP_BIT + idx)); //assumes axes are in bit order.
+      *max_travel = max(*max_travel, settings.max_travel[idx]);
+      *min_seek_rate = min(*min_seek_rate, settings.homing_seek_rate[idx]);
+    }
+  }
+  *max_travel *= HOMING_AXIS_SEARCH_SCALAR; // Ensure homing switches engaged by over-estimating max travel.
+  *max_travel += settings.homing_pulloff;
+  *homing_rate = *min_seek_rate * sqrt(*n_active_axis); //Adjust so individual axes all move at homing rate.
+
+  return;
+}
+
+// Called from limits_go_home
+void limits_plan_homing(uint8_t cycle_mask, float homing_rate, float max_travel, uint8_t axislock, uint8_t approach, float* target, uint8_t flipped)
+{
+ 
+  uint8_t idx;
+  
+  // Set target location and rate for active axes.
+  // and reset homing axis locks based on cycle mask.
+
+  // limit travel distance to the length of the largest flag
+  float travel = approach ? max_travel : MAXFLAGLEN;
+  // set target for moving axes based on direction
+  for (idx = 0; idx < N_AXIS; idx++) {
+    if (bit_istrue(cycle_mask, bit(idx))) {
+      if ((flipped & (1 << idx)) ^ approach) {
+        target[idx] = -travel;
+      } else {
+        target[idx] = travel;
+      }
+    } else {
+      target[idx] = 0;
+    }
+  }
+
+  // Perform homing cycle. Planner buffer should be empty, as required to initiate the homing cycle.
+  plan_buffer_line(target, homing_rate, false, LINENUMBER_EMPTY_BLOCK);  // Bypass mc_line(). Directly plan homing motion.
+
+  // axislock bit is high if axis is homing, so we only enable checking on moving axes.
+  limits_enable(axislock,~approach);  //expect 0 on approach (stop when 1). vice versa for pulloff
+  limits.ishoming = axislock << LIMIT_BIT_SHIFT;
+ 
+  st_prep_buffer(); // Prep and fill segment buffer from newly planned block.
+  st_wake_up(); // Initiate motion
+
+}
 
 // Limit checking moved to stepper ISR. 
 // limits_enable() sets limits.active and limits.expected flags.
@@ -118,10 +174,10 @@ void limits_go_home(uint8_t cycle_mask)
   // Initialize homing in search mode to quickly engage the specified cycle_mask limit switches.
   uint8_t approach = ~0;  //approach has all bits set (negative dir) or none (positive)
   uint8_t idx;
-  uint8_t n_cycle = (2*N_HOMING_LOCATE_CYCLE);
+  uint8_t n_cycle = (2 * N_HOMING_LOCATE_CYCLE);
   float target[N_AXIS];
 
-  uint8_t flipped = settings.homing_dir_mask>>X_DIRECTION_BIT;  //assumes keyme configuration.
+  uint8_t flipped = settings.homing_dir_mask >> X_DIRECTION_BIT;  //assumes keyme configuration.
   //replace with an instance of `if (bitistrue(h_d_m,X_DIRECTION_BIT)) { flipped|=1<<X_AXIS;}` 
   //for each axis if the bits line up differently
 
@@ -131,51 +187,38 @@ void limits_go_home(uint8_t cycle_mask)
   uint8_t n_active_axis = 0;
   uint8_t axislock = 0;
 
-  for (idx=0; idx<N_AXIS; idx++){
-    if (bit_istrue(cycle_mask,bit(idx))) {
-      n_active_axis++;
-      axislock |= (1<<(X_STEP_BIT+idx)); //assumes axes are in bit order.
-      max_travel = max(max_travel,settings.max_travel[idx]);
-      min_seek_rate = min(min_seek_rate,settings.homing_seek_rate[idx]);
-    }
-  }
-  max_travel *= HOMING_AXIS_SEARCH_SCALAR; // Ensure homing switches engaged by over-estimating max travel.
-  max_travel += settings.homing_pulloff;
-  homing_rate = min_seek_rate * sqrt(n_active_axis); //Adjust so individual axes all move at homing rate.
+  limits_update_homing_values(cycle_mask, &homing_rate, &min_seek_rate, &axislock, &max_travel, &n_active_axis);
   plan_reset(); // Reset planner buffer to zero planner current position and to clear previous motions.
 
   do {
-    // Set target location and rate for active axes.
-    // and reset homing axis locks based on cycle mask.
-
-    // limit travel distance to the length of the largest flag
-    float travel = approach ? max_travel : MAXFLAGLEN;
-    // set target for moving axes based on direction
-    for (idx=0; idx<N_AXIS; idx++) {
-      if (bit_istrue(cycle_mask,bit(idx))) {
-        if ((flipped&(1<<idx))^approach) {
-          target[idx] = -travel;
-        }
-        else {
-          target[idx] = travel;
-        }
-      }
-      else {
-        target[idx] = 0;
-      }
-    }
-
-    // Perform homing cycle. Planner buffer should be empty, as required to initiate the homing cycle.
-    plan_buffer_line(target, homing_rate, false, LINENUMBER_EMPTY_BLOCK);  // Bypass mc_line(). Directly plan homing motion.
-
-    // axislock bit is high if axis is homing, so we only enable checking on moving axes.
-    limits_enable(axislock,~approach);  //expect 0 on approach (stop when 1). vice versa for pulloff
-    limits.ishoming = 1;
-
-    st_prep_buffer(); // Prep and fill segment buffer from newly planned block.
-    st_wake_up(); // Initiate motion
+    limits_plan_homing(cycle_mask, homing_rate, max_travel, axislock, approach, target, flipped);
 
     do {
+      
+      // Monitor magazine probe to look for missing magazines on carousel
+      magazine_gap_monitor();
+
+      // If the home speed needs to be adjusted when an axis finishes homing,
+      // calculate new homing values and reset the plan buffer
+      if (bit_istrue(sys.state, STATE_HOME_ADJUST)) {
+       
+        limits_disable();
+        st_reset();
+        plan_reset(); // Reset planner buffer to zero planner current position and to clear previous motions.
+
+        min_seek_rate = 1e9; //arbitrary maximum=1km/s, will be reduced by axis setting below
+        max_travel = 0;
+        n_active_axis = 0;
+        axislock = 0;
+        
+        limits_update_homing_values(limits.ishoming, &homing_rate, &min_seek_rate, &axislock, &max_travel, &n_active_axis);
+
+        limits_plan_homing(limits.ishoming, homing_rate, max_travel, axislock, approach, target, flipped);
+
+        // Clear the STATE_HOME_ADJUST flag when homing is adjusted
+        bit_false(sys.state, STATE_HOME_ADJUST);
+      }
+
       st_prep_buffer(); // Check and prep segment buffer. NOTE: Should take no longer than 200us.
       // Check only for user reset. Keyme: fixed to allow protocol_execute_runtime() in this loop.
       protocol_execute_runtime();
