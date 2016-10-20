@@ -14,6 +14,24 @@
 #define BLOCK_BUFFER_SIZE       48
 #define LINE_BUFFER_SIZE        255
 
+//Slave Chip Selects for stepper motors
+#define SCS_XTABLE_PIN          PC6
+#define SCS_YTABLE_PIN          PC5
+#define SCS_CAROUSEL_PIN        PC7
+#define SCS_GRIPPER_PIN         PC4
+#define SCS_MASK  (1 << SCS_XTABLE_PIN) | (1 << SCS_YTABLE_PIN) | (1 << SCS_CAROUSEL_PIN) | (1 << SCS_GRIPPER_PIN)
+
+// Note - All steppers need to be on the same port,
+// if not, use the commented section below
+#define SCS_PORT        PORTC
+#define SCS_DDR_PORT    DDRC
+
+#define SCS_XTABLE_DDR_PIN      DDC6
+#define SCS_YTABLE_DDR_PIN      DDC5
+#define SCS_CAROUSEL_DDR_PIN    DDC7
+#define SCS_GRIPPER_DDR_PIN     DDC4
+#define SCS_DDR_MASK (1 << SCS_XTABLE_DDR_PIN) | (1 << SCS_YTABLE_DDR_PIN) | (1 << SCS_CAROUSEL_DDR_PIN) | (1 << SCS_GRIPPER_DDR_PIN)
+
 // Define step pulse output pins. NOTE: All step bit pins must be on the same port.
 #define STEP_DDR      DDRH
 #define STEP_PORT     PORTH

@@ -30,12 +30,83 @@
 #include "report.h"
 #include "magazine.h"
 
+#include "spi.h"
+
 // Some useful constants.
 #define DT_SEGMENT (1.0/(ACCELERATION_TICKS_PER_SECOND*60.0)) // min/segment
 #define REQ_MM_INCREMENT_SCALAR 1.25
 #define RAMP_ACCEL 0
 #define RAMP_CRUISE 1
 #define RAMP_DECEL 2
+
+//SPI drivers
+#define SPI_ADDRESS_MASK        0x7
+#define SPI_RW_BIT              7
+// For use with the SPI driver chip
+typedef enum {
+  XTABLE = 0,
+  YTABLE,
+  GRIPPER,
+  CAROUSEL
+} steppers_t;
+
+static const uint8_t scs_pin_lookup[4] = {
+  SCS_XTABLE_PIN,
+  SCS_YTABLE_PIN,
+  SCS_GRIPPER_PIN,
+  SCS_CAROUSEL_PIN
+  
+};
+
+// Initialization values for spi stepper drivers
+// Format: MSB, LSB
+static const uint8_t stepper_init_registers[4][18] = {
+  {
+    //XTABLE
+    0x0C, 0x11, // CTRL,   DTIME=11, ISGAIN=00, EXSTALL=0, MODE=0010, RSTEP=0, RDIR=0, ENBL=1
+    0x11, 0xFF, // TORQUE, SMPLTH=001, TORQUE=0xFF
+    0x20, 0x30, // OFF,    PWMMODE=0, TOFF=0x30
+    0x30, 0x80, // BLANK,  ABT=0, TBLANK=0x80
+    0x41, 0x10, // DECAY,  DECMOD=001, TDECAY=0x10
+    0x50, 0x40, // STALL,  VDIV=00, SDCNT=00, SDTHR=0x40
+    0x6A, 0x59, // DRIVE,  IDRIVEP=10, IDRIVEN=10, TDRIVEP=01, TDRIVEN=01, OCPDEG=10, OCPTH=01
+    0x70, 0x00  // STATUS, init all status flags to 0 
+  },
+  {
+    //YTABLE
+    0x0C, 0x11, // CTRL,   DTIME=11, ISGAIN=00, EXSTALL=0, MODE=0010, RSTEP=0, RDIR=0, ENBL=1	
+    0x11, 0xFF, // TORQUE, SMPLTH=001, TORQUE=0xFF
+    0x20, 0x30, // OFF,    PWMMODE=0, TOFF=0x30
+    0x30, 0x80, // BLANK,  ABT=0, TBLANK=0x80
+    0x41, 0x10, // DECAY,  DECMOD=001, TDECAY=0x10
+    0x50, 0x40, // STALL,  VDIV=00, SDCNT=00, SDTHR=0x40
+    0x6A, 0x59, // DRIVE,  IDRIVEP=10, IDRIVEN=10, TDRIVEP=01, TDRIVEN=01, OCPDEG=10, OCPTH=01
+    0x70, 0x00  // STATUS, init all status flags to 0 
+  },
+  {
+    //GRIPPER
+    0x0C, 0x11, //  CTRL,   DTIME=11, ISGAIN=00, EXSTALL=0, MODE=0010, RSTEP=0, RDIR=0, ENBL=1  
+    0x11, 0xFF, //  TORQUE, SMPLTH=001, TORQUE=0xFF
+    0x20, 0x30, //  OFF,    PWMMODE=0, TOFF=0x30
+    0x30, 0x80, //  BLANK,  ABT=0, TBLANK=0x80
+    0x41, 0x10, //  DECAY,  DECMOD=001, TDECAY=0x10
+    0x50, 0x40, //  STALL,  VDIV=00, SDCNT=00, SDTHR=0x40
+    0x6A, 0x59, //  DRIVE,  IDRIVEP=10, IDRIVEN=10, TDRIVEP=01, TDRIVEN=01, OCPDEG=10, OCPTH=01   
+    0x70, 0x00  //  STATUS, init all status flags to 0 
+
+  },
+  {
+    //CAROUSEL
+    0x0C, 0x11, //  CTRL,   DTIME=11, ISGAIN=00, EXSTALL=0, MODE=0010, RSTEP=0, RDIR=0, ENBL=1  
+    0x11, 0xFF, //  TORQUE, SMPLTH=001, TORQUE=0xFF
+    0x20, 0x30, //  OFF,    PWMMODE=0, TOFF=0x30
+    0x30, 0x80, //  BLANK,  ABT=0, TBLANK=0x80
+    0x41, 0x10, //  DECAY,  DECMOD=001, TDECAY=0x10
+    0x50, 0x40, //  STALL,  VDIV=00, SDCNT=00, SDTHR=0x40
+    0x6A, 0x59, //  DRIVE,  IDRIVEP=10, IDRIVEN=10, TDRIVEP=01, TDRIVEN=01, OCPDEG=10, OCPTH=01   
+    0x70, 0x00  //  STATUS, init all status flags to 0 
+  }
+};
 
 // Define Adaptive Multi-Axis Step-Smoothing(AMASS) levels and cutoff frequencies. The highest level
 // frequency bin starts at 0Hz and ends at its cutoff frequency. The next lower level frequency bin
@@ -565,8 +636,37 @@ void st_reset()
 
 }
 
+void spi_read_driver_register(uint8_t addr, uint8_t * dataout , steppers_t stepper)
+{
+  //For read, MSB should be 1
+  uint8_t tx_data[2];
+  tx_data[0] = (1 << SPI_RW_BIT);
+  tx_data[0] |= (addr & SPI_ADDRESS_MASK) << 4;
 
-void keyme_init() {
+  bit_true(SCS_PORT, 1 << scs_pin_lookup[(uint8_t)stepper]); // Chip select high
+  spi_transact_array(tx_data, dataout, 2);
+  bit_false(SCS_PORT, 1 << scs_pin_lookup[(uint8_t)stepper]); // Chip select low
+ 
+}
+
+void spi_driver_setup(steppers_t stepper)
+{
+  uint8_t idx = 0;
+  for(idx = 0; idx <= 14; idx += 2) {
+    uint8_t tx_buf[2];
+    tx_buf[0] = stepper_init_registers[(uint8_t)stepper][idx];
+    tx_buf[1] = stepper_init_registers[(uint8_t)stepper][idx + 1];
+
+    bit_true(SCS_PORT, 1 << scs_pin_lookup[(uint8_t)stepper]); // Chip select high
+    spi_write(tx_buf, 2);
+    bit_false(SCS_PORT, 1 << scs_pin_lookup[(uint8_t)stepper]); // Chip select low
+
+  }
+}
+
+
+void keyme_init() 
+{
   // PORTG0 for drive enable
   ESTOP_DDR  |= (1<<RUN_ENABLE_BIT);    //set enable as outupt
   ESTOP_DDR  &= ~(ESTOP_BIT);           //estop as input
@@ -574,9 +674,17 @@ void keyme_init() {
   ESTOP_PORT &= ~(ESTOP_BIT);           //estop input normal-low
 
   // Microstepping
-  MS_DDR = MS_MASK; //all output
 
-  MS_PORT = settings.microsteps&MS_MASK;
+  #ifdef SPI_STEPPER_DRIVER
+    //Initialise SPI Stepper drivers
+    spi_driver_setup(XTABLE);
+    spi_driver_setup(YTABLE);
+    spi_driver_setup(GRIPPER);
+    spi_driver_setup(CAROUSEL);
+  #else
+    MS_DDR = MS_MASK; //all output
+    MS_PORT = settings.microsteps & MS_MASK;
+  #endif 
 
   // Phase Current Decay
   PFD_DDR = PFD_MASK; //all output
