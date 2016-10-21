@@ -66,7 +66,8 @@ void serial_init()
 
 
 
-void serial_sendchar(uint8_t data) {
+void serial_sendchar(uint8_t data) 
+{
   // Calculate next head
   uint8_t next_head = tx_buffer_head + 1;
   if (next_head == TX_BUFFER_SIZE) { next_head = 0; }
@@ -83,13 +84,15 @@ void serial_sendchar(uint8_t data) {
   UCSR0B |=  (1 << UDRIE0);
 }
 
-void serial_write(uint8_t data) {
-  checksum+=data;
+void serial_write(uint8_t data)
+{
+  checksum += data;
   serial_sendchar(data);
   if (data == '\n') {
     serial_sendchar(checksum);
     checksum = 0;
   }
+
 }
 
 
@@ -144,8 +147,8 @@ ISR(SERIAL_RX)
 
   // Write data to buffer unless it is full.
   if (next_head != rx_buffer_tail) {
-	  rx_buffer[rx_buffer_head] = data;
-	  rx_buffer_head = next_head;
+    rx_buffer[rx_buffer_head] = data;
+    rx_buffer_head = next_head;
 
   }
   //TODO: else alarm on overflow?

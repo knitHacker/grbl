@@ -34,7 +34,7 @@ PORT       ?= /dev/ttyUSB0
 PROGRAMMER ?= -c wiring -P $(PORT) -v -v
 OBJECTS    = main.o motion_control.o gcode.o spindle_control.o coolant_control.o serial.o \
              protocol.o stepper.o eeprom.o settings.o planner.o magazine.o nuts_bolts.o limits.o \
-             print.o probe.o report.o system.o counters.o gqueue.o progman.o adc.o
+             print.o probe.o report.o system.o counters.o gqueue.o progman.o adc.o spi.o
 
 # FUSES      = -U hfuse:w:0xd9:m -U lfuse:w:0x24:m
 FUSES      = -U hfuse:w:0xd8:m -U lfuse:w:0xff:m
@@ -46,6 +46,10 @@ FUSES      = -U hfuse:w:0xd8:m -U lfuse:w:0xff:m
 AVRDUDE = avrdude  $(PROGRAMMER) -p $(DEVICE) -B 10 -F -D
 CFLAGS = -Wall -Werror -Wextra -Os -fstack-usage -DF_CPU=$(CLOCK) -mmcu=$(DEVICE)
 COMPILE = avr-gcc $(CFLAGS) -I. -ffunction-sections
+
+ifneq ($(SPI),)
+  CFLAGS += -DSPI_STEPPER_DRIVER
+endif
 
 ifneq ($(USE_LOAD_CELL),)
   CFLAGS += -DUSE_LOAD_CELL

@@ -36,6 +36,7 @@
 #include "counters.h"
 #include "progman.h"
 #include "adc.h"
+#include "spi.h"
 
 // Declare system global variable structure
 system_t sys;
@@ -46,6 +47,10 @@ int main(void)
 {
   // Initialize system upon power-up.
   serial_init();   // Setup serial baud rate and interrupts
+  #ifdef SPI_STEPPER_DRIVER
+    spi_init();      // Setup SPI Control register and pins
+  #endif
+
   settings_init(); // Load grbl settings from EEPROM
   stepper_init();  // Configure stepper pins and interrupt timers
   system_init();   // Configure pinout pins and pin-change interrupt
