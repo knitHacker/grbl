@@ -26,7 +26,7 @@
   #define SEGMENT_BUFFER_SIZE 6
 #endif
 
-#define GRIPPER_FORCE_THRESHOLD 5
+#define GRIPPER_FORCE_THRESHOLD 2
 
 extern float travel_servo;
 

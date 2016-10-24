@@ -100,16 +100,8 @@ void report_revision();
 // Reporting of magazine slop
 void report_magazine_slop();
 
-// Variable for holding voltage value after ADC
-
-uint16_t analog_voltage_readings[VOLTAGE_SENSOR_COUNT];
-
-#define FORCE_VALUE_INDEX 4 // Index of analog_voltage_readings that holds force value
-#define REV_VALUE_INDEX 5
-
 // Prints recorded probe position
 void report_probe_parameters(uint8_t error);
-
 
 // Prints a message indicating probe failure
 void report_probe_fail();

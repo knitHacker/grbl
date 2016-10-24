@@ -37,8 +37,8 @@
 #include "stepper.h"
 #include "counters.h"
 #include "probe.h"
-#include "adc.h"
 #include "magazine.h"
+#include "signals.h"
 
 // Handles the primary confirmation protocol response for streaming interfaces and human-feedback.
 // For every incoming line, this method responds with an 'ok' for a successful command or an
@@ -390,10 +390,9 @@ void report_counters()
 void report_voltage()
 {
   uint8_t i;
-  calculate_motor_voltage();
   printPgmString( PSTR("|") );
   for (i = 0; i < VOLTAGE_SENSOR_COUNT; i++) {
-    printInteger((uint32_t)analog_voltage_readings[i]);
+    printInteger((uint32_t)signals.adc_samples[i]);
     if (i < VOLTAGE_SENSOR_COUNT - 1)
       printPgmString(PSTR(","));
   }
@@ -411,40 +410,11 @@ void report_magazine_slop()
   printPgmString(PSTR("\r\n"));
 }
 
-// Calculates voltage at motors. Only called in report_voltage().
-void calculate_motor_voltage(){
-  uint8_t i;
-
-  for (i = 0; i < N_AXIS; i++) {
-    // Assumes the motors are on ADC channels 0-3 and in the same
-    // order in analog_voltage_readings If the pins are changed, a
-    // map should be made to motors to ADC channels.
-    analog_voltage_readings[i] = adc_read_channel(i);
-  }
-}
-
-// Calculates force sensor value.
-void calculate_force_voltage()
-{
-  #ifdef USE_LOAD_CELL
-    analog_voltage_readings[FORCE_VALUE_INDEX] = adc_read_channel(LC_ADC);
-  #else
-    analog_voltage_readings[FORCE_VALUE_INDEX] = adc_read_channel(F_ADC); 
-  #endif
-}
-
-// Report the version of the board based on the revision voltage divider
-void report_revision()
-{
-  analog_voltage_readings[REV_VALUE_INDEX] = adc_read_channel(RD_ADC);
-}
-
-
- // Prints real-time data. This function grabs a real-time snapshot of the stepper subprogram
- // and the actual location of the CNC machine. Users may change the following function to their
- // specific needs, but the desired real-time data report must be as short as possible. This is
- // requires as it minimizes the computational overhead and allows grbl to keep running smoothly,
- // especially during g-code programs with fast, short line segments and high frequency reports (5-20Hz).
+// Prints real-time data. This function grabs a real-time snapshot of the stepper subprogram
+// and the actual location of the CNC machine. Users may change the following function to their
+// specific needs, but the desired real-time data report must be as short as possible. This is
+// requires as it minimizes the computational overhead and allows grbl to keep running smoothly,
+// especially during g-code programs with fast, short line segments and high frequency reports (5-20Hz).
 uint8_t report_realtime_status()
 {
   // **Under construction** Bare-bones status report. Provides real-time machine position relative to
