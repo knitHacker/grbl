@@ -6,6 +6,68 @@
 #define ADMUX_SELECTION_MASK    0x7
 #define MUX5_MASK               0x8
 
+channel_t active_channel = 0;
+
+uint8_t channel_map[VOLTAGE_SENSOR_COUNT] = {
+  F_ADC,
+  Y_ADC,
+  Z_ADC,
+  C_ADC,
+  #ifdef USE_LOAD_CELL
+    LC_ADC,
+  #else
+    F_ADC,
+  #endif
+  RD_ADC
+};
+
+void setup_adc_channel(uint8_t channel) 
+{
+  // Disable ADC Interrupt
+  bit_false(ADCSRA, 1 << ACIE);
+
+  // Stop ADC conversion
+  bit_false(ADCSRA, 1 << ADSC);
+
+  // Select Channel - ADCSRB, MUX5
+  // If the channel number is higher than 7, the MUX5 bit in ADCSRB needs to be set  
+  if (channel & MUX5_MASK) {
+    bit_true(ADCSRB, (1 << MUX5_BIT_POS));
+  } else {
+    bit_false(ADCSRB, (1 << MUX5_BIT_POS));
+  }
+
+  // Clear the previously selected channel
+  bit_false(ADMUX, (ADMUX_SELECTION_MASK));
+
+  // Select Channel
+  bit_true(ADMUX, (channel & ADMUX_SELECTION_MASK));
+
+  // Enable ADC, Prescaler: 128x
+  ADCSRA = (1 << ADEN) | (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
+
+  // Enable ADC Interrupt
+  bit_true(ADCSRA, 1 << ACIE);
+
+  // Start ADC conversion
+  bit_true(ADCSRA, 1 << ADSC);
+
+}
+
+ISR(ADC_vect)
+{
+  // Store raw ADC reading
+  raw_adc_readings[active_channel] = ADC;
+  
+  // Update the active channel
+  active_channel = (active_channel == REV) ? X : active_channel + 1;
+  
+  // Setup the ADC to read from the next channel and
+  // trigger an interupt once ADC conversion is completed
+  setup_adc_channel(channel_map[active_channel]);
+
+}
+
 void adc_init()
 {
 
@@ -27,43 +89,14 @@ void adc_init()
 
   // Set ADC reference
   ADMUX |= (1 << REFS0);
-}
 
-uint16_t adc_read_channel(uint8_t channel) 
-{
-  // Select Channel - ADCSRB, MUX5
-  // If the channel number is higher than 7, the MUX5 bit in ADCSRB needs to be set  
-  if (channel & MUX5_MASK) {
-    bit_true(ADCSRB, (1 << MUX5_BIT_POS));
-  } else {
-    bit_false(ADCSRB, (1 << MUX5_BIT_POS));
-  }
-
-  // Clear the previously selected channel
-  ADMUX &= ~(ADMUX_SELECTION_MASK);
-  // Select Channel
-  ADMUX |= (channel & ADMUX_SELECTION_MASK);
-
-  // Enable ADC, Prescaler: 128x
-  ADCSRA = (1 << ADEN) | (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
-  // Enable ADC capture
-  ADCSRA |= (1 << ADSC);
-
-  // Enable capture of ADC with timeout
-  uint16_t timeout = 0xFFFF;
-  while(ADCSRA & (1 << ADSC)) {
-    if (timeout-- == 0) {
-      return 0;
-    }
-  }
-    
-  // Stote the result
-  uint16_t ret = ADC;
-  
-  // Disable ADC 
-  ADCSRA &= ~(1<<ADEN);
+  // Start cycling through the ADC channels
+  active_channel = X;
+  setup_adc_channel(active_channel);
  
-  // Return result
-  return ret;
+  // Enable global interrupts
+  sei(); 
+
 }
+
 

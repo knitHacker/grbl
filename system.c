@@ -28,7 +28,8 @@
 #include "protocol.h"
 #include "stepper.h"
 #include "planner.h"
-
+#include "limits.h"
+#include "signals.h"
 
 uint32_t masterclock=0;
 //uint16_t voltage_result[VOLTAGE_SENSOR_COUNT];
@@ -154,10 +155,10 @@ void system_execute_startup(char *line)
     } else {
       if (line[0] != 0) {
         printString(line); // Echo startup line to indicate execution.
-	uint8_t status = gc_execute_line(line);
-	if (status) {
-	  report_status_message(status);
-	}
+        uint8_t status = gc_execute_line(line);
+        if (status) {
+          report_status_message(status);
+        }
       }
     }
   }
@@ -296,12 +297,30 @@ uint8_t system_execute_line(char *line)
           } else { return(STATUS_SETTING_DISABLED); }
           break;
         case 'F': // Perform Force servo process. By default it is defined for Gripper-Axis(Z) only.
-          char_counter++;
-          read_float(line, &char_counter, &value);
-          // This is the force value the gripper motor will approach. Specified by kiosk.
-          force_target_val = (uint16_t)value;
-          mc_force_servo_cycle();
-          if (!sys.abort) { system_execute_startup(line);}
+          char_counter++; 
+          // The $FS command, followed by a value,
+          // set limits.force_offset to the value.
+          if (line[char_counter] == 'S') {
+            char_counter++;         
+            if (!read_float(line, &char_counter, &value)){
+              return(STATUS_BAD_NUMBER_FORMAT);
+            }
+            signals.force_offset = (uint16_t)value;
+          } else if (line[char_counter] == 0) {
+             return(STATUS_INVALID_STATEMENT);
+          } else {
+              if (!read_float(line, &char_counter, &value)){
+                return(STATUS_BAD_NUMBER_FORMAT);
+              }           
+              // The $F command, followed by a value will set
+              // limits.bump_grip_force to the value and start
+              // servoing to limits.bump_grip_force
+              limits.bump_grip_force = (uint16_t)value;
+              mc_force_servo_cycle(); 
+          }      
+          if (!sys.abort) {
+            system_execute_startup(line);
+          }
           return STATUS_QUIET_OK;
           break;
         case 'I' : // Print or store build info. [IDLE/ALARM]
@@ -418,3 +437,4 @@ linenumber_t linenumber_peek(){
   }
   return 0;
 }
+

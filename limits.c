@@ -27,10 +27,15 @@
 #include "motion_control.h"
 #include "limits.h"
 #include "report.h"
+#include "signals.h"
 #include "magazine.h"
+#include "nuts_bolts.h"
 
 #define HOMING_AXIS_SEARCH_SCALAR  1.1  // Axis search distance multiplier. Must be > 1.
-
+#define MAX_FORCE_SERVO_CYCLES 10
+#define MIN_FORCE_SERVO_CYCLES 2
+#define LONG_FORCE_SERVO_DELAY 1000
+#define SHORT_FORCE_SERVO_DELAY 200
 
 limit_t limits={0};
 
@@ -330,81 +335,135 @@ void limits_soft_check(float *target)
   }
 }
 
-/* KEYME SPECIFIC START*/
-// Currently this function servos the Gripper Motor (Z-Axis) until it reaches a desired force
-// for bumping. Future iterations may want to include a specific force to reach in order to
-// do any force related movements. More motor motions may be added to reach the desired force
-// more accurately.
-void limits_force_servo(){
-  if (sys.abort) { return; } // Block if system reset has been issued.
+void limits_plan_force_servo(float servo_rate)
+{
 
-  limits.mag_gap_check = 0; // Do not look for gaps in magazine on carousel
+  // Make sure that limits.bump_grip_force is in the 0-1023
+  // range since the ADC is 10 bits.
+  limits.bump_grip_force = min(limits.bump_grip_force, 1023);
+  limits.bump_grip_force = max(limits.bump_grip_force, 0);
 
-  uint16_t bump_target_force = force_target_val; // This is the input target force sensor value
-  float servo_rate;
-  // Initialize homing in search mode to quickly engage the specified cycle_mask limit switches.
+  float travel = 0;
+
+  //Approach has all bits set (negative dir) or none (positive)
   uint8_t approach = ~0;
 
-  if (analog_voltage_readings[FORCE_VALUE_INDEX]<(bump_target_force-GRIPPER_FORCE_THRESHOLD)){
-    travel_servo = MAXSERVODIST;
+  if (FORCE_VAL < limits.bump_grip_force) {
+    travel = MAXSERVODIST;
+  } else if(FORCE_VAL > limits.bump_grip_force) {
+    travel = -(MAXSERVODIST);
+  } else {
+    return;
   }
-  else if(analog_voltage_readings[FORCE_VALUE_INDEX]>(bump_target_force+GRIPPER_FORCE_THRESHOLD)){
-    travel_servo = -MAXSERVODIST;
-  }
-  //approach has all bits set (negative dir) or none (positive)
-  float target[N_AXIS];
   
-  uint8_t axislock = AXISLOCKSERVO;
-  servo_rate = settings.homing_seek_rate[X_AXIS]/20.0; // TODO: make servo_rate into macro for servoing
+ 
+  uint8_t axislock = 1 << Z_AXIS;
   plan_reset();
 
-  // set target for moving axes based on direction
-  target[X_AXIS] = 0;
-  target[Y_AXIS] = 0;
-  target[Z_AXIS] = travel_servo;
-  target[C_AXIS] = 0;
+  // Set the gripper target
+  float target[N_AXIS] = {0};
+  target[Z_AXIS] = travel;
 
   // Perform homing cycle. Planner buffer should be empty, as required to initiate the homing cycle.
-  plan_buffer_line(target, servo_rate, false, LINENUMBER_SPECIAL_SERVO|(servo_line_number*4+LINEMASK_ON_EDGE)); 
+  plan_buffer_line(target, servo_rate, false, LINENUMBER_EMPTY_BLOCK);
+  
+  // Axislock bit is high if axis is homing, so we only enable checking on moving axes.
+  // Expect 0 on approach (stop when 1). vice versa for pulloff
 
-  // axislock bit is high if axis is homing, so we only enable checking on moving axes.
-  limits_enable(axislock,~approach);  //expect 0 on approach (stop when 1). vice versa for pulloff
-  limits.isservoing = 1; // tell system we are servoing
+  limits_enable(axislock,~approach);  
+  // Set the isservoing flag
+  limits.isservoing = 1;
 
   st_prep_buffer(); // Prep and fill segment buffer from newly planned block.
   st_wake_up(); // Initiate motion
 
-  do {
-    st_prep_buffer(); // Check and prep segment buffer. NOTE: Should take no longer than 200us.
-    // Check only for user reset. Keyme: fixed to allow protocol_execute_runtime() in this loop.
-    protocol_execute_runtime();
-    if (SYS_EXEC & EXEC_RESET) {
-      protocol_execute_runtime();
-      return;
-    }
 
-    // Check if we never reached limit switch.  call it a Probe fail.
-    if (SYS_EXEC & EXEC_CYCLE_STOP) {
-      sys.alarm |= ALARM_FORCESERVO_FAIL;
-      SYS_EXEC |= EXEC_CRIT_EVENT;
-      protocol_execute_runtime();
-      return;
-    }
-  } while (limits.isservoing);  // stepper isr sets this when force sensor value is reached
+}
 
-  limits_disable();
-  st_reset(); // Immediately force kill steppers and reset step segment buffer.
-  plan_reset(); // Reset planner buffer. Zero planner positions. Ensure homing motion is cleared.
+// Move gripper to limits.bump_grip_force.
+void limits_force_servo()
+{
+  // Block if system reset has been issued.
+  if (sys.abort) {
+    return;
+  } 
 
-  linenumber_insert(LINENUMBER_SPECIAL_SERVO|(servo_line_number*4+LINEMASK_DONE));
-  request_eol_report();
-  protocol_execute_runtime();
-  request_eol_report(); // need to report once more to report the "DONE" linenumber
+  // Do not look for gaps in magazine on carousel
+  limits.mag_gap_check = 0;  
 
-  servo_line_number++; // increment for next time we peform this process
+  float servo_rate = settings.homing_seek_rate[Z_AXIS];
+
+  // Pause the callback function that updates ADC
+  // values when not force servoing.
+  signals.pause = 1;
+
+  // Delays are used to compensate for the settling time
+  // of the load cell ADC reading
+  uint16_t delay = 0; 
+
+ // Keep track of completed cycles
+  uint8_t cycles = 0; 
   
-  plan_sync_position(); // Sync planner position to current machine position for pull-off move.
+  // Initially, move to the desired force at a fast rate
+  limits_plan_force_servo(servo_rate);
+
+  // After servoing at a fast rate, 
+  // delay for LONG_FORCE_SERVO_DELAY ms 
+  delay = LONG_FORCE_SERVO_DELAY;
+
+  // Perform force servoing cyles
+  do {
+    // Stay in this loop while moving the gripper motor
+    // Similair to homing procedure
+    do {
+      // Check for user reset and allow protocol_execute_runtime() in this loop.
+      protocol_execute_runtime();
+      if (SYS_EXEC & EXEC_RESET) {
+        protocol_execute_runtime();
+        return;
+      }
+      
+      // Check if we never reached limit switch.  Call it a probe fail.
+      if (SYS_EXEC & EXEC_CYCLE_STOP) {
+        sys.alarm |= ALARM_FORCESERVO_FAIL;
+        SYS_EXEC |= EXEC_CRIT_EVENT;
+        protocol_execute_runtime();
+        return;
+      }
+    } while (limits.isservoing);  // Stepper isr sets this flag when
+                                  // limits.bump_grip_force is reached
+
+    limits_disable();
+    st_reset(); // Immediately force kill steppers and reset step segment buffer.
+    plan_reset(); // Reset planner buffer. Zero planner positions. Ensure homing motion is cleared.
+
+    linenumber_insert(LINENUMBER_SPECIAL_SERVO | ((servo_line_number * 4) + LINEMASK_DONE));
+    request_eol_report();
+    protocol_execute_runtime();
+    request_eol_report(); // Need to report once more to report the "DONE" linenumber
+
+    servo_line_number++; // Increment for next time we peform this process
+  
+    plan_sync_position(); // Sync planner position to current machine position for pull-off move.
+      
+    delay_ms(delay);
+
+    // Increment cycle counter
+    cycles++;      
+  
+    // Step at the slowest speed possible
+    limits_plan_force_servo(1);
+
+    // After servoing at slow rate, 
+    // delay for SHORT_FORCE_SERVO_DELAY ms
+    delay = SHORT_FORCE_SERVO_DELAY;
+     
+  } while ((cycles <= MIN_FORCE_SERVO_CYCLES) | ((cycles <= MAX_FORCE_SERVO_CYCLES) \
+          && (abs(limits.bump_grip_force - FORCE_VAL) > GRIPPER_FORCE_THRESHOLD)));  
+
+  // Resume the regular sampling of ADCs
+  signals.pause = 0;
 
   limits.mag_gap_check = settings.mag_gap_enabled; // Start checking magazine gaps on carousel again
 }
-/* KEYME SPECIFIC END */
+
