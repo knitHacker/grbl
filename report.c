@@ -38,7 +38,7 @@
 #include "counters.h"
 #include "probe.h"
 #include "adc.h"
-
+#include "magazine.h"
 
 // Handles the primary confirmation protocol response for streaming interfaces and human-feedback.
 // For every incoming line, this method responds with an 'ok' for a successful command or an
@@ -398,6 +398,16 @@ void report_voltage()
       printPgmString(PSTR(","));
   }
   printPgmString(PSTR("|"));
+  printPgmString(PSTR("\r\n"));
+}
+
+void report_magazine_slop()
+{
+  printPgmString( PSTR("%") );
+  printInteger(magazine_lash());
+  printPgmString(PSTR(","));
+  printInteger(magazine_spacing());
+  printPgmString(PSTR("%"));
   printPgmString(PSTR("\r\n"));
 }
 

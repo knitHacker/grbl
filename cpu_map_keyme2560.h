@@ -61,7 +61,8 @@
 #define C_DISABLE_BIT 5  // J5 /Atmega Pin 68
 #define STEPPERS_DISABLE_MASK ((1<<X_DISABLE_BIT)|(1<<Y_DISABLE_BIT)|(1<<Z_DISABLE_BIT)|(1<<C_DISABLE_BIT))   // All disable bits
 
-#define STEPPERS_LONG_LOCK_MASK  ((1<<Y_DISABLE_BIT)|(1<<Z_DISABLE_BIT))  //Keep gripper and Y engaged longer
+//Keep gripper, carousel, and Y engaged longer
+#define STEPPERS_LONG_LOCK_MASK  ((1<<Y_DISABLE_BIT)|(1<<Z_DISABLE_BIT)|(1 << C_DISABLE_BIT))
 #define STEPPERS_LOCK_TIME_MULTIPLE 200  //ms*250 = quarter seconds so 255->63.75s
 
 

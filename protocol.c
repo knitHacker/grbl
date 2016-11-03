@@ -228,6 +228,10 @@ void protocol_execute_runtime()
         report_voltage();
         reports &= ~REQUEST_VOLTAGE_REPORT;
       }
+      else if (reports & REQUEST_SLOP_REPORT) {
+        report_magazine_slop();
+        reports &= ~REQUEST_SLOP_REPORT;
+      }
       if (0==(sysflags.report_rqsts|=reports)) { //if all reports done and no new requests, clear report flag
         bit_false(SYS_EXEC,EXEC_RUNTIME_REPORT);
       }

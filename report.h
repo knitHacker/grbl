@@ -97,6 +97,9 @@ void calculate_motor_voltage();
 void calculate_force_voltage();
 void report_revision();
 
+// Reporting of magazine slop
+void report_magazine_slop();
+
 // Variable for holding voltage value after ADC
 
 uint16_t analog_voltage_readings[VOLTAGE_SENSOR_COUNT];

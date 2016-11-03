@@ -8,13 +8,17 @@ import threading
 from threading import Event
 import os
 import signal
+import datetime
 import time
+import collections
 
 import serial
 import urwid
 from urwid import raw_display
 
 # TODO: Think about replacing Positions with a named tuple
+
+CarouselSlop = collections.namedtuple('CarouselSlop', ['lash', 'spacing'])
 
 
 class Positions:
@@ -85,6 +89,7 @@ class Status:
         self.adcs = None
         self.line = None
         self.limit_flags = None
+        self.slop = None
         self.reset()
 
     def reset(self):
@@ -100,6 +105,7 @@ class Status:
         self.adcs = ADCs()
         self.line = '0'
         self.limit_flags = '0000000000'
+        self.slop = CarouselSlop(0, 0)
 
     def __str__(self):
         return '[Status] ' + ' | '.join([
@@ -118,8 +124,23 @@ class Status:
             ),
             "Line: {}".format(self.line),
             "Limit Flags: {}".format(self.limit_flags),
-            "ADCs: {}".format(self.adcs.adc_string)
+            "ADCs: {}".format(self.adcs.adc_string),
+            "C Lash: {}".format(self.slop.lash),
+            "C Spacing: {}".format(self.slop.spacing),
         ])
+
+
+def get_file_timestamp():
+    """Returns a timestamp string
+
+    :returns: A timestamp in the format YYYYmmddHHMMSS
+    :rtype: Str
+
+    """
+    #
+    return datetime.datetime.fromtimestamp(
+        time.time()
+    ).strftime('%Y%m%d%H%M%S')
 
 
 def _update_text(max_rows, original, addition):
@@ -159,19 +180,35 @@ class GrblCon:
         'break': '/0 Print a pagebreak',
         'clear': '/0 Clear the screen',
         'close': '/0 Close the current grbl connection',
+        'dump_eeprom':
+            '/0 Tells GRBL to print out the contents '
+            'of its eeprom settings',
         'help': '/0 Display this dialog',
-        'home': '/0..4 (X/Y/Z/C) Homes specified axis.'
-                'Multiple axes may be provided (or none to home all)',
+        'home':
+            '/0..4 (X/Y/Z/C) Homes specified axis.'
+            'Multiple axes may be provided (or none to home all)',
         'load_gcode': '/1 Send the specified gcode file to grbl',
         'log': '/0 Display the event log',
+        'move':
+            '/3 (axis, distance) Moves the specified axis at the '
+            'given distance',
         'open': '/2 (dev, baud) Open a grbl connection to dev@baud',
+        'probe':
+            '/3 (axis, feedrate, distance) Probes the specified '
+            'axis at the given feedrate and distance',
         'quit': '/0 Close any active grbl connection and exit',
-        'reset': '/1 (hard?) Reset GRBL. `reset hard` resets hardware',
-        'run': '/0 Execute loaded gcode program',
-        'toggle_quiet': '/0 Toggle squelching of status messages',
-        'readadc': '/0 Print ADC values',
+        'readadc': '/0 Performs a read of the on-board ADCs',
         'read_w_pos': '/0 Print working positions',
         'read_m_pos': '/0 Print machine positions',
+        'readslop': '/0 Performs a read of the last known carousel slop',
+        'reset':
+            '/1 (hard?) Reset GRBL via command. '
+            'If `reset hard`, performs a hardware reset',
+        'run': '/0 Begins execution of loaded gcode program',
+        'startrec': '/1? Begins recording of all serial traffic',
+        'stoprec': '/0 Stops any currently running recordings',
+        'toggle_quiet': '/0 Toggle squelching of status messages',
+        'unlock': '/0 unlocks grbl after an alarm',
         '\\': '/? Sends a raw command strait to grbl',
     }
 
@@ -191,6 +228,7 @@ class GrblCon:
         # Application state
         self._quiet = True
         self._event_log = ''
+        self._log_file = None
 
         # Urwid stuff
         self._status_display = urwid.Text(('status', ''))
@@ -220,7 +258,7 @@ class GrblCon:
         self._update_status()
         self._clear_screen()
 
-    def _log_event(self, level, evt_str):
+    def _log_event(self, level, evt_str, display=False):
         log_time = time.time()
 
         log_header = (
@@ -238,17 +276,17 @@ class GrblCon:
                                        self._event_log,
                                        log_entry)
 
-        if level == 'CRIT':
+        if display:
             self._update_text_display(log_entry)
 
-    def _log_info(self, evt_str):
-        self._log_event('INFO', evt_str)
+    def _log_info(self, evt_str, display=False):
+        self._log_event('INFO', evt_str, display)
 
-    def _log_error(self, evt_str):
-        self._log_event('ERROR', evt_str)
+    def _log_error(self, evt_str, display=False):
+        self._log_event('ERROR', evt_str, display)
 
-    def _log_crit(self, evt_str):
-        self._log_event('CRIT', evt_str)
+    def _log_crit(self, evt_str, display=False):
+        self._log_event('CRIT', evt_str, display)
 
     def _sigint_handler(self, sig, frame):
         # pylint: disable=unused-argument
@@ -320,6 +358,15 @@ class GrblCon:
         """
         return self._serial_thread is not None
 
+    @property
+    def recording(self):
+        """ Returns whether or not we are currently recording logs
+
+        :rtype: bool
+
+        """
+        return bool(self._log_file)
+
     def _write(self, data):
         """Wraps our serial port so that connection status and encoding are
         automatically handled
@@ -331,7 +378,7 @@ class GrblCon:
         if self.connected:
             self._port.write(bytes(data, 'ISO-8859-1'))
         else:
-            self._log_crit("Not connected to GRBL!")
+            self._log_error("Not connected to GRBL!", True)
 
     def _writeline(self, data):
         """Writes string to the serial port if connected and appends a newline
@@ -340,7 +387,7 @@ class GrblCon:
 
         """
 
-        self._write(data + '\n')
+        self._write(data + '\r\n')
 
     def _clear_screen(self):
         """ Resets the text display area
@@ -376,24 +423,37 @@ class GrblCon:
         filename = os.path.expanduser(filename)
         filename = os.path.abspath(filename)
 
-        with open(filename) as gcfil:
-            lines = gcfil.readlines()
+        try:
+            with open(filename) as gcfil:
+                lines = gcfil.readlines()
 
-        lnum = 0
-        for line in lines:
-            numbered_line = 'N{} {}'.format(lnum, line)
-            lnum += 1
-            self._update_text_display(numbered_line)
-            self._write(numbered_line + '\n')
+            lnum = 0
+            for line in lines:
+                if line[0] not in ['@', '$']:
+                    line = 'N{} {}'.format(lnum, line)
+                    lnum += 1
+                self._update_text_display(line)
+                self._write(line + '\n')
+        except FileNotFoundError:
+            self._log_error(
+                "No Such File:{}".format(filename),
+                True
+            )
+
+    def _run(self):
+        self._write('~')
 
     def _handle_run(self, *args):  # pylint: disable=unused-argument
-        self._write('~')
+        self._run()
 
     def _handle_clear(self, *args):  # pylint: disable=unused-argument
         self._clear_screen()
 
     def _handle_break(self, *args):  # pylint: disable=unused-argument
         self._delimit_display()
+
+    def _handle_dump_eeprom(self, *args):  # pylint: disable=unused-argument
+        self._writeline("$$")
 
     def _handle_help(self, *args):  # pylint: disable=unused-argument
         help_str = '\n'.join([
@@ -420,13 +480,30 @@ class GrblCon:
         self._update_text_display(help_footer)
 
     def _handle_home(self, *args):
-        cmd = '$H'
+        cmd = 'G90\r\n$H'
 
         for arg in args:
             if arg in 'XYZCxyzc' and arg not in cmd:
                 cmd += arg
 
-        self._write(cmd)
+        self._writeline(cmd)
+
+    def _handle_probe(self, *args):  # pylint: disable=unused-argument
+
+        if len(args) < 3:
+            self._update_text_display("Not enough args to probe!")
+            return
+
+        cmd = "G38.2 G90 F{1} {0}{2}".format(*args)
+        self._writeline(cmd)
+
+    def _handle_move(self, *args):  # pylint: disable=unused-argument
+        cmd = "G0 G91 {0}{1}".format(*args)
+        self._writeline(cmd)
+        self._run()
+
+    def _handle_unlock(self, *args):  # pylint: disable=unused-argument
+        self._writeline("$X")
 
     def _handle_quit(self, *args):  # pylint: disable=unused-argument
         self.quit()
@@ -435,12 +512,36 @@ class GrblCon:
         self._quiet = not self._quiet
 
     def _handle_close(self, *args):  # pylint: disable=unused-argument
-        self._log_info('Closing GRBL Connection')
+        self._log_info('Closing GRBL Connection', True)
         self._close_serial()
 
-    def _handle_reset(self, *args):  # pylint: disable=unused-argument
-        if not self.connected:
+    def _handle_readslop(self, *args):  # pylint: disable=unused-argument
+        self._write('%')
+
+    def _handle_startrec(self, *args):  # pylint: disable=unused-argument
+        if self.recording:
+            self._log_info("Already recording!", True)
             return
+
+        try:
+            filename = args[0]
+        except IndexError:
+            filename = 'grblcon_{}.log'.format(get_file_timestamp())
+
+        self._log_info('Logging to {}'.format(filename), True)
+        self._log_file = open(filename, 'w')
+
+    def _handle_stoprec(self, *args):  # pylint: disable=unused-argument
+        if not self.recording:
+            self._log_info("Not recording!", True)
+            return
+
+        self._log_info('Stopping file logger', True)
+
+        self._log_file.close()
+        self._log_file = None
+
+    def _handle_reset(self, *args):  # pylint: disable=unused-argument
 
         if len(args) and args[0] == 'hard':
             self._reset_req.set()
@@ -550,6 +651,14 @@ class GrblCon:
         """
         self._status.limit_flags = line.strip('/')
 
+    def _process_carousel_slop(self, line):
+        """Handles incoming Carousel slop (lash+spacing) information
+
+        :param line: a string containing the carousel slop message
+        """
+        lash, spacing = line.strip('%').split(',')
+        self._status.slop = CarouselSlop(lash, spacing)
+
     def _check_and_clean(self, line):
         """Performs a checksum on serial line data and filters bad responses
 
@@ -588,21 +697,31 @@ class GrblCon:
             if not line:
                 return
 
+            if self.recording:
+                self._log_file.write(line + '\n')
+
             # Assume that we'll filter the message. This will be used
             # later to see if we should update the display with the data
             # that came back
             filtered = True
 
-            if line.startswith('<'):   # Real time state
-                self._process_realtime_state(line)
-            elif line.startswith('/'):  # Limit pin state
-                self._process_limit_flags(line)
-            elif line.startswith('|'):  # ADCs state
-                self._process_adc(line)
-            else:
-                filtered = False
-                self._update_text_display(line)
-
+            try:
+                if line.startswith('<'):   # Real time state
+                    self._process_realtime_state(line)
+                elif line.startswith('/'):  # Limit pin state
+                    self._process_limit_flags(line)
+                elif line.startswith('%'):  # Carousel Slop
+                    self._process_carousel_slop(line)
+                elif line.startswith('|'):  # ADCs state
+                    self._process_adc(line)
+                else:
+                    filtered = False
+                    self._update_text_display(line)
+            except ValueError:
+                self._log_error(
+                    'Unable to process line: {}'.format(line),
+                    True
+                )
             if filtered and not self._quiet:
                 self._update_text_display(line)
 
@@ -643,7 +762,7 @@ class GrblCon:
 
         """
         if self.connected:
-            self._log_crit('grbl already connected!')
+            self._log_error('grbl already connected!', True)
         else:
             self._log_info(
                 'Opening GRBL connection @ {}::{}'.format(portstr, baud)
@@ -656,7 +775,9 @@ class GrblCon:
                 self._end_evt.clear()
                 self._serial_thread.start()
             except (serial.serialutil.SerialException, FileNotFoundError):
-                self._log_crit("Unable to open port: {}".format(portstr))
+                self._log_error(
+                    "Unable to open port: {}".format(portstr), True
+                )
 
     def poll_adcs(self, *args):  # pylint: disable=unused-argument
         """Periodically polls the ADC values in grbl

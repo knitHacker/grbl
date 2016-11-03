@@ -14,4 +14,7 @@ void magazine_init();
 // specified threshold.
 void magazine_gap_monitor();
 
+int32_t magazine_lash(void);
+int32_t magazine_spacing(void);
+
 #endif

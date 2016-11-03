@@ -28,6 +28,7 @@
 #include "stepper.h"
 #include "settings.h"
 #include "report.h"
+#include "magazine.h"
 
 #define SOME_LARGE_VALUE 1.0E+38 // Used by rapids and acceleration maximization calculations. Just needs
                                  // to be larger than any feasible (mm/min)^2 or mm/sec^2 value.
