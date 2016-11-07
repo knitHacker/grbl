@@ -25,11 +25,13 @@
 #define false 0
 #define true 1
 
-#define N_AXIS 4 // Number of axes
-#define X_AXIS 0 // Axis indexing value. Must start with 0 and be continuous.
-#define Y_AXIS 1
-#define Z_AXIS 2
-#define C_AXIS 3
+enum e_axis {
+  X_AXIS = 0,
+  Y_AXIS,
+  Z_AXIS,
+  C_AXIS,
+  N_AXIS
+};
 
 #define MM_PER_INCH (25.40)
 #define INCH_PER_MM (0.0393701)

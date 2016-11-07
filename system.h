@@ -40,8 +40,6 @@
 #include "cpu_map.h"
 #include "nuts_bolts.h"
 
-
-
 // Define system executor bit map. Used internally by runtime protocol as runtime command flags,
 // which notifies the main program to execute the specified runtime command asynchronously.
 // NOTE: The system executor uses an unsigned 8-bit volatile variable (8 flag limit.) The default
@@ -54,7 +52,6 @@
 #define EXEC_RESET          bit(4) // bitmask 00010000
 #define EXEC_ALARM          bit(5) // bitmask 00100000
 #define EXEC_CRIT_EVENT     bit(6) // bitmask 01000000
-//
 
 #define REQUEST_STATUS_REPORT  bit(0)
 #define REQUEST_LIMIT_REPORT   bit(1)
@@ -74,6 +71,7 @@
 #define STATE_HOLD       bit(5) // Executing feed hold
 #define STATE_FORCESERVO bit(6) // Force servo process
 #define STATE_HOME_ADJUST bit(7) // Update the minimum homing rate when some axes complete homing cycle
+#define STATE_PROBING    bit(8)
 
 // Define Grbl alarm codes. Listed most to least serious
 #define ALARM_SOFT_LIMIT  bit(0) // soft limits exceeded
@@ -92,7 +90,7 @@
 // Define global system variables
 typedef struct {
   uint8_t abort;                 // System abort flag. Forces exit back to main loop for reset.
-  uint8_t state;                 // Tracks the current state of Grbl.
+  uint16_t state;                 // Tracks the current state of Grbl.
   uint8_t flags;                 // see SYSFLAG_xxx above
   uint8_t alarm;                 // see ALARM_xxx above. which alarm(s) are active
   int32_t position[N_AXIS];      // Real-time machine (aka home) position vector in steps.

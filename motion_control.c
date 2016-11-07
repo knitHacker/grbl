@@ -352,11 +352,12 @@ void mc_reset()
     spindle_stop();
     coolant_stop();
 
-    // Kill steppers only if in any motion state, i.e. cycle, feed hold, homing, or jogging
+    // Kill steppers only if in any motion state, i.e. cycle, feed hold,
+    // homing, force servoing, probing or jogging.
     // NOTE: If steppers are kept enabled via the step idle delay setting, this also keeps
     // the steppers enabled by avoiding the go_idle call altogether, unless the motion state is
     // violated, by which, all bets are off.
-    if (sys.state & (STATE_CYCLE | STATE_HOLD | STATE_HOMING | STATE_FORCESERVO)) {
+    if (sys.state & (STATE_CYCLE | STATE_HOLD | STATE_HOMING | STATE_FORCESERVO | STATE_PROBING)) {
       sys.alarm |= ALARM_ABORT_CYCLE;  //killed while in motion
       SYS_EXEC |= EXEC_ALARM; // Flag main program to execute alarm state.
       st_go_idle(); // Force kill steppers. Position has likely been lost.

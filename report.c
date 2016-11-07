@@ -437,6 +437,7 @@ uint8_t report_realtime_status()
     case STATE_ALARM: printPgmString(PSTR("<Alarm")); break;
     case STATE_CHECK_MODE: printPgmString(PSTR("<Check")); break;
     case STATE_FORCESERVO: printPgmString(PSTR("<Fservo")); break;
+    case STATE_PROBING: printPgmString(PSTR("<Probe:")); break;
   }
 
   // Report machine position
