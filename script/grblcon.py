@@ -177,6 +177,9 @@ class GrblCon:
     # NOTE: the /{number} in the dictionary value represents the
     # command's arity.
     _command_help = {
+        'abs':
+            '/2 (axis, distance) Moves the specified axis to the specified '
+            'position',
         'break': '/0 Print a pagebreak',
         'clear': '/0 Clear the screen',
         'close': '/0 Close the current grbl connection',
@@ -184,13 +187,16 @@ class GrblCon:
             '/0 Tells GRBL to print out the contents '
             'of its eeprom settings',
         'help': '/0 Display this dialog',
+        'force': '/1 (force amount [0..1023]) Force servo z-axis to '
+                 'specified amount',
+        'forcecal': '/0  Set force offset value (homes first)',
         'home':
             '/0..4 (X/Y/Z/C) Homes specified axis.'
             'Multiple axes may be provided (or none to home all)',
         'load_gcode': '/1 Send the specified gcode file to grbl',
         'log': '/0 Display the event log',
         'move':
-            '/3 (axis, distance) Moves the specified axis at the '
+            '/2 (axis, distance) Moves the specified axis at the '
             'given distance',
         'open': '/2 (dev, baud) Open a grbl connection to dev@baud',
         'probe':
@@ -229,6 +235,7 @@ class GrblCon:
         self._quiet = True
         self._event_log = ''
         self._log_file = None
+        self._polling_adcs = False
 
         # Urwid stuff
         self._status_display = urwid.Text(('status', ''))
@@ -418,6 +425,10 @@ class GrblCon:
         self._update_text_display(str(self._status.mach_positions))
 
     def _handle_load_gcode(self, *args):  # pylint: disable=unused-argument
+        if len(args) < 1:
+            self._log_error("Please provide a file path", True)
+            return
+
         filename = args[0]
 
         filename = os.path.expanduser(filename)
@@ -491,13 +502,38 @@ class GrblCon:
     def _handle_probe(self, *args):  # pylint: disable=unused-argument
 
         if len(args) < 3:
-            self._update_text_display("Not enough args to probe!")
+            self._log_error("Not enough args to probe!", True)
             return
 
         cmd = "G38.2 G90 F{1} {0}{2}".format(*args)
         self._writeline(cmd)
 
+    def _handle_abs(self, *args):  # pylint: disable=unused-argument
+        if len(args) < 2:
+            self._log_error("Not enough args to absolute move!", True)
+            return
+
+        cmd = "G0 G90 {0}{1}".format(*args)
+        self._writeline(cmd)
+        self._run()
+
+    def _handle_force(self, *args):  # pylint: disable=unused-argument
+        if len(args) < 1:
+            self._log_error("Not enough args to force servo!", True)
+            return
+
+        cmd = "$F {0}".format(args[0])
+        self._writeline(cmd)
+
+    def _handle_forcecal(self, *args):  # pylint: disable=unused-argument
+        cmd = "$HZ\n$FS{0}".format(self._status.adcs.z)
+        self._writeline(cmd)
+
     def _handle_move(self, *args):  # pylint: disable=unused-argument
+        if len(args) < 2:
+            self._log_error("Not enough args to move!", True)
+            return
+
         cmd = "G0 G91 {0}{1}".format(*args)
         self._writeline(cmd)
         self._run()
@@ -548,6 +584,10 @@ class GrblCon:
         else:
             # Send a ctrl-x
             self._write('\x18')
+
+        if self._polling_adcs:
+            self.loop.remove_alarm(self._adc_alarm)
+            self._polling_adcs = False
 
     def _handle_open(self, *args):  # pylint: disable=unused-argument
         self._open_port(*args)
@@ -725,6 +765,13 @@ class GrblCon:
             if filtered and not self._quiet:
                 self._update_text_display(line)
 
+            if not self._polling_adcs:
+                # Call poll_adcs in ADC_POLL_TIME seconds
+                self._adc_alarm = self.loop.set_alarm_in(
+                    self.ADC_POLL_TIME, self.poll_adcs
+                )
+                self._polling_adcs = True
+
             self._update_status()
 
     def _serial_rx(self):
@@ -772,6 +819,7 @@ class GrblCon:
                 self._port.port = portstr
                 self._port.open()
                 self._serial_thread = threading.Thread(target=self._serial_rx)
+                self._serial_thread.daemon = True
                 self._end_evt.clear()
                 self._serial_thread.start()
             except (serial.serialutil.SerialException, FileNotFoundError):
@@ -788,9 +836,12 @@ class GrblCon:
         """
         if self.connected:
             self._write('|')
-
-        # Call poll_adcs again in ADC_POLL_TIME seconds
-        self.loop.set_alarm_in(self.ADC_POLL_TIME, self.poll_adcs)
+            # Call poll_adcs again in ADC_POLL_TIME seconds
+            self._adc_alarm = self.loop.set_alarm_in(
+                self.ADC_POLL_TIME, self.poll_adcs
+            )
+        else:
+            self._polling_adcs = False
 
     def run(self):
         """Starts the main urwid loop and does not return
@@ -800,8 +851,6 @@ class GrblCon:
 
         """
 
-        # Call poll_adcs in ADC_POLL_TIME seconds
-        self.loop.set_alarm_in(self.ADC_POLL_TIME, self.poll_adcs)
         self.loop.run()
 
 if __name__ == '__main__':
