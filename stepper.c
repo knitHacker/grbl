@@ -277,7 +277,7 @@ void st_wake_up()
   // Enable all stepper drivers.
   st_disable(false,~0);
 
-  if (sys.state & (STATE_CYCLE | STATE_HOMING | STATE_FORCESERVO)) {
+  if (sys.state & (STATE_CYCLE | STATE_HOMING | STATE_FORCESERVO | STATE_PROBING)) {
     // Initialize stepper output bits
     st.dir_outbits = settings.dir_invert_mask;
     st.step_outbits = settings.step_invert_mask;
@@ -359,14 +359,13 @@ void st_limit_check()
   uint8_t must_stop = (( (LIMIT_PIN) ^ limits.expected) & limits.active);
   if (must_stop) {
     st.step_outbits &= ~(must_stop >> LIMIT_BIT_SHIFT);
-    limits.ishoming &= ~(must_stop >> LIMIT_BIT_SHIFT); // If an axis is done homing, clear the corresponding bit in limits.ishoming     
- 
-  if (!limits.ishoming) {
-      request_report(REQUEST_STATUS_REPORT|REQUEST_LIMIT_REPORT,LINENUMBER_EMPTY_BLOCK);
-  } else { 
-    bit_true(sys.state, STATE_HOME_ADJUST);
+    // If an axis is done homing, clear the corresponding bit in limits.ishoming     
+    limits.ishoming &= ~(must_stop >> LIMIT_BIT_SHIFT);
 
-  }
+    if (!limits.ishoming)
+      request_report(REQUEST_STATUS_REPORT | REQUEST_LIMIT_REPORT, LINENUMBER_EMPTY_BLOCK);
+    else
+      bit_true(sys.state, STATE_HOME_ADJUST);
 
     //if limits made but not homing , servoing, or alarmed already: critical alarm.
     if (!(sys.state & (STATE_ALARM | STATE_HOMING)) && !(sys.state & (STATE_ALARM | STATE_FORCESERVO)) &&
@@ -403,7 +402,7 @@ void st_force_check()
   const uint8_t positive_stop = (positive_direction && (FORCE_VAL >= limits.bump_grip_force));
   const uint8_t negative_stop = (!positive_direction && (FORCE_VAL <= limits.bump_grip_force));
     
-  if (positive_stop | negative_stop) {
+  if (positive_stop || negative_stop) {
     limits.isservoing = 0;
     request_report(REQUEST_STATUS_REPORT | REQUEST_LIMIT_REPORT, LINENUMBER_EMPTY_BLOCK);    
   }
@@ -584,9 +583,12 @@ ISR(TIMER4_COMPA_vect)
 
   st_limit_check(); //Check for limits, including homing limits
 
-  if (limits.isservoing) {
+  if (limits.isservoing) 
     st_force_check();
-  }
+  
+  // Check if probe is reached, if probing
+  if (probe.isprobing)
+    probe_check();
 
   st.step_count--; // Decrement step events count
   if (st.step_count == 0) {

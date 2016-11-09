@@ -252,7 +252,7 @@ void protocol_execute_runtime()
 
     // Execute a cycle start by starting the stepper interrupt begin executing the blocks in queue.
     // block Start while homing/force-servoing.
-    if ((rt_exec & EXEC_CYCLE_START) && !(sys.state & STATE_HOMING) && !(sys.state & STATE_FORCESERVO)) {
+    if ((rt_exec & EXEC_CYCLE_START) && !(sys.state & (STATE_HOMING | STATE_FORCESERVO | STATE_PROBING))) {
       if (sys.state == STATE_QUEUED) {
         sys.state = STATE_CYCLE;
         st_prep_buffer(); // Initialize step segment buffer before beginning cycle.
@@ -283,9 +283,9 @@ void protocol_execute_runtime()
   // are runtime and require a direct and controlled interface to the main stepper program.
 
   // Reload step segment buffer
-  if (sys.state & (STATE_CYCLE | STATE_HOLD | STATE_HOMING | STATE_FORCESERVO))
-  { st_prep_buffer(); }
-
+  if (sys.state & (STATE_CYCLE | STATE_HOLD | STATE_HOMING | STATE_FORCESERVO | STATE_PROBING)) 
+    st_prep_buffer(); 
+  
   // Clear IO Reset bit.
   IO_RESET_PORT &= (~IO_RESET_MASK);
 

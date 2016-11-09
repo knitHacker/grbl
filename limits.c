@@ -116,7 +116,6 @@ void limits_update_homing_values(uint8_t cycle_mask, float * homing_rate, float 
 // Called from limits_go_home
 void limits_plan_homing(uint8_t cycle_mask, float homing_rate, float max_travel, uint8_t axislock, uint8_t approach, float* target, uint8_t flipped)
 {
- 
   uint8_t idx;
   
   // Set target location and rate for active axes.
@@ -124,6 +123,7 @@ void limits_plan_homing(uint8_t cycle_mask, float homing_rate, float max_travel,
 
   // limit travel distance to the length of the largest flag
   float travel = approach ? max_travel : MAXFLAGLEN;
+
   // set target for moving axes based on direction
   for (idx = 0; idx < N_AXIS; idx++) {
     if (bit_istrue(cycle_mask, bit(idx))) {
@@ -376,8 +376,6 @@ void limits_plan_force_servo(float servo_rate)
 
   st_prep_buffer(); // Prep and fill segment buffer from newly planned block.
   st_wake_up(); // Initiate motion
-
-
 }
 
 // Move gripper to limits.bump_grip_force.

@@ -30,6 +30,7 @@
 #include "planner.h"
 #include "limits.h"
 #include "signals.h"
+#include "probe.h"
 
 uint32_t masterclock=0;
 //uint16_t voltage_result[VOLTAGE_SENSOR_COUNT];
@@ -265,7 +266,35 @@ uint8_t system_execute_line(char *line)
           if ( line[++char_counter] != 0 ) { return(STATUS_INVALID_STATEMENT); }
           else { report_ngc_parameters(); }
           break;
-
+        case 'A': // Probe: Specify sensor, axis and specified directionX,
+          char_counter++;
+          uint8_t axis = line[char_counter];
+          axis = get_axis_idx(axis);
+          //Axis
+          if ((axis == N_AXIS) || (line[++char_counter] != ' '))
+            return(STATUS_INVALID_STATEMENT);
+          // Sensor
+          char_counter++;
+          if (!read_float(line, &char_counter, &value))
+            return(STATUS_BAD_NUMBER_FORMAT);      
+          uint8_t sensor = (uint8_t)value;
+          // Check if sensor is valid
+          if (sensor >= E_SENSOR_TYPES)
+            return(STATUS_BAD_NUMBER_FORMAT);
+          // Direction
+          if (line[char_counter] != ' ')
+            return(STATUS_INVALID_STATEMENT);
+          char_counter++;
+          if (!read_float(line, &char_counter, &value))
+            return(STATUS_BAD_NUMBER_FORMAT);      
+          uint8_t dir = (uint8_t)value;
+          if (dir > 1)
+            return(STATUS_BAD_NUMBER_FORMAT);
+          probe_move_to_sensor(sensor, axis, dir);
+          // End of system command:
+          if (line[++char_counter] != 0)
+            return(STATUS_INVALID_STATEMENT);
+          break;
         case 'P': // Set force sensitivity parameter. Avoids hastle of changing eeprom settings.
           char_counter++;
           if (!read_float(line, &char_counter, &parameter)){
@@ -284,7 +313,8 @@ uint8_t system_execute_line(char *line)
             else {
               while (axis != '\0') {
                 axis = get_axis_idx(axis);
-                if (axis == N_AXIS) { return(STATUS_INVALID_STATEMENT); }
+                if (axis == N_AXIS)
+                  return(STATUS_INVALID_STATEMENT);
                 home_mask |= (1 << axis); //add axis to homing mask 
                 axis = line[++char_counter]; 
               }
