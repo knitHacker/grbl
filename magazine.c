@@ -34,12 +34,6 @@ static struct {
 
 void magazine_init()
 {
-  // Configure as input pin
-  MAGAZINE_ALIGNMENT_DDR &= ~(MAGAZINE_ALIGNMENT_MASK);
-
-  // Enable internal pull-up resistors. Normal high operation
-  MAGAZINE_ALIGNMENT_PORT |= MAGAZINE_ALIGNMENT_MASK;
-
   // Set the magazine alignment position to the current position
   memcpy(sys.probe_position, sys.position, sizeof(int32_t) * N_AXIS);
 
@@ -131,7 +125,6 @@ void magazine_loss_detector(const uint8_t magazine_alignment_on)
 
 }
 
-//KeyMe function
 // Monitors the gap in units between mags and throws an alarm if the gap is larger than a
 // specified threshold. Additionally, magazine slop can be calculated
 // if turned on via compiler flag

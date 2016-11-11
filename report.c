@@ -492,7 +492,7 @@ void report_limit_pins()
   }
   printPgmString(PSTR("/"));
   printInteger((ESTOP_PIN>>ESTOP_BIT)&1);
-  printInteger(probe_get_state()?1:0);
+  printInteger(probe_get_carousel_state() ? 1 : 0);
   print_uint8_base2(limit_state);
   printPgmString(PSTR("/\r\n"));
 }

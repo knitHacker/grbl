@@ -1,5 +1,5 @@
 /*
-  Not part of Grbl. Written by KeyMe.
+  Not part of Grbl. KeyMe specific.
 */
 
 #ifndef magazine_h

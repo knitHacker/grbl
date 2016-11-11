@@ -34,9 +34,6 @@
 #include "report.h"
 #include "counters.h"
 
-#define PROBE_LINE_NUMBER (LINENUMBER_SPECIAL)
-
-
 // Execute linear motion in absolute millimeter coordinates. Feed rate given in millimeters/second
 // unless invert_feed_rate is true. Then the feed_rate means that the motion should be completed in
 // (1 minute)/feed_rate time.
@@ -273,67 +270,6 @@ void mc_force_servo_cycle()
   sys.state = STATE_IDLE;
   st_go_idle();
 
-}
-
-
-// Perform tool length probe cycle. Requires probe switch.
-// NOTE: Upon probe failure, the program will be stopped and placed into ALARM state.
-void mc_probe_cycle(float *target, float feed_rate, uint8_t invert_feed_rate, linenumber_t line_number)
-{
-  if (sys.state != STATE_CYCLE) protocol_auto_cycle_start();
-  protocol_buffer_synchronize(); // Finish all queued commands
-  if (sys.abort) { return; } // Return if system reset has been issued.
-
-  /* TODO: Report a probing status? -JC */
-
-  // Perform probing cycle. Planner buffer should be empty at this point.
-  mc_line(target, feed_rate, invert_feed_rate, line_number);
-
-  // NOTE: It's ok if probe is already triggered, we return current pos.
-  //TODO - maybe we should back off first to ensure edge finding
-  sysflags.probe_state = PROBE_ACTIVE;   
-
-  SYS_EXEC |= EXEC_CYCLE_START;
-  do {
-    protocol_execute_runtime(); 
-    if (sys.abort) { return; } // Check for system abort
-    //stepper isr calls probe_state_monitor, which will set FeedHold, which 
-    //  will change state to QUEUED when stopped.
-  } while ((sys.state != STATE_IDLE) && (sys.state != STATE_QUEUED));
-
-  uint8_t probe_fail = (sysflags.probe_state == PROBE_ACTIVE);
-  if (probe_fail) {
-    //set 'probe position' to current position so that it doesn't move anymore
-    memcpy(sys.probe_position, sys.position, sizeof(float)*N_AXIS);
-    // this is where we would set an alarm if we wanted one.
-  }
-  protocol_execute_runtime();   // Check and execute run-time commands
-  if (sys.abort) { return; } // Check for system abort
-
-  //Prep the new target based on the position that the probe triggered
-  uint8_t i;
-  for(i=0; i<N_AXIS; ++i){
-    target[i] = (float)sys.probe_position[i]/settings.steps_per_mm[i];
-  }
-
-  protocol_execute_runtime();
-
-  st_reset(); // Immediately force kill steppers and reset step segment buffer.
-  plan_reset(); // Reset planner buffer. Zero planner positions. Ensure probe motion is cleared.
-  plan_sync_position(); // Sync planner position to current machine position for pull-off move.
-
-  mc_line(target, feed_rate, invert_feed_rate, PROBE_LINE_NUMBER); // Bypass mc_line(). Directly plan homing motion.
-
-  SYS_EXEC |= EXEC_CYCLE_START;
-  protocol_buffer_synchronize(); // Complete pull-off motion.
-  if (sys.abort) { return; } // Did not complete. Alarm state set by mc_alarm.
-
-  // Gcode parser position was circumvented by the this routine, so sync position now.
-  gc_sync_position();
-
-  // Output the probe position as message.
-  report_probe_parameters(probe_fail);
-  request_eol_report(); //make sure linenumber is printed
 }
 
 

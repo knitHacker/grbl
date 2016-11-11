@@ -210,7 +210,9 @@ uint8_t gc_execute_line(char *line)
               case 3: gc_block.modal.motion = MOTION_MODE_CCW_ARC; break; // G3
               case 38: 
                 switch(mantissa) {
-                  case 20: gc_block.modal.motion = MOTION_MODE_PROBE; break;  // G38.2
+                  case 20:  // G38.2
+                    gc_block.modal.motion = MOTION_MODE_PROBE; 
+                    break;
                   // NOTE: If G38.3+ are enabled, change mantissa variable type to uint16_t.
                   // case 30: gc_block.modal.motion = MOTION_MODE_PROBE_NO_ERROR; break; // G38.3 Not supported.
                   // case 40: // Not supported.
@@ -809,6 +811,9 @@ uint8_t gc_execute_line(char *line)
           }
           break;
         case MOTION_MODE_PROBE:
+          // Consume P word
+          bit_false(value_words, bit(WORD_P));
+
           // [G38 Errors]: Target is same current. No axis words. Cutter compensation is enabled. Feed rate
           //   is undefined. Probe is triggered.
           //KeyMe: same posiiton will report probe fail when done.
@@ -966,10 +971,23 @@ uint8_t gc_execute_line(char *line)
           mc_arc(gc_state.position, gc_block.values.xyz, gc_block.values.ijk, gc_block.values.r, 
             gc_state.feed_rate, gc_state.modal.feed_rate, axis_0, axis_1, axis_linear, gc_block.values.n);  
           break;
-        case MOTION_MODE_PROBE:
-          mc_probe_cycle(gc_block.values.xyz, gc_state.feed_rate, gc_state.modal.feed_rate, gc_block.values.n);
+        case MOTION_MODE_PROBE: {
+          uint8_t sensor;
+          if (bit_istrue(value_words, bit(WORD_P))) {
+            // Cast the p parameter to uint8_t for the sensor address
+            sensor = (uint8_t)gc_block.values.p;
+            bit_false(value_words, bit(WORD_P));
+          } else {
+            // If gc_block.values.p is not defined, select the carousel
+            // magazine alignment sensor as the default. This allows for
+            // backward compatability with motion.
+            sensor = MAG_SENSOR; 
+          }
+          probe_move_to_sensor(gc_block.values.xyz, gc_state.feed_rate,
+          gc_state.modal.feed_rate, gc_block.values.n, sensor); 
           retval = STATUS_QUIET_OK;
           //block.values.xyz is updated inside probe_cycle, so the next line is correct
+        }
       }
     
       // As far as the parser is concerned, the position is now == target. In reality the

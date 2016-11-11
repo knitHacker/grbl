@@ -533,8 +533,6 @@ ISR(TIMER4_COMPA_vect)
       return; // Nothing to do but exit.
     }
   }
-  // Check probing state.
-  probe_state_monitor();
 
   if(settings.mag_gap_enabled) {
    // Monitor magazine probe to look for missing magazines on carousel
@@ -585,7 +583,10 @@ ISR(TIMER4_COMPA_vect)
 
   if (limits.isservoing) 
     st_force_check();
-  
+ 
+  // Used to move to carousel magazine
+  probe_carousel_monitor();
+
   // Check if probe is reached, if probing
   if (probe.isprobing)
     probe_check();
