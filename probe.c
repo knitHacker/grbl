@@ -27,7 +27,10 @@
 #include "settings.h"
 #include "limits.h"
 #include "gcode.h"
+#include "report.h"
+#include "motion_control.h"
 
+#define PROBE_LINE_NUMBER (LINENUMBER_SPECIAL)
 struct probe_state probe;
 
 // Idx, Mask, PIN - Note PIN is not the
@@ -43,6 +46,11 @@ static struct {
     .in_port = &MAGAZINE_ALIGNMENT_PIN
   }
 };
+
+void set_active_probe(enum e_sensor sensor)
+{
+  probe.active_sensor = sensor;
+}
 
 // Probe pin initialization routine.
 void probe_init() 
@@ -61,72 +69,52 @@ void probe_init()
 
 void probe_check()
 {
-  if (probe_get_active_sensor_state())
+  if (probe_get_active_sensor_state()) {
+    // Stop looking for probe
     probe.isprobing = 0;
+
+    // TODO: Report the position where the probe was found
+    // using report_probe_parameters(). This should possibly be
+    // reported in in probe_loop or probe_move_to_sensor instead of here.
+  }
+
+  // Check for ESTOP
+  if (ESTOP_PIN & ESTOP_MASK) {
+    sys.alarm |= ALARM_ESTOP;
+    SYS_EXEC |= (EXEC_FEED_HOLD | EXEC_ALARM | EXEC_CRIT_EVENT);
+  }
 }
 
-void probe_plan_move(uint8_t sensor, uint8_t axis, uint8_t dir)
-{
-  /*  sensor - Which sensor to home
-   *  axis - Which axis to move to the sensor
-   *  dir - true = neg; false = pos
-   */
-
-  // Set the active probe
-  probe.active_sensor = sensor;
-
-  // Approach has all bits set (neg dir) or none (pos dir)
-  const uint8_t approach = dir ? ~0 : 0;
-
-  // Limit travel distance to the max flag
-  const float travel = settings.max_travel[axis];
-  const uint8_t flipped = settings.homing_dir_mask >> X_DIRECTION_BIT;  //assumes keyme configuration.
- 
-  // Set target for axis
-  float target[N_AXIS] = {0};
-  target[axis] = ((flipped & (1 << axis)) ^ approach) ? -travel : travel;
-
-  // Set speed
-  //TODO: Allow for this rate to be set over serial / passed as a variable
-  const float probe_rate = settings.homing_seek_rate[axis];
-
-  // Reset plan and stepper buffers
-  plan_reset();
-  st_reset();
-
-  // Plan moition. Planner buffer should be empty, bypass mc_line() 
-  plan_buffer_line(target, probe_rate, false, LINENUMBER_EMPTY_BLOCK); 
-
-  // Tell the system we are probing
-  probe.isprobing = 1;
-
-  // Enable hard limit checking
-  limits_enable(LIMIT_MASK & HARDSTOP_MASK, 0);
-
-
-}
-
-void probe_loop()
+bool probe_loop()
 {
   // Start stepper
   st_prep_buffer();
   st_wake_up();
 
+  SYS_EXEC |= EXEC_CYCLE_START;
+
+  // Stay in this loop until alarm or until
+  // the probe is found. probe_check() is called
+  // from the stepper ISR to check if the active
+  // probe is found.
   while (probe.isprobing) {
     // Check for user reset and allow
     // protocol_execute_runtime to run in this loop 
     protocol_execute_runtime();
     
+    if(sys.abort)
+      return false;
+
     if (SYS_EXEC & EXEC_RESET) {
       protocol_execute_runtime();
-      return;
+      return false;
     } 
 
     if (ESTOP_PIN & ESTOP_MASK) {
       sys.alarm |= ALARM_ESTOP;
       SYS_EXEC |= (EXEC_FEED_HOLD | EXEC_ALARM | EXEC_CRIT_EVENT);
       protocol_execute_runtime();
-      return;
+      return false;
     }
 
     // Check if we never reach probe.
@@ -134,47 +122,109 @@ void probe_loop()
       sys.alarm |= ALARM_PROBE_FAIL;
       SYS_EXEC |= EXEC_CRIT_EVENT;
       protocol_execute_runtime();
-      return;
+      return false;
     }
   }
 
-  // Disable limits
-  limits_disable();
-
-  // Force kill steppers and reset
-  // step segment buffer
-  st_reset();
-  plan_reset(); 
+  return true;
 
 }
 
-void probe_move_to_sensor(enum e_sensor sensor, enum e_axis axis, uint8_t dir)
+void probe_move_to_sensor(float * target, float feed_rate, uint8_t invert_feed_rate,
+  linenumber_t line_number, enum e_sensor sensor)
 {
+  // Set the active probe
+  probe.active_sensor = sensor;
+
+  if (sys.state != STATE_CYCLE)
+    protocol_auto_cycle_start();
+  
+  // Finish all queued commands
+  protocol_buffer_synchronize();
+
+  // Return if system reset has been issued
+  if (sys.abort)
+    return;
+
+  // Move in a line to the target
+  mc_line(target, feed_rate, invert_feed_rate, line_number);
+
+  // TODO: If the probe is already activated, we should look in
+  // the oppostie direction that is specified.
+
+  if (sensor == MAG_SENSOR)
+    probe.carousel_probe_state = PROBE_ACTIVE;
+
+  // Tell the system we are probing
+  probe.isprobing = 1;
+
   sys.state = STATE_PROBING;
-  probe_plan_move(sensor, axis, dir);
-  probe_loop();
+  
+  if (!probe_loop())
+    return;
+
+  uint8_t probe_fail;
+  if (sensor == MAG_SENSOR) {
+    probe_fail = (probe.carousel_probe_state == PROBE_ACTIVE);
+    if (probe_fail)
+      memcpy(sys.probe_position, sys.position, sizeof(float) * N_AXIS);
+  }
+
+  protocol_execute_runtime();
+
+  if (sys.abort)
+    return;
+  
+  // Prep the new target based on the positon that the probe triggered
+  uint8_t idx;
+  for (idx = 0; idx < N_AXIS; ++idx) {
+    target[idx] = (float)sys.probe_position[idx] / settings.steps_per_mm[idx];
+  }
+
+  protocol_execute_runtime();
+  
+  // Force kill steppers and reset
+  // step segment buffer
+  st_reset();
+  plan_reset();
+  plan_sync_position();
+
+  mc_line(target, feed_rate, invert_feed_rate, PROBE_LINE_NUMBER);
+
+  SYS_EXEC |= EXEC_CYCLE_START;
+  
+  // Complete pull-off action
+  protocol_buffer_synchronize();
+
+  // Did not complete. Alarm state set by mc_alarm
+  if (sys.abort)
+    return;
 
   gc_sync_position();
 
   sys.state = STATE_IDLE;
   st_go_idle();
+
+  if (sensor == MAG_SENSOR)
+    report_probe_parameters(probe_fail);
+  request_eol_report();
 }
 
-// Monitors probe pin state and records the system position when detected. Called by the
-// stepper ISR per ISR tick.
-// NOTE: This function must be extremely efficient as to not bog down the stepper ISR.
-void probe_state_monitor()
+// This function monitors the carousel magazine alignment probe
+// which is used to move to a specified magazine.
+void probe_carousel_monitor()
 {
-  uint8_t probe_on = probe_get_state();
-  if (sysflags.probe_state == PROBE_ACTIVE && probe_on) {
-    sysflags.probe_state = PROBE_OFF;
-    memcpy(sys.probe_position, sys.position, sizeof(float)*N_AXIS);
+  uint8_t probe_on = probe_get_carousel_state();
+  if (probe.carousel_probe_state == PROBE_ACTIVE && probe_on) {
+    probe.carousel_probe_state = PROBE_OFF;
+    memcpy(sys.probe_position, sys.position, sizeof(float) * N_AXIS);
     SYS_EXEC |= EXEC_FEED_HOLD;
   }
 
   if (ESTOP_PIN & ESTOP_MASK) {
     sys.alarm |= ALARM_ESTOP;
-    SYS_EXEC |= (EXEC_FEED_HOLD|EXEC_ALARM|EXEC_CRIT_EVENT);
+    SYS_EXEC |= (EXEC_FEED_HOLD | EXEC_ALARM | EXEC_CRIT_EVENT);
   }
+
 }
 

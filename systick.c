@@ -46,7 +46,7 @@ void systick_service_callbacks()
   while (systick_callbacks_array[idx].callback_time <= sys_tick && idx < systick_len) {
     idx++;
   }
-  
+
   while (idx > 0) {
     // Call the callback function
     systick_callbacks_array[0].cb_function();

@@ -102,7 +102,6 @@ extern system_t sys;
 
 typedef struct {
   volatile uint8_t execute;      // Global system runtime executor bitflag variable. See EXEC bitmasks.
-  volatile uint8_t probe_state;   // Probing state value.  Used to coordinate the probing cycle with stepper ISR.
   volatile uint8_t limits;                 //limit
   volatile uint8_t report_rqsts;   //requestsd reports
 } sys_flags_t;

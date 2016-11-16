@@ -34,9 +34,9 @@ enum e_sensor {
 
 struct probe_state {
   enum e_sensor active_sensor;  // The currently active probe seonsor
-  uint8_t probe_reached;  // Flag to indicate if active probe is reached
+  volatile uint8_t probe_reached;  // Flag to indicate if active probe is reached
   uint8_t isprobing;
-
+  volatile uint8_t carousel_probe_state;
 };
 
 extern struct probe_state probe;
@@ -45,7 +45,11 @@ extern struct probe_state probe;
 void probe_init();
 
 // Plan a probe move to a probe sensor on an axis in a given direction
-void probe_move_to_sensor(enum e_sensor, enum e_axis, uint8_t dir);
+void probe_move_to_sensor(float * target, float feed_rate, uint8_t invert_feed_rate,
+  linenumber_t line_number, enum e_sensor sensor);
+
+// Used to set active probe to look for
+void set_active_probe(enum e_sensor sensor);
 
 // Called from stepper ISR - needs to be very efficient
 void probe_check();
@@ -56,10 +60,12 @@ void probe_check();
 #define probe_get_active_sensor_state() (!(ACTIVE_SENSOR_MASK & ACTIVE_SENSOR_PIN))
 
 // Returns probe pin state. Triggered = true. Called by gcode parser and probe state monitor.
-#define probe_get_state() (!(PROBE_PIN & PROBE_MASK))
+#define probe_get_carousel_state() (!(PROBE_PIN & PROBE_MASK))
 
-// Monitors probe pin state and records the system position
+// Monitors ACTIVE probe pin state and records the system position
 // when detected. Called by the stepper ISR each ISR tick.
 void probe_state_monitor();
 
+// Monitors CAROUSEL probe pin state
+void probe_carousel_monitor();
 #endif
