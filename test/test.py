@@ -22,4 +22,4 @@ while True:
         continue
     if line == 'ok\r\n':
         outstanding -= 1
-    print outstanding, repr(line.rstrip())
+    print(outstanding, repr(line.rstrip()))
